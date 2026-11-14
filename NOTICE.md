@@ -12,7 +12,7 @@ de contexte, quantification clé/valeurs, réserve de VRAM, vision sur AMD ;
 mémoire sémantique **EmbeddingGemma 2** ; **pont Ajean↔Ajean** ; déduplication
 des appels ; réglage du seuil de compactage). Elle est signalée par un suffixe à part,
 **`.N Cresius`** : la version lue par le binaire est par exemple
-**`0.18.17.1 Cresius`**, pas `0.18.17` (base amont `v0.18.17` + révision `1`).
+**`0.20.1.1 Cresius`**, pas `0.20.1` (base amont `v0.20.1` + révision `1`).
 Cette ligne n'est **pas** une version de
 l'amont, n'est **pas** testée sur d'autres machines et n'est **pas** garantie
 transposable. Pour installer AJEAN, prenez les versions publiées sur
@@ -20,8 +20,8 @@ transposable. Pour installer AJEAN, prenez les versions publiées sur
 
 ## Ce que ce fork ajoute à l'amont
 
-Sept fronts, mesurés commit par commit contre le tag amont `v0.18.17`
-(**151 fichiers, +30 900 / −10 367**, **102 ajoutés, 49 modifiés, aucun fichier
+Sept fronts, mesurés commit par commit contre le tag amont `v0.20.1`
+(**174 fichiers, +46 107 / −10 638**, **123 ajoutés, 51 modifiés, aucun fichier
 amont supprimé** — chaque fusion est additive). Le détail chiffré et la surface
 de conflit sont dans [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
@@ -50,7 +50,7 @@ Windows sont téléchargés à l'installation du moteur.
 | --- | --- |
 | [nathaninline/ajean](https://github.com/nathaninline/ajean) | amont — projet original et versions publiées |
 | [Niko1221/Strata](https://github.com/Niko1221/Strata) | moteur MoE exécuté par le fork |
-| ce dépôt | ligne de correctifs privée, millésime `.N Cresius` (`0.18.17.1 Cresius` en service, base amont `v0.18.17`) |
+| ce dépôt | ligne de correctifs privée, millésime `.N Cresius` (`0.20.1.1 Cresius` en service, base amont `v0.20.1`) |
 
 ## Modèles
 
