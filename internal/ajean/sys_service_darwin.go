@@ -55,7 +55,7 @@ func serviceAction(action string) error {
 		return parallelServiceAction(action)
 	}
 	// API Externe : aucun moteur local (arrêt). GPU Cloud : relais local vers le GPU.
-	action = cloudServiceAction(action)
+	action = presetServiceAction(action)
 	svc := serviceName()
 	plist := launchdPlistPath(svc)
 	// Pas de LaunchDaemon installé — cas normal d'un Mac de bureau, où AJEAN tourne

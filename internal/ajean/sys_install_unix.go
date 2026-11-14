@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -26,6 +27,9 @@ func cmdInstall(args []string) error {
 	if os.Geteuid() != 0 {
 		return fmt.Errorf("ajean install doit être exécuté en root (sudo ajean install)")
 	}
+	// Unités des modèles laissées par la 0.19 : on a ici les droits pour les arrêter.
+	retire019Units()
+	purge019Root()
 	targetUser := os.Getenv("SUDO_USER")
 	if targetUser == "" {
 		targetUser = "root"
@@ -87,11 +91,9 @@ func cmdInstall(args []string) error {
 	fmt.Println()
 	fmt.Printf("%s installation terminée.\n", green("[ok]"))
 	fmt.Printf("\nProchaines étapes :\n")
-	fmt.Printf("  1. installe le moteur :  %s   (compile llama.cpp, renseigne BIN)\n", bold("sudo -u "+targetUser+" ajean llamacpp install"))
-	fmt.Printf("  2. choisis le modèle :   %s   (renseigne MODEL, un fichier .gguf)\n", bold("sudo -u "+targetUser+" ajean edit"))
-	fmt.Printf("  3. démarre le moteur :   %s\n", bold("sudo ajean start"))
-	fmt.Printf("  4. vérifie :             %s\n", bold("ajean test"))
-	fmt.Printf("  5. démarre l'interface : %s   (http://localhost:8090)\n", bold("sudo ajean ui start"))
+	fmt.Printf("  1. démarre l'interface : %s   (http://localhost:8090)\n", bold("sudo ajean ui start"))
+	fmt.Printf("  2. choisis un modèle dans l'interface (le moteur llama.cpp s'installe seul)\n")
+	fmt.Printf("  3. vérifie :             %s\n", bold("ajean test"))
 	return nil
 }
 
@@ -184,4 +186,38 @@ func chown(path string, u *user.User) {
 		}
 		return nil
 	})
+}
+
+// purge019Root retire, en administrateur sous Linux, ce que la 0.19 avait posé
+// en dehors d'AJEAN_HOME : les unités des modèles (ajean-svc-*), le gardien RAM
+// (ajean-guard) et l'assistant root avec sa règle sudoers. Rien de tout cela ne
+// sert à la 0.20, et l'assistant root garde des droits qu'elle n'utilise plus.
+// services.json reste en place.
+func purge019Root() {
+	if runtime.GOOS != "linux" || os.Geteuid() != 0 {
+		return
+	}
+	const dir = "/etc/systemd/system"
+	units, _ := filepath.Glob(filepath.Join(dir, "ajean-svc-*.service"))
+	if _, err := os.Stat(filepath.Join(dir, "ajean-guard.service")); err == nil {
+		units = append(units, filepath.Join(dir, "ajean-guard.service"))
+	}
+	removed := 0
+	for _, u := range units {
+		name := filepath.Base(u)
+		_ = exec.Command("systemctl", "disable", "--now", name).Run()
+		if os.Remove(u) == nil {
+			removed++
+			fmt.Printf("  %s %s retiré (0.19)\n", green("✓"), name)
+		}
+	}
+	for _, p := range []string{"/usr/local/sbin/ajean-svc", "/etc/sudoers.d/ajean-svc"} {
+		if os.Remove(p) == nil {
+			fmt.Printf("  %s %s retiré (0.19)\n", green("✓"), p)
+		}
+	}
+	_ = os.RemoveAll("/etc/ajean-svc")
+	if removed > 0 {
+		_ = exec.Command("systemctl", "daemon-reload").Run()
+	}
 }

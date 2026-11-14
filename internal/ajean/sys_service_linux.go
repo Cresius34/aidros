@@ -18,7 +18,7 @@ func serviceAction(action string) error {
 		return parallelServiceAction(action)
 	}
 	// API Externe : aucun moteur local (arrêt). GPU Cloud : relais local vers le GPU.
-	action = cloudServiceAction(action)
+	action = presetServiceAction(action)
 	svc := serviceName()
 	needsRoot := action == "start" || action == "stop" || action == "restart" || action == "enable" || action == "disable"
 	args := []string{}
