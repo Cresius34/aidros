@@ -190,6 +190,10 @@ func (c *embeddingHTTPClient) embed(ctx context.Context, input []string) ([][]fl
 }
 
 func (c *embeddingHTTPClient) embedRequest(ctx context.Context, input any, count int) ([][]float32, error) {
+	// À l'ENTRÉE, pas en différé : une requête qui tourne depuis dix minutes est
+	// l'encodeur en train de travailler, donc une marque de vie fraîche. Marquer
+	// à la sortie laisserait le veilleur tuer un encodage long.
+	markEmbeddingUse(c)
 	body, err := json.Marshal(map[string]any{"input": input, "model": "ajean-memory", "encoding_format": "float"})
 	if err != nil {
 		return nil, err
@@ -257,11 +261,12 @@ func (c *embeddingHTTPClient) embedRequest(ctx context.Context, input any, count
 }
 
 type embeddingProcess struct {
-	cmd    *exec.Cmd
-	done   chan struct{}
-	err    error // published by closing done
-	client *embeddingHTTPClient
-	ready  bool // protected by embeddingServer.Mutex
+	cmd     *exec.Cmd
+	done    chan struct{}
+	err     error // published by closing done
+	client  *embeddingHTTPClient
+	ready   bool        // protected by embeddingServer.Mutex
+	lastUse time.Time   // dernière requête servie ; seul le veilleur la lit
 }
 
 var embeddingServer struct {
@@ -362,11 +367,15 @@ func startEmbeddingServer(ctx context.Context, c embeddingConfig) (*embeddingHTT
 			return nil, e
 		}
 		bindChild(cmd)
-		p = &embeddingProcess{cmd: cmd, done: make(chan struct{}), client: &embeddingHTTPClient{
+		p = &embeddingProcess{cmd: cmd, done: make(chan struct{}), lastUse: time.Now(), client: &embeddingHTTPClient{
 			URL: fmt.Sprintf("http://127.0.0.1:%d", c.Port), Key: key, Fingerprint: fp, HTTP: &http.Client{Timeout: 30 * time.Second}, Dimensions: c.Dimensions, Provider: c.Provider,
 		}}
 		embeddingServer.p = p
 		go func(p *embeddingProcess) { p.err = p.cmd.Wait(); log.Close(); close(p.done) }(p)
+		// Le veilleur démarre ici et pas plus bas : il ne doit veiller que sur
+		// l'instance que ce lancement a créée. Une instance reprise (p != nil en
+		// entrée de fonction) a déjà le veilleur de son propre lancement.
+		go embeddingWatch(p, time.Now())
 	}
 	if p.ready {
 		embeddingServer.Unlock()
@@ -400,6 +409,91 @@ func startEmbeddingServer(ctx context.Context, c embeddingConfig) (*embeddingHTT
 			return nil, ctx.Err()
 		case <-ticker.C:
 		}
+	}
+}
+
+// Les deux gardes-mémoire de l'encodeur, calibrées sur celles de la voie
+// llama-server (jean_embed.go:68-70) pour que les deux voies obéissent à la même
+// politique. La voie « transformers » (Python + torch) était la seule à ne pas
+// les observer : mesurée le 14/11/2026 sur le poste 20.1, son encodeur retenait
+// 24,8 Go privés et 15,9 Go vifs APRÈS la fin de l'indexation (0,1 s de CPU sur
+// 25 s), sans jamais les rendre, jusqu'à l'arrêt de l'application.
+const (
+	embeddingStopRAMMB = 700              // sous ce seuil, l'encodeur est arrêté
+	embeddingIdleStop  = 20 * time.Minute // au-delà sans requête, il est arrêté
+	// Le veilleur ne regarde pas avant ce délai. Le premier lancement de la voie
+	// Python installe torch et ses dépendances, qui dépasse largement une phase
+	// d'encodage et consomme justement de la RAM : sans cette tolérance, on
+	// tuerait une installation légitime en plein travail.
+	embeddingGrace = 45 * time.Minute
+)
+
+// markEmbeddingUse note que cet encodeur vient de servir. lastUse est protégé
+// par embeddingServer.Mutex, la même serrure que le veilleur.
+//
+// embedRequest est le SEUL point de passage de toute la voie encodeur :
+// embed() (texte) et embedInput() (multimodal) y aboutissent tous les deux
+// (mem_embedding_media.go:126,131), et la boucle d'indexation y passe pour
+// chaque fragment (mem_embeddings.go:252). Marquer ici protège donc une
+// indexation en cours contre l'arrêt pour inactivité.
+func markEmbeddingUse(c *embeddingHTTPClient) {
+	embeddingServer.Lock()
+	if p := embeddingServer.p; p != nil && p.client == c {
+		p.lastUse = time.Now()
+	}
+	embeddingServer.Unlock()
+}
+
+// embeddingWatchDecision rend la décision du veilleur, sans processus ni RAM :
+// une fonction pure, donc testable. now lui est passé pour qu'un test fixe le
+// temps au lieu d'attendre vingt minutes.
+//
+// availMB vaut -1 quand la RAM est indisponible : on ne tue pas sur un doute.
+func embeddingWatchDecision(now, started, lastUse time.Time, availMB int) (bool, string) {
+	if now.Sub(started) <= embeddingGrace {
+		return false, "" // tolérance de démarrage : torch s'installe, il travaille
+	}
+	if a := availMB; a >= 0 && a < embeddingStopRAMMB {
+		return true, fmt.Sprintf("RAM trop basse (%d Mo libres, %d requis)", a, embeddingStopRAMMB)
+	}
+	if d := now.Sub(lastUse); d > embeddingIdleStop {
+		return true, fmt.Sprintf("inutilisé depuis %s", d.Truncate(time.Minute))
+	}
+	return false, ""
+}
+
+// embeddingWatch surveille l'encodeur « transformers » (Python) et l'arrête
+// quand la machine en a besoin ou qu'il ne sert plus. C'est l'équivalent du
+// watch() de jean_embed.go:268-287, que cette voie n'avait pas :
+// stopEmbeddingServer n'était appelé que par web_embeddings (à la demande),
+// sys_tray_windows, parallel_profile (à l'arrêt) et backend_presets.
+//
+// Tuer en pleine indexation aurait un coût : stopEmbeddingServer appelle
+// clearEmbeddingCache, qui jette les vecteurs déjà encodés (mesuré : 693 blocs
+// sur 45 pages). C'est markEmbeddingUse qui l'en empêche, pas une inspection du
+// job : l'indexation parle au même encodeur, donc sa dernière requête est récente.
+func embeddingWatch(p *embeddingProcess, started time.Time) {
+	for {
+		select {
+		case <-p.done:
+			return // mort de lui-même, ou arrêté volontairement : plus rien à surveiller
+		default:
+		}
+
+		embeddingServer.Lock()
+		vivante := embeddingServer.p == p
+		lastUse := p.lastUse
+		embeddingServer.Unlock()
+		if !vivante {
+			return // une autre instance a pris la main : ce n'est plus à elle de veiller
+		}
+
+		if stop, why := embeddingWatchDecision(time.Now(), started, lastUse, availRAMMB()); stop {
+			fmt.Fprintf(os.Stderr, "[mémoire] encodeur arrêté : %s\n", why)
+			stopEmbeddingServer()
+			return
+		}
+		time.Sleep(2 * time.Second)
 	}
 }
 
