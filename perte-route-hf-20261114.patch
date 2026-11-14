@@ -1,0 +1,10 @@
+﻿# La fusion 0.20.1 a perdu la route /api/hf (le navigateur de modeles GGUF depuis
+# HuggingFace). MESURE le 14/11 : web_server.go de HEAD porte api/hf x0, celui de
+# upstream/main x2. web_hf.go est LA partout (5 852 o), ce sont les DEUX lignes
+# denregistrement qui manquent, plus l'appel cote UI. Le seul binaire qui les
+# porte encore etait archive-0.20.1.2-retour-binaire-20261114\ajean.exe, supprime
+# ce soir sur ma demande : ce fichier est sa preuve, et la source est recupÃ©rable
+# par git show upstream/main:internal/ajean/web_server.go.
+
+	api("/api/hf/search", handleHFSearch)                  // recherche de dépôts GGUF sur Hugging Face
+	api("/api/hf/files", handleHFFiles)                    // fichiers .gguf d'un dépôt (quantifications, tailles)
