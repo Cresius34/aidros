@@ -443,10 +443,10 @@ func sendLLMPrewarm(ctx context.Context, ep chatEndpoint, payload map[string]any
 	return nil
 }
 
-// doLLM envoie une requête de complétion en la comptant dans llmInFlight : vu
+// doLLMPlain envoie une requête de complétion en la comptant dans llmInFlight : vu
 // par le pré-chauffage de prompt, une génération occupe le moteur et il ne faut
 // pas s'insérer devant elle.
-func doLLM(req *http.Request) (*http.Response, error) {
+func doLLMPlain(req *http.Request) (*http.Response, error) {
 	llmInFlight.Add(1)
 	defer llmInFlight.Add(-1)
 	return http.DefaultClient.Do(req)

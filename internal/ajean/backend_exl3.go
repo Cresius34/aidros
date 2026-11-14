@@ -741,16 +741,16 @@ func exl3DefaultName(repo, rev string) string {
 	return strings.Trim(reSafeName.ReplaceAllString(n, "_"), "._")
 }
 
-type hfFile struct {
+type exl3HfFile struct {
 	Type string `json:"type"`
 	Path string `json:"path"`
 	Size int64  `json:"size"`
 }
 
 // exl3ListHF : les fichiers d'une révision d'un dépôt Hugging Face.
-func exl3ListHF(repo, rev string) ([]hfFile, error) {
+func exl3ListHF(repo, rev string) ([]exl3HfFile, error) {
 	next := "https://huggingface.co/api/models/" + repo + "/tree/" + url.PathEscape(rev) + "?recursive=true"
-	var files []hfFile
+	var files []exl3HfFile
 	c := &http.Client{Timeout: 30 * time.Second}
 	for next != "" {
 		req, _ := http.NewRequest("GET", next, nil)
@@ -765,7 +765,7 @@ func exl3ListHF(repo, rev string) ([]hfFile, error) {
 			resp.Body.Close()
 			return nil, fmt.Errorf("Hugging Face : HTTP %d (dépôt ou branche introuvable ?)", resp.StatusCode)
 		}
-		var page []hfFile
+		var page []exl3HfFile
 		err = json.NewDecoder(resp.Body).Decode(&page)
 		resp.Body.Close()
 		if err != nil {

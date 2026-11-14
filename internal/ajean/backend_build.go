@@ -939,13 +939,6 @@ func cudaToolkitRoot(nvcc string) string {
 	return root
 }
 
-func hasNvidiaGPU() bool {
-	if !hasTool("nvidia-smi") {
-		return false
-	}
-	out, err := hideCmd(exec.Command("nvidia-smi", "-L")).Output()
-	return err == nil && strings.Contains(string(out), "GPU")
-}
 
 // detectCudaArch queries every GPU's compute capability via nvidia-smi and
 // returns them as CMake-style arch codes (e.g. "8.6" → "86"), deduped and
@@ -984,15 +977,7 @@ func numJobs() int {
 	return n
 }
 
-func isFile(p string) bool {
-	fi, err := os.Stat(p)
-	return err == nil && !fi.IsDir()
-}
 
-func isDir(p string) bool {
-	fi, err := os.Stat(p)
-	return err == nil && fi.IsDir()
-}
 
 // llamaServerBin returns the path to the built llama-server binary under repo,
 // probing the layouts the different CMake generators emit: the Visual Studio
@@ -1017,36 +1002,7 @@ func llamaServerBin(repo string) string {
 	return ""
 }
 
-func hasTool(name string) bool {
-	_, err := exec.LookPath(name)
-	return err == nil
-}
 
-// hasVulkanLib détecte la présence du loader Vulkan (libvulkan) sans supposer un
-// unique chemin de distribution. L'ancienne détection testait en dur le chemin
-// Debian multiarch (/usr/lib/x86_64-linux-gnu/libvulkan.so.1), invisible sur
-// Fedora/RHEL/Atomic où la lib vit dans /usr/lib64/ (issues #28, #29). On
-// interroge d'abord ldconfig (la source de vérité du linker dynamique), puis on
-// retombe sur une liste de chemins connus.
-func hasVulkanLib() bool {
-	// ldconfig -p liste les bibliothèques connues du cache, tous chemins confondus.
-	if out, err := exec.Command("ldconfig", "-p").Output(); err == nil {
-		if strings.Contains(string(out), "libvulkan.so") {
-			return true
-		}
-	}
-	for _, p := range []string{
-		"/usr/lib/x86_64-linux-gnu/libvulkan.so.1", // Debian/Ubuntu multiarch
-		"/usr/lib64/libvulkan.so.1",                // Fedora/RHEL/Bazzite
-		"/usr/lib/libvulkan.so.1",                  // Arch et divers
-		"/lib64/libvulkan.so.1",
-	} {
-		if isFile(p) {
-			return true
-		}
-	}
-	return false
-}
 
 func requireTools(tools ...string) error {
 	missing := missingTools(tools)

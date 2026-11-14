@@ -109,6 +109,29 @@ func totalRAMGB() float64 {
 // against cublas64_*/cublasLt64_*.dll which live there, not next to the binary —
 // without it the server dies with 0xC0000135 (DLL not found) unless the launching
 // shell happened to have CUDA on PATH.
+// libraryPathValue construit la valeur PATH pour CE moteur : son repertoire
+// d'abord, puis les repertoire supplementaires demandes, puis le CUDA Toolkit
+// trouve par findNvcc (ggml-cuda.dll a besoin de cublas64_*, qui n'est pas a cote
+// du binaire : sans lui le serveur meurt en 0xC0000135), puis le PATH existant.
+func libraryPathValue(dir string, extra []string) string {
+	parts := append([]string{dir}, extra...)
+	if nvcc := findNvcc(); nvcc != "" {
+		binDir := filepath.Dir(nvcc) // ...\CUDA\vX.Y\bin
+		parts = append(parts, binDir)
+		// CUDA 13+ a deplace les DLL runtime (cublas64_*, cublasLt64_*, cudart64_*)
+		// dans bin\x64\ ; sur CUDA 12 elles sont directement dans bin\. Les deux
+		// couvrent les deux layouts.
+		if x64 := filepath.Join(binDir, "x64"); isDir(x64) {
+			parts = append(parts, x64)
+		}
+	}
+	if existing := os.Getenv("PATH"); existing != "" {
+		parts = append(parts, existing)
+	}
+	return strings.Join(parts, string(os.PathListSeparator))
+}
+
+
 func setLibraryPath(dir string) {
 	parts := []string{dir}
 	if nvcc := findNvcc(); nvcc != "" {
@@ -560,4 +583,11 @@ func killTree(pid int) {
 		return
 	}
 	_ = hideCmd(exec.Command("taskkill", "/PID", strconv.Itoa(pid), "/T", "/F")).Run()
+}
+
+// libraryPathEnvWith construit l'environnement du moteur : les variables du
+// processus, plus PATH oriente vers les bibliotheques de CE moteur. Windows n'a
+// qu'une variable a poser ; l'appelant lui donne les repertoire supplementaires.
+func libraryPathEnvWith(dir string, extra []string) []string {
+	return append(os.Environ(), "PATH="+libraryPathValue(dir, extra))
 }

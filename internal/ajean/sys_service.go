@@ -45,7 +45,20 @@ func preflightEngine() error {
 		}
 		return nil
 	}
-	// Preset d'un moteur retiré en 0.20 (MoE, ExLlama) : il ne peut plus démarrer.
+	// Moteur MoE (Strata) : NOTRE moteur, il lance son propre serveur (serveMoe).
+	// L'amont a « retiré » MoE en 0.20 et son removedEngine() refuse ENGINE=moe ;
+	// cette ligne est la raison pour laquelle la fusion 0.20.1 ne démarre plus
+	// Strata. backend_serve.go garde bien sa branche serveMoe() : sans elle ici,
+	// le pré-vol mentait sur un chemin que cmdServe sait encore faire. Et comme le
+	// pré-vol échoue avant engineEnsure, le moteur livré llama.cpp n'est jamais
+	// installé : BIN reste vide, et vulkanVramGPUs — le SEUL repli qui voie une
+	// carte AMD sous Windows, amd-smi/rocm-smi n'étant jamais lancés (issue #259) —
+	// rend une liste vide. C'est ce qui vidait aussi l'encart « Appareil ».
+	if isMoeConfig(cfg) {
+		_, _, err := moePreflight(cfg)
+		return err
+	}
+	// Preset d'un moteur retiré en 0.20 (ExLlama) : il ne peut plus démarrer.
 	if name := removedEngine(cfg); name != "" {
 		return removedEngineError(name)
 	}

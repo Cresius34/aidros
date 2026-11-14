@@ -31,6 +31,13 @@ func TestCanalNeDeclencheUnTourAgentQueSurDoubleAutorisation(t *testing.T) {
 	}
 	valide := requete("/v1/chat/completions", "1")
 
+	// Depuis la 0.20, le mode agent naît ACTIF d'office (chat_agent.go : l'absence
+	// de réglage vaut « actif »). Ce scénario exige la seconde autorisation dans
+	// son état éteint, donc c'est lui qui la pose — il ne peut plus la supposer.
+	if err := putStr(bkState, "agent", "0"); err != nil {
+		t.Fatal(err)
+	}
+
 	// Rien n'est allumé : le pont n'a pas le droit d'exécuter quoi que ce soit.
 	if canalDemande(valide) {
 		t.Fatal("par défaut le canal ne déclenche aucun tour d'agent")
@@ -87,6 +94,11 @@ func TestCanalNeDeclencheUnTourAgentQueSurDoubleAutorisation(t *testing.T) {
 // heure pourquoi le voisin récite une réponse de modèle nu.
 func TestEtatDuPontDeclareLAuthorisationAgent(t *testing.T) {
 	parallelTestHome(t)
+	// Le mode agent naît actif d'office depuis la 0.20 : ce test veut observer le
+	// passage « une seule autorisation », il éteint donc le mode agent explicitement.
+	if err := putStr(bkState, "agent", "0"); err != nil {
+		t.Fatal(err)
+	}
 	st := parallelBridgeStatus()
 	if st["agent_on"].(bool) {
 		t.Fatal("agent_on doit être faux tant que rien n'est autorisé")

@@ -453,9 +453,11 @@ async function loadTelemetry(){
 }
 let ENGINE_CMDLINE='';
 async function loadCfg(){
-  // /api/llamacpp en parallèle : il indique si le BIN de la config correspond au
+  // /api/engine en parallèle : il indique si le BIN de la config correspond au
   // précompilé (prebuilt.in_use) ou compilé ici (in_use) — sinon c'est un fork perso.
-  const [c, lc] = await Promise.all([jget('/api/config'), jget('/api/llamacpp').catch(()=>null)]);
+  // Depuis la 0.20 c'est cette route qui rend prebuilt.{bin,dir,in_use} ; la
+  // page d'installation llama.cpp, elle, est passée de /api/llamacpp* à /api/engine*.
+  const [c, lc] = await Promise.all([jget('/api/config'), jget('/api/engine').catch(()=>null)]);
   const row=(k,v,title)=>'<div class="kv"><span>'+k+'</span><span title="'+String(title!=null?title:v).replace(/"/g,'&quot;')+'">'+String(v)+'</span></div>';
   const rows=[];
   // Preset externe (API distante) : pas de moteur/modèle local à montrer. On
@@ -538,7 +540,7 @@ async function loadCfg(){
     // toujours le chemin complet, quel que soit le libellé.
     let v;
     if(lc && lc.prebuilt && lc.prebuilt.in_use) v=t('status.engine_prebuilt');
-    else if(lc && lc.in_use) v=t('status.engine_compiled');
+    else if(lc && lc.compiled && lc.compiled.in_use) v=t('status.engine_compiled');
     else v=t('status.engine_custom_prefix')+' '+c.BIN;
     // Commande exacte du dernier lancement (#108) : petite icône de copie
     // accolée au libellé MOTEUR, le détail au survol.

@@ -275,24 +275,22 @@
          la machine (voir lcRenderReco). Sur Linux + NVIDIA le précompilé ne
          donne que du Vulkan — llama.cpp ne publie aucun binaire CUDA Linux —
          alors que compiler donne du CUDA natif. -->
+    <div class="rowbody eng-card">
+      <div class="eng-line">
+        <span class="eng-name">llama.cpp <span id="eng-version"></span></span>
+        <span class="eng-state" id="eng-state"></span>
+      </div>
+      <div class="eng-sub" data-i18n="engine.bundled_desc">Livré avec AJEAN et installé automatiquement. Il change avec les mises à jour d'AJEAN.</div>
+      <div class="eng-actions">
+        <label class="eng-variant" id="eng-variant-wrap" hidden>
+          <span data-i18n="engine.variant_label">accélération</span>
+          <select id="eng-variant" onchange="engSetVariant(this.value)"></select>
+        </label>
+        <button type="button" class="lc-update-link" id="eng-repair" onclick="engRepair()" data-i18n="engine.repair">réparer</button>
+      </div>
+      <div class="eng-legacy" id="eng-legacy" hidden></div>
+    </div>
     <div class="lc-modes">
-      <div class="lc-mode" id="lc-mode-fast" onclick="lcPick('fast')">
-        <div class="lc-mode-t"><span data-i18n="engine.mode_fast_title">llama.cpp précompilé</span> <span class="lc-reco" id="lc-reco-fast" hidden data-i18n="engine.mode_recommended">conseillé</span></div>
-        <div class="lc-mode-d" id="lc-desc-fast" data-i18n="engine.mode_fast_desc">binaire officiel téléchargé tel quel, prêt en ~2 min</div>
-        <div class="lc-mode-state" id="lc-fast-state"></div>
-      </div>
-      <div class="lc-mode" id="lc-mode-opt" onclick="lcPick('opt')">
-        <div class="lc-mode-t"><span data-i18n="engine.mode_opt_title">llama.cpp compilé</span> <span class="lc-reco" id="lc-reco-opt" hidden data-i18n="engine.mode_recommended">conseillé</span></div>
-        <div class="lc-mode-d" id="lc-desc-opt" data-i18n="engine.mode_opt_desc">compilé ici pour votre machine — plus rapide, plus long à installer</div>
-        <div class="lc-mode-state" id="lc-opt-state"></div>
-      </div>
-      <div class="lc-mode" id="lc-mode-custom" onclick="openCustomBackends()">
-        <div class="lc-mode-t" data-i18n="engine.mode_custom_title">llama.cpp personnalisé</div>
-        <div class="lc-mode-d" data-i18n="engine.mode_custom_desc">un fork de llama.cpp pour modèles spéciaux (quant ternaire…)</div>
-        <div class="lc-mode-state" id="lc-custom-state"></div>
-      </div>
-      <!-- Moteur MoE Strata, installé en un clic (version posée par le moteur
-           luimême). Affiché seulement là où il tourne. -->
       <div class="lc-mode" id="lc-mode-exl3" hidden onclick="openExl3()">
         <div class="lc-mode-t" data-i18n="exl3.mode_title">ExLlama</div>
         <div class="lc-mode-d" data-i18n="exl3.mode_desc">modèles EXL3 sur carte NVIDIA, très rapide en génération</div>

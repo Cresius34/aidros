@@ -518,6 +518,14 @@ func SavePreset(id, name, content string) (string, error) {
 }
 
 // DeletePreset removes a preset by id; refuses if it is the active config.
+// presetStopEngine arrete le moteur du preset qu'on supprime. Variable : les
+// tests la remplacent pour ne toucher a aucun service.
+var presetStopEngine = func() {
+	if serviceIsActive() {
+		_ = serviceAction("stop")
+	}
+}
+
 func DeletePreset(id string) error {
 	p, err := safePresetPath(id)
 	if err != nil {
@@ -527,8 +535,19 @@ func DeletePreset(id string) error {
 	if err != nil {
 		return fmt.Errorf("introuvable")
 	}
-	if presetFingerprint(target) == configFingerprint(ReadConfig()) {
-		return fmt.Errorf("preset actif, switche d'abord")
+	cur := ReadConfig()
+	if presetFingerprint(target) == configFingerprint(cur) || getStr(bkState, "active_preset") == id {
+		presetStopEngine()
+		keep := map[string]string{}
+		for _, k := range preservedKeys {
+			if v, ok := cur[k]; ok {
+				keep[k] = v
+			}
+		}
+		if err := WriteConfig(keep); err != nil {
+			return err
+		}
+		_ = putStr(bkState, "active_preset", "")
 	}
 	if err := os.Remove(p); err != nil {
 		return err
@@ -549,3 +568,4 @@ func ReadPreset(id string) (string, error) {
 	}
 	return string(b), nil
 }
+

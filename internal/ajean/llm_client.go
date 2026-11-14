@@ -1203,7 +1203,7 @@ func runChat(ctx context.Context, messages []Message, temperature float64, caps 
 			authHeader(req)
 		}
 		tReq := time.Now() // secours des stats quand le serveur n'envoie pas de timings
-		resp, err := doLLM(req)
+		resp, err := doLLMPlain(req)
 		if err != nil && ctx.Err() == nil && streamRetryable(ep) && transientNetErr(err) && streamRetries < maxStreamRetries {
 			// Tunnel en pleine reconnexion : même reprise qu'un flux coupé.
 			streamRetries++

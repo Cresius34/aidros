@@ -19,9 +19,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -255,20 +253,6 @@ func pickLlamaRelease(rels []llamaRelease, now time.Time) (string, []ghAsset, er
 	return "", nil, fmt.Errorf("aucune release llama.cpp avec des binaires trouvée")
 }
 
-// driverCudaVersion renvoie la version CUDA max supportée par le pilote NVIDIA
-// (bandeau de nvidia-smi : « CUDA Version: 12.8 »), ou 0 si inconnue.
-func driverCudaVersion() float64 {
-	out, err := hideCmd(exec.Command("nvidia-smi")).Output()
-	if err != nil {
-		return 0
-	}
-	m := regexp.MustCompile(`CUDA Version:\s*([0-9]+\.[0-9]+)`).FindSubmatch(out)
-	if m == nil {
-		return 0
-	}
-	v, _ := strconv.ParseFloat(string(m[1]), 64)
-	return v
-}
 
 // assetMatch garde les assets dont le nom contient TOUS les fragments.
 func assetMatch(assets []ghAsset, frags ...string) []ghAsset {
@@ -288,7 +272,6 @@ func assetMatch(assets []ghAsset, frags ...string) []ghAsset {
 	return out
 }
 
-var reCudaAssetVer = regexp.MustCompile(`cuda-([0-9]+\.[0-9]+)`)
 
 // pickCuda choisit le build CUDA (osTag = "win" ou "ubuntu") le plus récent que le
 // pilote supporte (pilote inconnu : le plus ancien, le plus compatible), et
@@ -456,7 +439,7 @@ func prebuiltInstall(logf, phasef func(string)) (string, error) {
 			return "", fmt.Errorf("téléchargement de %s : %w", a.Name, err)
 		}
 		phasef("extraction de " + a.Name + "…")
-		if err := extractArchive(tmp, dir); err != nil {
+		if err := extractArchivePrebuilt(tmp, dir); err != nil {
 			_ = os.Remove(tmp)
 			return "", fmt.Errorf("extraction de %s : %w", a.Name, err)
 		}
@@ -535,9 +518,9 @@ func downloadWithProgress(url, dest string, total int64, logf func(string)) erro
 	}
 }
 
-// extractArchive extrait un .zip ou un .tar.gz dans dir, en refusant toute
+// extractArchivePrebuilt extrait un .zip ou un .tar.gz dans dir, en refusant toute
 // entrée qui s'échapperait du dossier (zip-slip).
-func extractArchive(path, dir string) error {
+func extractArchivePrebuilt(path, dir string) error {
 	safe := func(name string) (string, error) {
 		p := filepath.Join(dir, filepath.FromSlash(name))
 		if rel, err := filepath.Rel(dir, p); err != nil || strings.HasPrefix(rel, "..") {
@@ -650,35 +633,7 @@ func extractArchive(path, dir string) error {
 }
 
 // archiveLink : un lien (symbolique ou dur) relevé dans une archive.
-type archiveLink struct{ path, target string }
 
-// applyLinks crée les liens relevés pendant l'extraction. Sur les systèmes où la
-// création de liens symboliques est refusée (Windows sans mode développeur), on
-// copie le fichier cible : moins élégant, mais fonctionnel.
-func applyLinks(links []archiveLink) error {
-	for _, l := range links {
-		_ = os.Remove(l.path)
-		if err := os.MkdirAll(filepath.Dir(l.path), 0o755); err != nil {
-			return err
-		}
-		if err := os.Symlink(l.target, l.path); err == nil {
-			continue
-		}
-		// Repli par copie. La cible peut être relative au dossier du lien.
-		src := l.target
-		if !filepath.IsAbs(src) {
-			src = filepath.Join(filepath.Dir(l.path), l.target)
-		}
-		data, err := os.ReadFile(src)
-		if err != nil {
-			continue // cible absente de l'archive : on n'échoue pas l'installation pour ça
-		}
-		if err := os.WriteFile(l.path, data, 0o755); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 // cudartLibs liste les bibliothèques du runtime CUDA déjà extraites sous dir
 // (cudart64*.dll sous Windows, libcudart.so* dans un dossier cudart-* sous Linux).

@@ -53,9 +53,9 @@ func isCloudConfig(cfg map[string]string) bool {
 	return strings.EqualFold(strings.TrimSpace(cfg[cloudKeyFlag]), "modal")
 }
 
-// usesRemoteEndpoint : pas de llama-server local pour cette config (API externe
+// usesRemoteCloudEndpoint : pas de llama-server local pour cette config (API externe
 // ou GPU cloud). C'est ce que les chemins « moteur local » doivent tester.
-func usesRemoteEndpoint(cfg map[string]string) bool {
+func usesRemoteCloudEndpoint(cfg map[string]string) bool {
 	return isExternalConfig(cfg) || isCloudConfig(cfg)
 }
 

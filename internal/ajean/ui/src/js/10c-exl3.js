@@ -352,7 +352,10 @@ async function exl3PresetDownload(){
   if(exl3DlTimer) clearInterval(exl3DlTimer);
   exl3DlTimer = setInterval(async () => {
     let j;
-    try{ j = await jget('/api/llamacpp/job?from=999999'); }catch(_){ return; }
+    // Depuis la 0.20, le journal d'installation se lit sur /api/engine/job : mêmes
+    // champs (running, phase, error), même paramètre from. La route llama.cpp est
+    // partie avec la page d'installation que l'humain a retirée.
+    try{ j = await jget('/api/engine/job?from=999999'); }catch(_){ return; }
     if(!document.getElementById('modal').classList.contains('eng-exl3')){ clearInterval(exl3DlTimer); exl3DlTimer = null; return; }
     if(j.running){ note.textContent = j.phase || '…'; return; }
     clearInterval(exl3DlTimer); exl3DlTimer = null;

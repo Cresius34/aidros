@@ -496,10 +496,14 @@ function beWarnInstall(){
 }
 async function populateBackend(){
   // Chemins des deux moteurs gérés + liste des backends détectés (dossier ajean).
-  let lc = {}; try{ lc = await jget('/api/llamacpp'); }catch(_){}
+  // Depuis la 0.20, c'est /api/engine qui rend bin et prebuilt.{bin,dir} ;
+  // /api/llamacpp a disparu avec la page d'installation llama.cpp de l'amont.
+  let lc = {}; try{ lc = await jget('/api/engine'); }catch(_){}
   beFastPath = (lc.prebuilt && lc.prebuilt.bin) || '';
   beFastDir  = (lc.prebuilt && lc.prebuilt.dir) || '';
-  beOptPath  = lc.bin || '';
+  // La clé bin de /api/engine désigne le moteur livré avec AJEAN ; l'option
+  // « compilé ici » de l'éditeur veut le binaire construit dans le dépôt.
+  beOptPath  = (lc.compiled && lc.compiled.bin) || '';
   // Menu « backend détecté » du mode personnalisé : tout ce qu'on trouve dans
   // le dossier backends de ajean (l'utilisateur peut y déposer son propre build).
   const detected = await jget('/api/backends');

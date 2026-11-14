@@ -3148,3 +3148,20 @@ audio.jf-media{width:min(520px,100%);margin-top:18vh}
   display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
 .voice-play:disabled{opacity:.4}
 #voice-url{min-width:0;flex:1 1 auto;max-width:62%}
+
+/* Panneau Moteur de la 0.20 (eng-card) : regles importees de l'amont, necessaires aux 6 elements que 10-engine.js pilote. */
+.eng-card{display:flex;flex-direction:column;gap:6px}
+.eng-card.busy .eng-actions{opacity:.5;pointer-events:none}
+.eng-line{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.eng-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap}
+.eng-name span{font-weight:400;color:var(--dim);font-variant-numeric:tabular-nums}
+.eng-state{font-size:11px;color:var(--dim);text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eng-state.ok{color:var(--accent);font-weight:600}
+.eng-state.warn{color:var(--warn)}
+.eng-sub{font-size:11px;line-height:1.45;color:var(--dim)}
+.eng-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px;min-height:22px}
+.eng-actions button{background:none;border:0;padding:0;font:inherit}
+.eng-variant{display:flex;align-items:center;gap:6px;color:var(--dim)}
+.eng-variant select{font:inherit;color:var(--text);background:transparent;border:1px solid var(--border);border-radius:6px;padding:2px 4px;max-width:120px}
+.eng-legacy{font-size:11px;line-height:1.45;color:var(--dim);border-top:1px solid var(--border);padding-top:6px}
+.eng-legacy-p{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left}

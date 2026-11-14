@@ -296,11 +296,18 @@ func handleBackendDevices(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewDecoder(r.Body).Decode(&req)
 	bin := strings.TrimSpace(req.Bin)
 	if bin == "" {
-		bin = ReadConfig()["BIN"]
+		// Le frontend de l'amont (10-engine.js) n'envoie PAS de bin : il demande
+		// « le moteur que AJEAN a installé ». ReadConfig()["BIN"] ne suffit pas :
+		// un preset MoE laisse BIN vide alors que le moteur livré est bien présent
+		// (backendsDir()/engine/<tag>). C'est ce qui vidait l'encart « Appareil »
+		// sous Windows, où amd-smi/rocm-smi sont interdits et où cette route est
+		// la seule voie d'énumération. engineBin() est la fonction de l'amont
+		// (v0.20.1) : moteur en développement d'abord, puis moteur installé.
+		bin = engineBin()
 	}
 	bin = prebuiltResolveBin(bin)
 	if bin == "" || !isFile(bin) {
-		sendJSON(w, 200, map[string]any{"ok": false, "error": "moteur introuvable — choisissez d'abord un moteur"})
+		sendJSON(w, 200, map[string]any{"ok": false, "error": "moteur en cours d'installation — réessaie dans un instant"})
 		return
 	}
 	// Le moteur MoE (Strata) est un llama.cpp recompilé par son propre installeur :
@@ -443,7 +450,20 @@ func listDevicesCached(bin string) []map[string]any {
 }
 
 func vulkanVramGPUs() []map[string]any {
-	bin := prebuiltResolveBin(ReadConfig()["BIN"])
+	// engineBin() et non ReadConfig()["BIN"] : c'est la lecture de l'amont v0.20.1.
+	// Un preset MoE laisse BIN vide alors que le moteur livré est installé, et
+	// cette fonction est alors la SEULE à le trouver. Sur une carte AMD sous
+	// Windows, où amd-smi/rocm-smi sont interdits (issue #259), ce repli est le
+	// seul qui voie la carte : BIN vide y donnait une liste vide, donc un encart
+	// « Appareil » sans GPU.
+	bin := engineBin()
+	if bin == "" {
+		// Variante « précompilée » propre à Cresius : le moteur n'est pas dans
+		// backendsDir()/engine/<tag>, engineBin() ne le voit pas. On retombe sur
+		// la clé BIN, résolue comme avant (prebuiltResolveBin sait retrouver le
+		// dossier llama.cpp-prebuilt quand le chemin visé a bougé).
+		bin = prebuiltResolveBin(ReadConfig()["BIN"])
+	}
 	if bin == "" || !isFile(bin) {
 		return nil
 	}
@@ -524,6 +544,30 @@ func applyWindowsDedicatedUsage(gpus []map[string]any) {
 		g["util"] = adapters[ai].UtilPct
 		ai++
 	}
+	assignIntegratedUsage(gpus, adapters[min(ai, len(adapters)):])
+}
+
+// assignIntegratedUsage donne aux cartes intÃ©grÃ©es la mÃ©moire PARTAGÃ‰E (plus la
+// dÃ©diÃ©e, quelques centaines de Mio rÃ©servÃ©s par le BIOS) et l'utilisation des
+// adaptateurs restants, le plus chargÃ© d'abord. Une puce intÃ©grÃ©e n'a pas de VRAM
+// dÃ©diÃ©e : son modÃ¨le tient dans la RAM systÃ¨me, et Â« Dedicated Usage Â» y reste ~0
+// mÃªme sous charge. Sans cette piÃ¨ce, un iGPU affichait 0 Mo utilisÃ©.
+func assignIntegratedUsage(gpus []map[string]any, rest []windowsAdapterStat) {
+	sort.SliceStable(rest, func(i, j int) bool { return rest[i].SharedMiB > rest[j].SharedMiB })
+	ri := 0
+	for _, g := range gpus {
+		name, _ := g["name"].(string)
+		if !integratedGPUName(name) || ri >= len(rest) {
+			continue
+		}
+		used := rest[ri].SharedMiB + rest[ri].DedicatedMiB
+		if total, _ := g["total"].(int); total > 0 && used > total {
+			used = total
+		}
+		g["used"] = used
+		g["util"] = rest[ri].UtilPct
+		ri++
+	}
 }
 
 // integratedGPUName : le nom désigne-t-il un GPU intégré au processeur ? Intel
@@ -553,6 +597,7 @@ func integratedGPUName(name string) bool {
 // — les deux mesures viennent du même appel PowerShell pour rester appariées.
 type windowsAdapterStat struct {
 	DedicatedMiB int
+	SharedMiB    int // mémoire système utilisée par la carte (tout, pour une puce intégrée)
 	UtilPct      int
 }
 
@@ -565,13 +610,13 @@ type windowsAdapterStat struct {
 // fausserait l'appariement.
 func windowsAdapterStats() []windowsAdapterStat {
 	const script = `$mem = Get-CimInstance Win32_PerfFormattedData_GPUPerformanceCounters_GPUAdapterMemory -ErrorAction Stop | ` +
-		`Where-Object { $_.TotalCommitted -gt 5MB } | Select-Object Name, DedicatedUsage; ` +
+		`Where-Object { $_.TotalCommitted -gt 5MB } | Select-Object Name, DedicatedUsage, SharedUsage; ` +
 		`$eng = Get-CimInstance Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine -ErrorAction SilentlyContinue; ` +
 		`$r = @(foreach ($m in $mem) { ` +
 		`  $u = 0; ` +
 		`  if ($eng) { $hit = $eng | Where-Object { $_.Name -like "*$($m.Name)*" }; if ($hit) { $mx = ($hit | Measure-Object -Property UtilizationPercentage -Maximum).Maximum; if ($mx -gt $u) { $u = $mx } } }; ` +
 		`  if ($u -gt 100) { $u = 100 }; ` +
-		`  [PSCustomObject]@{dedicated=$m.DedicatedUsage; util=[int]$u} ` +
+		`  [PSCustomObject]@{dedicated=$m.DedicatedUsage; shared=$m.SharedUsage; util=[int]$u} ` +
 		`}); ` +
 		`[PSCustomObject]@{items=$r} | ConvertTo-Json -Compress -Depth 3`
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
@@ -583,6 +628,7 @@ func windowsAdapterStats() []windowsAdapterStat {
 	var parsed struct {
 		Items []struct {
 			Dedicated int64 `json:"dedicated"`
+			Shared     int64 `json:"shared"`
 			Util      int   `json:"util"`
 		} `json:"items"`
 	}
@@ -591,7 +637,19 @@ func windowsAdapterStats() []windowsAdapterStat {
 	}
 	stats := make([]windowsAdapterStat, 0, len(parsed.Items))
 	for _, it := range parsed.Items {
-		stats = append(stats, windowsAdapterStat{DedicatedMiB: int(it.Dedicated / (1024 * 1024)), UtilPct: it.Util})
+		stats = append(stats, windowsAdapterStat{DedicatedMiB: int(it.Dedicated / (1024 * 1024)), SharedMiB: int(it.Shared / (1024 * 1024)), UtilPct: it.Util})
 	}
 	return stats
 }
+
+// devCacheReset jette le cache des cartes vues par le moteur : la variante
+// installee change ce que le moteur declare, donc ce que nous avons vu ne vaut plus.
+func devCacheReset() {
+	devCacheMu.Lock()
+	devCache = map[string]devCacheEntry{}
+	devCacheMu.Unlock()
+	listDevMu.Lock()
+	listDevBin, listDevOut = "", nil
+	listDevMu.Unlock()
+}
+

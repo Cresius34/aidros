@@ -2,14 +2,14 @@
   "FixedFileInfo": {
     "FileVersion": {
       "Major": 0,
-      "Minor": 18,
-      "Patch": 17,
+      "Minor": 20,
+      "Patch": 1,
       "Build": 1
     },
     "ProductVersion": {
       "Major": 0,
-      "Minor": 18,
-      "Patch": 17,
+      "Minor": 20,
+      "Patch": 1,
       "Build": 1
     },
     "FileFlagsMask": "3f",
@@ -20,13 +20,13 @@
   },
   "StringFileInfo": {
     "CompanyName": "AJEAN contributors",
-    "FileDescription": "Base 0.18.17 amont, EmbeddingGemma 2 + recherche, MoE AMD Strata (catalogue de modèles lu dans le moteur, plus de liste recopiée), canal Ajean-Ajean (pont qui rend un tour d'agent et dit pourquoi il ne le rend pas, outil peer, auteur de chaque message : un ordre humain cible un poste, un ordre d'IA jamais)",
+    "FileDescription": "Base 0.20.1 amont, EmbeddingGemma 2 + recherche, MoE AMD Strata (catalogue de modèles lu dans le moteur, plus de liste recopiée), canal Ajean-Ajean (pont qui rend un tour d'agent et dit pourquoi il ne le rend pas, outil peer, auteur de chaque message : un ordre humain cible un poste, un ordre d'IA jamais)",
     "InternalName": "ajean-memoire-test",
     "LegalCopyright": "Copyright (c) 2026 AJEAN contributors. MIT License.",
     "OriginalFilename": "ajean-memoire-test.exe",
-    "ProductName": "AJEAN v0.18.17.1 Cresius",
-    "FileVersion": "0.18.17.1 Cresius",
-    "ProductVersion": "0.18.17.1 Cresius",
+    "ProductName": "AJEAN v0.20.1.1 Cresius",
+    "FileVersion": "0.20.1.1 Cresius",
+    "ProductVersion": "0.20.1.1 Cresius",
     "Comments": "https://github.com/nathaninline/ajean — projet open source (MIT)"
   },
   "VarFileInfo": {

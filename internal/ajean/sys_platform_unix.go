@@ -375,3 +375,11 @@ func killTree(pid int) {
 		_ = syscall.Kill(-pid, syscall.SIGKILL)
 	}
 }
+
+// libraryPathEnvWith construit l'environnement du moteur : les variables du
+// processus, plus la variable de chemin des bibliotheques que libraryPathValue
+// designe (LD_LIBRARY_PATH, et sa variante macOS).
+func libraryPathEnvWith(dir string, extra []string) []string {
+	k, v := libraryPathValue(dir, extra)
+	return append(os.Environ(), k+"="+v)
+}

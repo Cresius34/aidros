@@ -64,7 +64,14 @@ func binHelp(bin string) (string, bool) {
 // on ne relance pas « --help » à chaque fois (un seul spawn par binaire).
 var loadModeCapCache sync.Map // clé "chemin\x00mtime" -> bool
 
-func backendUsesLoadMode(bin string) bool {
+// backendUsesLoadMode dit si le moteur INSTALLE attend la NOUVELLE syntaxe
+// Â« --load-mode Â» (et a donc potentiellement retire --mlock / --no-mmap).
+// Signature de l'amont : le binaire est celui du moteur, lu en direct.
+func backendUsesLoadMode() bool { return backendBinUsesLoadMode(engineBin()) }
+
+// backendBinUsesLoadMode : meme capacite pour un BIN donne (celui d'un preset
+// non actif, d'une variante en cours d'installation). Mergerendu amont garde.
+func backendBinUsesLoadMode(bin string) bool {
 	if bin == "" {
 		return false
 	}
@@ -233,6 +240,13 @@ func cmdServe(args []string) error {
 	// API externe : aucun moteur local. On sort SANS erreur, sinon systemd
 	// (Restart=on-failure) relance en boucle — et chaque relance arrêterait le
 	// moteur tiers du preset (EXTERNAL_SERVICE), déclaré en conflit avec nous.
+	// Service systÃ¨me : la commande du preset tourne Ã  la place de llama-server.
+	// TestÃ©e AVANT le cas externe : un programme annoncÃ© mais absent doit Ãªtre
+	// dit, pas masquÃ© par la sortie propre du preset externe (backend_service_test.go).
+	if cmd := serviceCmdOf(cfg); cmd != "" {
+		return serveServiceCmd(cfg, cmd)
+	}
+
 	if isExternalConfig(cfg) {
 		fmt.Println("[info] preset externe actif : pas de moteur local à lancer")
 		return nil
@@ -243,13 +257,13 @@ func cmdServe(args []string) error {
 	if isExl3Config(cfg) {
 		return serveExl3(cfg)
 	}
-	bin := cfg["BIN"]
-	if bin == "" {
-		return fmt.Errorf("BIN non défini — lance « ajean edit »")
-	}
 	model := cfg["MODEL"]
 	if model == "" {
 		return fmt.Errorf("MODEL non défini — lance « ajean edit »")
+	}
+	bin := cfg["BIN"]
+	if bin == "" {
+		return fmt.Errorf("BIN non défini — lance « ajean edit »")
 	}
 	// MODEL vaut soit un simple nom de fichier (le .gguf vit dans AJEAN_HOME ou
 	// dans un dossier déclaré — disque externe…), soit un chemin absolu. Sous
@@ -538,3 +552,4 @@ func warnKVPrebuilt(bin, k, v string) {
 			"(converti en f16 à chaque pas, lent). Préfère q8_0, q4_0 ou f16, ou compile llama.cpp localement.\n", k, v)
 	}
 }
+

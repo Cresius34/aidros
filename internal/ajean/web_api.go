@@ -602,7 +602,7 @@ func handlePreset(w http.ResponseWriter, r *http.Request) {
 	if parallelBuild() {
 		content = withDisplayName(formatEnv(resolveParallelConfig(parseEnv(content))), presetDisplayName(content, id))
 	}
-	sendJSON(w, 200, map[string]any{"id": id, "name": presetDisplayName(content, id), "content": content, "sysprompt": presetSysPrompt(id)})
+	sendJSON(w, 200, map[string]any{"id": id, "name": presetDisplayName(content, id), "content": content})
 }
 
 // presetSaveReq is the preset editor payload. `id` identifies an existing
@@ -649,7 +649,8 @@ func handlePresetSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Prompt système propre au preset (stocké en base, sous l'id retourné).
-	_ = setPresetSysPrompt(newID, req.SysPrompt)
+	// Le prompt systeme par preset n'est plus un reglage depuis la 0.20 :
+	// req.SysPrompt est ignore, la cle sysprompt/<id> reste en base sans etre lue.
 	reload := false
 	if wasActive {
 		if list, err := ListPresets(); err == nil {

@@ -211,22 +211,16 @@ func newWebMux() *http.ServeMux {
 	api("/api/backends", handleBackends)
 	api("/api/backends/custom", handleBackendsCustom)                    // backends custom uniquement (hors ⚡/🔧)
 	api("/api/backends/devices", handleBackendDevices)                   // GPU vus par CE moteur (noms/ordre propres au backend)
-	api("/api/llamacpp", handleLlamacpp)                                 // statut du backend llama.cpp
-	api("/api/llamacpp/check", handleLlamacppCheck)                      // git fetch + retard sur origin
-	api("/api/llamacpp/install", handleLlamacppInstall)                  // job : clone + build + BIN
-	api("/api/llamacpp/install-custom", handleLlamacppInstallCustom)     // job : clone d'un fork depuis une URL Git (par preset, sans BIN global)
-	api("/api/llamacpp/uninstall-custom", handleLlamacppUninstallCustom) // supprime un backend custom (backends/<name>)
-	api("/api/llamacpp/update", handleLlamacppUpdate)                    // job : pull + rebuild + restart
-	api("/api/llamacpp/job", handleLlamacppJob)                          // progression + logs du job
-	api("/api/llamacpp/job/dismiss", handleLlamacppJobDismiss)           // masque un job terminé (l'erreur ne revient plus au démarrage)
-	api("/api/llamacpp/job/cancel", handleLlamacppJobCancel)             // arrête un job en cours (tue cmake/ninja/compilateur)
-	api("/api/llamacpp/prebuilt", handleLlamacppPrebuilt)                // job : binaires officiels précompilés
-	api("/api/llamacpp/prebuilt/check", handleLlamacppPrebuiltCheck)     // dernière release officielle vs installée
-	api("/api/llamacpp/use", handleLlamacppUse)                          // bascule BIN entre versions déjà installées
 	api("/api/moe", handleMoe)                                           // moteur MoE : machine, catalogue figé, recommandation, modèles installés
-	api("/api/moe/install", handleMoeInstall)                            // job : paquet figé + installeur du moteur + preset (suivi par /api/llamacpp/job)
 	api("/api/moe/settings", handleMoeSettings)                          // réglages d'un modèle MoE installé (relance s'il est actif)
 	api("/api/moe/verify", handleMoeProbe)                               // test explicite réponse + appel d’outil du prototype
+	api("/api/moe/install", handleMoeInstall)                              // job : paquet fige + installeur du moteur Strata + preset (suivi par /api/engine/job)
+	api("/api/engine", handleEngine)                                       // moteur llama.cpp livrÃ© avec AJEAN : version, variante, restes
+	api("/api/engine/repair", handleEngineRepair)                          // job : retÃ©lÃ©charge le moteur ({variant} en corps)
+	api("/api/engine/job", handleEngineJob)                                // progression + logs du job en cours
+	api("/api/engine/job/dismiss", handleEngineJobDismiss)                 // masque un job termine (plus de relance de l erreur)
+	api("/api/engine/job/cancel", handleEngineJobCancel)                   // arrete le job en cours
+	api("/api/engine/devices", handleBackendDevices)                       // GPU vus par le moteur (noms/ordre propres au backend)
 	api("/api/exl3", handleExl3)                    // moteur ExLlama : machine, version installée (?check=1 : dernière version), modèles EXL3
 	api("/api/exl3/install", handleExl3Install)     // job : installation ({latest:false}, commit validé) ou mise à jour ({latest:true})
 	api("/api/exl3/uninstall", handleExl3Uninstall) // retire le moteur (garde les modèles)
@@ -328,6 +322,13 @@ func newWebMux() *http.ServeMux {
 	api("/api/voice/settings", handleVoiceSettings)            // réglages voix (GET / POST)
 	api("/api/voice/design", handleVoiceDesign)                // crée une voix à partir d'une description
 	api("/api/voice/delete", handleVoiceDelete)                // retire une voix de la bibliothèque
+	// Dictée par API distante (dictation.go, arrivé avec la 0.20) : à distinguer de
+	// /api/voice/stt ci-dessus, qui est le relais audio.cpp LOCAL. Les deux voies
+	// coexistent — l'amont avait amené dictation.go sans enregistrer ses trois
+	// routes, ce qui rendait l'interface de dictée muette (404 sur /api/stt*).
+	api("/api/stt", handleSTT)                                 // audio dicté -> texte (API Whisper distante)
+	api("/api/stt/settings", handleSTTSettings)                // réglages de la dictée (GET / POST)
+	api("/api/stt/models", handleSTTModels)                    // modèles proposés par l'API de transcription
 	api("/api/chat/upload", handleChatUpload)                  // dépose un fichier dans le workspace agent (joint au message suivant)
 	api("/api/chat/file", handleChatFile)                      // télécharge un fichier produit par l'agent (dossier de travail only)
 	api("/api/chat/stop", handleChatStop)                      // interrompt la génération en cours
