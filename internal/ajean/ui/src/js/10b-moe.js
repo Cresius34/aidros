@@ -53,10 +53,14 @@ async function openMoe(presetId){
   // état relu à chaque ouverture : juste après une installation, l'ancien
   // proposait encore « Installer »
   await loadMoe();
-  if(!moeState) return;
+  // false = la fenêtre n'a pas pu s'ouvrir (etat illisible, ou ce poste ne peut
+  // pas charger ce moteur). L'appelant du « + » s'en sert pour basculer sur
+  // l'editeur llama.cpp : sans ce repli, le + serait mort sur une machine sans
+  // moteur MoE (la variante 6900 XT avant son installation).
+  if(!moeState) return false;
   const targetBackend=moeState.preset_backends&&moeState.preset_backends[presetId];
   if(targetBackend&&targetBackend!==(moeState.env||{}).backend){moeBackend=targetBackend;await loadMoe();}
-  if(!(moeState.env||{}).supported && !moeState.modern){ toast(moeState.env.reason || t('moe.chip')); return; }
+  if(!(moeState.env||{}).supported && !moeState.modern){ toast(moeState.env.reason || t('moe.chip')); return false; }
   moeTarget = typeof presetId === 'string' ? presetId : '';
   const s = moeState, env = s.env || {};
   document.getElementById('moe-windows-options').hidden=!s.modern;
@@ -90,6 +94,7 @@ async function openMoe(presetId){
   const mt = document.getElementById('moe-modal-title');
   if(mt && s.version) mt.textContent = moeEngineLabel(s.version);
   showModal('moe-modal');
+  return true;
 }
 function closeMoe(){ hideModal('moe-modal'); }
 

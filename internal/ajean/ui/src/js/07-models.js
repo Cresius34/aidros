@@ -1338,6 +1338,13 @@ function toggleSampling(){
   b.style.display = show ? '' : 'none';
   if(c) c.classList.toggle('open', show);
 }
+// Le « + » des presets : il ouvre la MEME fenetre que l'engrenage d'un preset
+// MoE, sans configuration etablie — les reglages par defaut du moteur. openMoe()
+// sans identifiant laisse moeTarget vide, donc moeRenderQuants(true) part sur le
+// quant conseille (moeQuant = f.recommend). Repli sur l'editeur llama.cpp quand
+// openMoe n'a pas pu ouvrir (moteur MoE absent ou puce non couverte) : sinon le
+// + serait mort sur une machine sans moteur installe.
+const addPreset = async ()=>{ try{ if (await openMoe() !== false) return; }catch(_){} openItem('preset', ''); };
 const openPreset = (id)=>openItem('preset', id);
 const openMem    = (n)=>openItem('mem', n);
 // Fermer la modale n'annule PAS un téléchargement en cours (il vit côté
