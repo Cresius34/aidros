@@ -318,7 +318,7 @@ func handleBackendDevices(w http.ResponseWriter, r *http.Request) {
 		bin = ReadConfig()["BIN"]
 	}
 	if bin == "" || !isFile(bin) {
-		sendJSON(w, 200, map[string]any{"ok": false, "error": "moteur introuvable — choisissez d'abord un moteur"})
+		sendJSON(w, 200, map[string]any{"ok": false, "error": "moteur en cours d'installation — reéessaie dans un instant"})
 		return
 	}
 	// Le moteur MoE (Strata) est un llama.cpp recompilé par son propre installeur :
@@ -641,5 +641,3 @@ func windowsAdapterStats() []windowsAdapterStat {
 	}
 	return stats
 }
-
-
