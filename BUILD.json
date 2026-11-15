@@ -1,0 +1,22 @@
+﻿{
+    "version":  "0.20.1.2 Cresius",
+    "base":  "v0.20.1",
+    "branche":  "fusion-0201",
+    "commit":  "6063a94",
+    "construit_le":  "2026-11-15 08:48:48",
+    "cible":  "cmd/ajean-memory-test",
+    "go":  "1.25.0",
+    "taille_octets":  20079616,
+    "sha256":  "B937421F2FC8A31922FEA0592BBCACD57EA02C86AC21EDFABDBFCF7FA919418F",
+    "moteur_epingle":  "0.1.59",
+    "control_epingle":  "0.1.54",
+    "correction":  "LE + DES PRESETS OUUVRE LE CONFIGURATEUR MOE, PAS LEDITEUR LLAMA.CPP. index.tmpl.html:106 passait openPreset() : le + ouvrait lediteur dont les moteurs sont Precompile / Compile / Personnalise / ExLlama ; MoE ny est pas, donc le + creait un preset de tout moteur SAUF MoE. Le configurateur savait deja ouvrir sans configuration : openMoe() sans identifiant laisse moeTarget vide (10b-moe.js:60), donc moeRenderQuants(true) (l.90) part sur le quant conseille (moeQuant = f.recommend, l.165) â€” litteralement Â« des reglages par defaut Â». addPreset() (07-models.js) appelle openMoe() et ne bascule sur openItem(preset,) quen cas dchec (moteur MoE absent, puce non couverte) ; try/catch autour, car un /api/moe qui leve eteindrait le +. openMoe rend false quand il nuvert pas, true quand il a montre la fenetre : les deux return nus etaient indiscernables de lappelant.",
+    "verifie":  "assemble-ui 1 103 456 o (+137 = le code utile, les commentaires sont evinces) Â· go vet exit 0 Â· go build exit 0 Â· comptes dans le binaire : addPreset() 2x, openMoe 6x, moeRenderQuants 4x, jget(/api/backends)||[] 1x (le garde d hier), Strata 0.1.59 1x, 0.20.1.2 Cresius 1x Â· a zero : handleBackends 0, 0.20.1.3 0 Â· commit 6063a94 = 3 fichiers, +15 -3 (1/1 gabarit, 7/0 07-models, 7/2 10b-moe), etape au hunk pres pour ne pas fondre les gestes du 15/11",
+    "etiquette":  "v0.20.1+rev2 (inchangÃ©e : correction de bug, aucune montÃ©e en rÃ©vision)",
+    "filets":  [
+                   "ajean.exe.avant-r26-20261115-0644",
+                   "ajean.exe.avant-r26b-20261115-0700",
+                   "ajean.exe.avant-r27-20261115-0816",
+                   "ajean.exe.avant-r28-20261115-0848"
+               ]
+}
