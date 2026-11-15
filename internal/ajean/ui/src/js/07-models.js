@@ -506,7 +506,12 @@ async function populateBackend(){
   beOptPath  = (lc.compiled && lc.compiled.bin) || '';
   // Menu « backend détecté » du mode personnalisé : tout ce qu'on trouve dans
   // le dossier backends de ajean (l'utilisateur peut y déposer son propre build).
-  const detected = await jget('/api/backends');
+  // /api/backends a disparu avec la page d'installation llama.cpp de l'amont (0.20) :
+  // son 404, non gardé, faisait crouler tout openItem — la modale s'ouvrait PLEINE
+  // mais restait sous son voile de chargement (le CSS cache .modal-body pendant
+  // .loading), donc le « + » des presets ne s'affichait jamais. Même garde que
+  // populateDlDirs juste en dessous : le menu reste vide, « Personnalisé » répond.
+  let detected = []; try{ detected = (await jget('/api/backends')) || []; }catch(_){}
   const sel = document.getElementById('m-backend-detected');
   let html = '<option value="">'+t('models.backend.or_choose_detected')+'</option>';
   for(const b of (detected||[])) html += '<option value="'+b.path+'">'+b.name+'</option>';
