@@ -183,6 +183,17 @@ func devCacheGet(bin string) ([]map[string]any, bool) {
 	return e.devices, true
 }
 
+// devCacheReset oublie les énumérations en mémoire : après une réinstallation
+// du moteur, la variante (donc les cartes vues) a pu changer.
+func devCacheReset() {
+	devCacheMu.Lock()
+	devCache = map[string]devCacheEntry{}
+	devCacheMu.Unlock()
+	listDevMu.Lock()
+	listDevBin, listDevOut = "", nil
+	listDevMu.Unlock()
+}
+
 func devCachePut(bin string, devs []map[string]any) {
 	devCacheMu.Lock()
 	devCache[bin] = devCacheEntry{devices: devs, at: time.Now()}
@@ -286,28 +297,28 @@ func hasZeroMemory(devs []map[string]any) bool {
 	return false
 }
 
-// handleBackendDevices renvoie les devices vus par le moteur passé en `bin`
-// (celui du preset en cours d'édition). Sans `bin`, on prend celui de la config
-// active.
+// handleBackendDevices renvoie les cartes vues par le moteur d'AJEAN. Le
+// binaire n'est jamais fourni par la requête : c'est toujours celui du moteur
+// installé.
 func handleBackendDevices(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Bin string `json:"bin"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&req)
+	// Le chemin demande par l interface passe avant tout : un preset MoE (Strata)
+	// ou un fork llama.cpp ne sera jamais engineBin(), qui ne connait que le
+	// llama.cpp epingle par AJEAN. Sans cette lecture, l encart Â« appareils Â»
+	// tourne a vide des que le preset actif n est pas le moteur livre.
 	bin := strings.TrimSpace(req.Bin)
 	if bin == "" {
-		// Le frontend de l'amont (10-engine.js) n'envoie PAS de bin : il demande
-		// « le moteur que AJEAN a installé ». ReadConfig()["BIN"] ne suffit pas :
-		// un preset MoE laisse BIN vide alors que le moteur livré est bien présent
-		// (backendsDir()/engine/<tag>). C'est ce qui vidait l'encart « Appareil »
-		// sous Windows, où amd-smi/rocm-smi sont interdits et où cette route est
-		// la seule voie d'énumération. engineBin() est la fonction de l'amont
-		// (v0.20.1) : moteur en développement d'abord, puis moteur installé.
+		// Rien demande : le moteur livre, puis la config.
 		bin = engineBin()
 	}
-	bin = prebuiltResolveBin(bin)
+	if bin == "" {
+		bin = ReadConfig()["BIN"]
+	}
 	if bin == "" || !isFile(bin) {
-		sendJSON(w, 200, map[string]any{"ok": false, "error": "moteur en cours d'installation — réessaie dans un instant"})
+		sendJSON(w, 200, map[string]any{"ok": false, "error": "moteur introuvable — choisissez d'abord un moteur"})
 		return
 	}
 	// Le moteur MoE (Strata) est un llama.cpp recompilé par son propre installeur :
@@ -450,21 +461,8 @@ func listDevicesCached(bin string) []map[string]any {
 }
 
 func vulkanVramGPUs() []map[string]any {
-	// engineBin() et non ReadConfig()["BIN"] : c'est la lecture de l'amont v0.20.1.
-	// Un preset MoE laisse BIN vide alors que le moteur livré est installé, et
-	// cette fonction est alors la SEULE à le trouver. Sur une carte AMD sous
-	// Windows, où amd-smi/rocm-smi sont interdits (issue #259), ce repli est le
-	// seul qui voie la carte : BIN vide y donnait une liste vide, donc un encart
-	// « Appareil » sans GPU.
 	bin := engineBin()
 	if bin == "" {
-		// Variante « précompilée » propre à Cresius : le moteur n'est pas dans
-		// backendsDir()/engine/<tag>, engineBin() ne le voit pas. On retombe sur
-		// la clé BIN, résolue comme avant (prebuiltResolveBin sait retrouver le
-		// dossier llama.cpp-prebuilt quand le chemin visé a bougé).
-		bin = prebuiltResolveBin(ReadConfig()["BIN"])
-	}
-	if bin == "" || !isFile(bin) {
 		return nil
 	}
 	devs := listDevicesCached(bin)
@@ -506,9 +504,13 @@ func vulkanVramGPUs() []map[string]any {
 // usage dans "Shared Usage" (RAM système), "Dedicated Usage" y reste ~0 en
 // permanence. Un GPU DISCRET (carte dédiée) a de la vraie VRAM : c'est lui qui
 // concentre le "Dedicated Usage". On assigne donc les cartes qui ne sont pas
-// intégrées (integratedGPUName) aux LUID triés par Dedicated Usage décroissant ; les
-// cartes intégrées gardent la valeur (proche de 0, donc déjà correcte) issue de
-// --list-devices. Best-effort : une erreur PowerShell laisse "used"/"util" tels quels.
+// intégrées (integratedGPUName) aux LUID triés par Dedicated Usage décroissant.
+// Les cartes INTÉGRÉES reçoivent ensuite, parmi les LUID restants, celui dont le
+// "Shared Usage" est le plus élevé : c'est là qu'est le modèle. Elles gardaient
+// auparavant la valeur de --list-devices, qui ne compte pas la mémoire partagée —
+// la jauge restait presque vide pendant qu'un modèle de 15 Go tournait sur la
+// puce Intel (et remplissait la RAM, puisque c'est la même mémoire).
+// Best-effort : une erreur PowerShell laisse "used"/"util" tels quels.
 func applyWindowsDedicatedUsage(gpus []map[string]any) {
 	if runtime.GOOS != "windows" || len(gpus) == 0 {
 		return
@@ -547,11 +549,9 @@ func applyWindowsDedicatedUsage(gpus []map[string]any) {
 	assignIntegratedUsage(gpus, adapters[min(ai, len(adapters)):])
 }
 
-// assignIntegratedUsage donne aux cartes intÃ©grÃ©es la mÃ©moire PARTAGÃ‰E (plus la
-// dÃ©diÃ©e, quelques centaines de Mio rÃ©servÃ©s par le BIOS) et l'utilisation des
-// adaptateurs restants, le plus chargÃ© d'abord. Une puce intÃ©grÃ©e n'a pas de VRAM
-// dÃ©diÃ©e : son modÃ¨le tient dans la RAM systÃ¨me, et Â« Dedicated Usage Â» y reste ~0
-// mÃªme sous charge. Sans cette piÃ¨ce, un iGPU affichait 0 Mo utilisÃ©.
+// assignIntegratedUsage donne aux cartes intégrées la mémoire PARTAGÉE (plus la
+// dédiée, quelques centaines de Mio réservés par le BIOS) et l'utilisation des
+// adaptateurs restants, le plus chargé d'abord.
 func assignIntegratedUsage(gpus []map[string]any, rest []windowsAdapterStat) {
 	sort.SliceStable(rest, func(i, j int) bool { return rest[i].SharedMiB > rest[j].SharedMiB })
 	ri := 0
@@ -628,7 +628,7 @@ func windowsAdapterStats() []windowsAdapterStat {
 	var parsed struct {
 		Items []struct {
 			Dedicated int64 `json:"dedicated"`
-			Shared     int64 `json:"shared"`
+			Shared    int64 `json:"shared"`
 			Util      int   `json:"util"`
 		} `json:"items"`
 	}
@@ -642,14 +642,4 @@ func windowsAdapterStats() []windowsAdapterStat {
 	return stats
 }
 
-// devCacheReset jette le cache des cartes vues par le moteur : la variante
-// installee change ce que le moteur declare, donc ce que nous avons vu ne vaut plus.
-func devCacheReset() {
-	devCacheMu.Lock()
-	devCache = map[string]devCacheEntry{}
-	devCacheMu.Unlock()
-	listDevMu.Lock()
-	listDevBin, listDevOut = "", nil
-	listDevMu.Unlock()
-}
 

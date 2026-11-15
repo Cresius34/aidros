@@ -58,6 +58,7 @@ func preflightEngine() error {
 		_, _, err := moePreflight(cfg)
 		return err
 	}
+
 	// Preset d'un moteur retiré en 0.20 (ExLlama) : il ne peut plus démarrer.
 	if name := removedEngine(cfg); name != "" {
 		return removedEngineError(name)
