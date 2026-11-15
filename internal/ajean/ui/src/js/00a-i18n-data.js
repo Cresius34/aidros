@@ -461,9 +461,6 @@ fr: {
   "jean.act_look": "Regarde l'image…",
   "jean.act_machine": "S'en occupe sur la machine…",
   "jean.act_work": "Travaille…",
-  "chat.mode_fast": "Rapide",
-  "chat.mode_fast_hint": "bash, write, edit",
-  "chat.mode_base": "Modèle de base",
   "chat.history_search": "Rechercher partout…",
   "chat.history_no_results": "aucune conversation ne correspond.",
   "memory.mode_heading": "Mode",
@@ -478,7 +475,6 @@ fr: {
   "projects.manage": "Gérer les projets…",
   "chat.new_chat_btn": "Nouvelle conversation",
   "chat.history_btn": "Historique",
-  "chat.mode_base_hint": "sans agent ni outils",
   "settings.section_title": "Paramètres",
   "settings.general_subhead": "Général",
   "settings.link_browser_label": "liens externes dans",
@@ -2037,9 +2033,6 @@ en: {
   "jean.act_look": "Looking at the image…",
   "jean.act_machine": "Handling it on the machine…",
   "jean.act_work": "Working…",
-  "chat.mode_fast": "Fast",
-  "chat.mode_fast_hint": "bash, write, edit",
-  "chat.mode_base": "Base model",
   "chat.history_search": "Search everywhere…",
   "chat.history_no_results": "no matching conversation.",
   "memory.mode_heading": "Mode",
@@ -2054,7 +2047,6 @@ en: {
   "projects.manage": "Manage projects…",
   "chat.new_chat_btn": "New conversation",
   "chat.history_btn": "History",
-  "chat.mode_base_hint": "no agent, no tools",
   "settings.section_title": "Settings",
   "settings.general_subhead": "General",
   "settings.link_browser_label": "external links in",
@@ -3158,3 +3150,4 @@ en: {
   "models.dl.file_n_prefix": "file ",
 }
 };
+

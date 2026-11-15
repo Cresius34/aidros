@@ -24,24 +24,10 @@ import (
 
 // ─── configuration & état ───────────────────────────────────────────────────
 
-// internetEnabled : l'accès web reste coupable — l'arbitrage du 14/11 le garde,
-// mais ACTIF PAR DÉFAUT, comme le mode agent (chat_agent.go) : le moteur web est
-// intégré (web_fetch_go.go), il ne demande aucun réglage pour fonctionner, donc
-// l'absence de réglage vaut « actif ». Seul un arrêt explicite le coupe, noté "0".
-// Les outils web restent de plus liés au mode agent (chat_internet_tools.go).
-func internetEnabled() bool { return getStr(bkState, "internet") != "0" }
-
-// setInternetEnabled note l'état de la même façon que setAgentEnabled : "1" pour
-// actif, "0" pour coupé. Le lecteur ne consulte que "0", ce qui laisse « aucun
-// réglage posé » signifier « actif » — le comportement voulu sur une base neuve,
-// et ce que teste TestStore* (store_test.go : « base neuve : agent et internet
-// actifs attendus »).
-func setInternetEnabled(on bool) error {
-	if on {
-		return putStr(bkState, "internet", "1")
-	}
-	return putStr(bkState, "internet", "0")
-}
+// internetEnabled : l'accès web fait partie des outils de l'IA, toujours
+// disponible (il n'y a plus d'interrupteur depuis la 0.20). Le moteur intégré
+// ne demande aucun réglage. Les outils restent liés au mode agent.
+func internetEnabled() bool { return true }
 
 // ─── URL & normalisation ────────────────────────────────────────────────────
 

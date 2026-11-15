@@ -141,22 +141,6 @@ func jeanEmbedBin() string {
 	if b := strings.TrimSpace(readEmbeddingConfig().Bin); isFile(b) && strings.EqualFold(filepath.Base(b), exe) {
 		return b
 	}
-	// 2) un précompilé : dossier par version, ou fichiers posés à la racine.
-	if isFile(filepath.Join(prebuiltDir(), exe)) {
-		return filepath.Join(prebuiltDir(), exe)
-	}
-	if ents, err := os.ReadDir(prebuiltDir()); err == nil {
-		var dirs []string
-		for _, e := range ents {
-			if e.IsDir() && isFile(filepath.Join(prebuiltDir(), e.Name(), exe)) {
-				dirs = append(dirs, e.Name())
-			}
-		}
-		sort.Strings(dirs)
-		if len(dirs) > 0 {
-			return filepath.Join(prebuiltDir(), dirs[len(dirs)-1], exe)
-		}
-	}
 	if b := strings.TrimSpace(ReadConfig()["BIN"]); b != "" && strings.Contains(filepath.Base(b), "llama-server") && isFile(b) {
 		return b
 	}
@@ -771,7 +755,7 @@ func jeanEmbedDownload() {
 		}
 		_ = os.MkdirAll(filepath.Dir(dst), 0o755)
 		tmp := dst + ".part"
-		err := downloadWithProgress(jeanEmbedModelURL, tmp, jeanEmbedModelSize, func(string) {})
+		err := engineFetchOnce(context.Background(), jeanEmbedModelURL, tmp, jeanEmbedModelSize, func(string) {})
 		if err == nil {
 			if fi, e := os.Stat(tmp); e != nil || fi.Size() != jeanEmbedModelSize {
 				err = fmt.Errorf("téléchargement incomplet")
@@ -832,3 +816,5 @@ func handleJeanEmbed(w http.ResponseWriter, r *http.Request) {
 	}
 	sendJSON(w, 200, map[string]any{"ok": true, "status": jeanEmbedState()})
 }
+
+

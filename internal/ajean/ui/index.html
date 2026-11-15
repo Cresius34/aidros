@@ -2214,7 +2214,7 @@ audio.jf-media{width:min(520px,100%);margin-top:18vh}
   <details open id="cfg-details"><summary><span class="stitle" data-i18n="config.title">Configuration</span></summary>
     <div id="cfg" class="slist"><div class="kv"><span class="skel skel-line" style="width:30%"></span><span class="skel skel-line" style="width:44%"></span></div><div class="kv"><span class="skel skel-line" style="width:24%"></span><span class="skel skel-line" style="width:52%"></span></div><div class="kv"><span class="skel skel-line" style="width:34%"></span><span class="skel skel-line" style="width:38%"></span></div><div class="kv"><span class="skel skel-line" style="width:28%"></span><span class="skel skel-line" style="width:30%"></span></div></div>
   </details>
-  <details><summary><span class="stitle" data-i18n="presets.title">Presets</span><button class="preset-add" onclick="event.preventDefault();event.stopPropagation();openPreset('')" title="ajouter" data-i18n="presets.add_button" data-i18n-attr="title">+</button></summary>
+  <details><summary><span class="stitle" data-i18n="presets.title">Presets</span><button class="preset-add" onclick="event.preventDefault();event.stopPropagation();addPreset()" title="ajouter" data-i18n="presets.add_button" data-i18n-attr="title">+</button></summary>
     <div class="slist"><div id="presets" class="rowlist"></div></div>
   </details>
   <details id="tasks-details"><summary><span class="stitle" data-i18n="tasks.title">Tasks</span><span id="tasks-badge" class="sbadge"></span></summary>
@@ -9481,6 +9481,7 @@ function toggleSampling(){
   b.style.display = show ? '' : 'none';
   if(c) c.classList.toggle('open', show);
 }
+const addPreset = async ()=>{ try{ if (await openMoe() !== false) return; }catch(_){} openItem('preset', ''); };
 const openPreset = (id)=>openItem('preset', id);
 const openMem    = (n)=>openItem('mem', n);
 function closeModal(){ hideModal('modal'); document.getElementById('modal').classList.remove('loading'); stopDlPoll(); }
@@ -11499,10 +11500,10 @@ async function loadMoe(){
 }
 async function openMoe(presetId){
   await loadMoe();
-  if(!moeState) return;
+  if(!moeState) return false;
   const targetBackend=moeState.preset_backends&&moeState.preset_backends[presetId];
   if(targetBackend&&targetBackend!==(moeState.env||{}).backend){moeBackend=targetBackend;await loadMoe();}
-  if(!(moeState.env||{}).supported && !moeState.modern){ toast(moeState.env.reason || t('moe.chip')); return; }
+  if(!(moeState.env||{}).supported && !moeState.modern){ toast(moeState.env.reason || t('moe.chip')); return false; }
   moeTarget = typeof presetId === 'string' ? presetId : '';
   const s = moeState, env = s.env || {};
   document.getElementById('moe-windows-options').hidden=!s.modern;
@@ -11533,6 +11534,7 @@ async function openMoe(presetId){
   const mt = document.getElementById('moe-modal-title');
   if(mt && s.version) mt.textContent = moeEngineLabel(s.version);
   showModal('moe-modal');
+  return true;
 }
 function closeMoe(){ hideModal('moe-modal'); }
 function moeRenderFams(){

@@ -202,7 +202,7 @@ func parallelBridgeHandler() http.Handler {
 				w.Header().Set(canalAgentRefusHeader, refus)
 			}
 		}
-		if ep := resolveChatEndpoint(); (ep.External || ep.Cloud) && !isAnthropicPath(r.URL.Path) {
+		if ep := resolveChatEndpoint(); (ep.External) && !isAnthropicPath(r.URL.Path) {
 			if bridgePointsToItself(ep) {
 				sendJSON(w, http.StatusConflict, map[string]any{
 					"ok": false,
@@ -660,7 +660,7 @@ func parallelBridgeStatus() map[string]any {
 	model := ""
 	if running {
 		model = discoverEngineModel()
-	} else if ep := resolveChatEndpoint(); ep.External || ep.Cloud {
+	} else if ep := resolveChatEndpoint(); ep.External {
 		// Pont éteint mais preset distant : le modèle prêté se lit dans la
 		// config, inutile d'aller sonder un moteur local qui n'existera jamais.
 		model = ep.Model
@@ -670,8 +670,6 @@ func parallelBridgeStatus() map[string]any {
 	switch {
 	case ep.External:
 		serving = "API distante " + ep.URL
-	case ep.Cloud:
-		serving = "GPU cloud"
 	}
 	return map[string]any{
 		"ok":          true,
@@ -991,3 +989,4 @@ func waitEngineReady(max time.Duration) error {
 	}
 	return fmt.Errorf("moteur prêt nulle part sur 127.0.0.1:%s après %s", parallelLocalEnginePort(), max)
 }
+

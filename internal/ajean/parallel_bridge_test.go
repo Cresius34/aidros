@@ -307,7 +307,7 @@ func TestParallelBridgeEndToEndTwoInstances(t *testing.T) {
 	if ep.Key != "" {
 		req.Header.Set("Authorization", "Bearer "+ep.Key)
 	}
-	resp, err := doLLM(context.Background(), req, body, ep)
+	resp, err := doLLM(req)
 	if err != nil {
 		t.Fatalf("A → pont de B : %v", err)
 	}
@@ -342,7 +342,7 @@ func TestParallelBridgeEndToEndTwoInstances(t *testing.T) {
 	req2.Header.Set("Accept", "text/event-stream")
 	req2.Header.Set("Authorization", "Bearer "+epStream.Key)
 	restoreB()
-	resp2, err := doLLM(context.Background(), req2, []byte(`{"stream":true}`), epStream)
+	resp2, err := doLLM(req2)
 	if err != nil {
 		t.Fatalf("stream A → pont de B : %v", err)
 	}
@@ -523,3 +523,4 @@ func TestParallelConnectRefusesOwnBridge(t *testing.T) {
 		t.Fatalf("preset non enregistré : %+v", ReadConfig())
 	}
 }
+

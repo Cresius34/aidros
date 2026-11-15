@@ -106,7 +106,7 @@ func parallelNetworkArgs(args []string) []string {
 }
 
 func normalizeParallelConfig(cfg map[string]string) (map[string]string, error) {
-	if isCloudConfig(cfg) || (isMoeConfig(cfg) && !isStrataMoe(cfg)) {
+	if isMoeConfig(cfg) && !isStrataMoe(cfg) {
 		return nil, fmt.Errorf("Cloud et les anciens moteurs MoE système restent désactivés ; utiliser le moteur MoE Windows portable")
 	}
 	next := make(map[string]string, len(cfg)+2)
@@ -285,3 +285,4 @@ func saveParallelSharedPreset(cfg map[string]string) error {
 	}
 	return putStr(bkState, "active_preset", id)
 }
+

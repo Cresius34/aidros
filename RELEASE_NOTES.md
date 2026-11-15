@@ -1,4 +1,5 @@
-# Notes de version — AJEAN `0.20.1.1 Cresius` / étiquette `v0.20.1+rev1`
+# Notes de version — AJEAN `0.18.17.1 Cresius` / étiquette `v0.18.17+rev1`
+Version corrective de la 0.20 : reprise d'une installation passée par la 0.19, et éditeur des presets Service.
 
 **Projet dérivé, usage personnel.** Cette version est construite sur le dépôt
 `Cresius34/ajean`, fork de [**nathaninline/ajean**](https://github.com/nathaninline/ajean)
@@ -8,7 +9,7 @@ validés sur d'autres machines, ni garantis transposables. Pour installer AJEAN,
 prenez les versions publiées sur
 [nathaninline/ajean](https://github.com/nathaninline/ajean/releases/latest).
 
-Cette version **absorbe l'amont `v0.20.1`** — donc aussi, en cascade, `v0.18.17` et
+Cette version **absorbe l'amont `v0.18.17`** — donc aussi
 [`v0.18.12`](#amont-v01812--pré-chauffage-du-prompt-paires-doutils-incomplètes),
 [`v0.18.13`](#amont-v01813--moteur-exllama-exl3-en-un-clic),
 [`v0.18.14`](#amont-v01814--cartes-exllama-qui-déportaient-llamacpp),
@@ -16,61 +17,9 @@ Cette version **absorbe l'amont `v0.20.1`** — donc aussi, en cascade, `v0.18.1
 [`v0.18.16`](#amont-v01816--exllama-depuis-linterface-cuda-linux-chat-plus-fluide) — dans la
 ligne privée `Cresius`. Le socle est celui de l'amont ; la ligne privée se réduit à ce qu'elle apporte encore.
 
-## Amont `v0.20.1` — la fusion du 14/11, et ses deux régressions
+## En-tête
 
-Campagne du 14/11/2026, montée sur la branche de travail `fusion-0201`. L'amont
-`v0.20.1` (commit `11a5808`) **reprend une installation `0.19` corrigée** et ajoute
-l'**éditeur des presets Service**. Il amène aussi son **propre frontend du moteur
-llama.cpp** — `engine.go`, `engine_install.go`, `engine_status.go`,
-`engine_detect.go`, `web_engine.go`, `10-engine.js` — avec ses **sept routes
-`/api/engine`**.
-
-**Deux arbitrages de l'humain, appliqués tels quels :**
-
-1. **Internet redevient activé par défaut** : `internetEnabled()` =
-   `getStr(bkState, "internet") != "0"`, sur le modèle exact de `chat_agent.go:15`.
-   Seul un arrêt explicite écrit `"0"`.
-2. **Le frontend llama.cpp de l'amont est gardé, le nôtre retiré**
-   (`web_llamacpp.go` et ses douze routes), et les sept routes `/api/engine` de
-   l'amont sont amenées.
-
-**Les deux régressions produites par la fusion — vues à l'écran, causes MESURÉES :**
-
-| Symptôme | Cause mesurée | Réparation |
-| --- | --- | --- |
-| Le **panneau Moteur**, que l'humain a choisi, rendait **404** | la fusion n'avait **jamais** amené les sept routes `/api/engine` : le frontend était greffé **sans ses routes** | les routes sont amenées dans `web_engine.go` |
-| Le **panneau Appareil** ne nommait plus la carte | la garde de l'amont testait la clé `BIN` du preset, que **notre preset MoE laisse vide** | garde déplacée **après** la lecture du `MODEL` (`sys_service.go`) et branche `serviceCmdOf` placée **avant** `isExternalConfig` |
-
-La seconde se prouve par un test : `internal/ajean/preflight_moe_cresius_test.go`
-est **vert** tel quel, **rouge** si l'on remet la ligne de l'amont. Un troisième
-défaut est réparé au passage : mon propre filtre de fusion emportait
-`/api/moe/install` parce que **son commentaire** citait `/api/llamacpp/job` — le
-moteur Strata perdait sa page d'installation. Les cinq tests rouges de la fusion
-sont éteints **sans qu'un seul soit supprimé** : deux relèvent de l'ordre de la
-garde ci-dessus, deux du fait que le mode agent **naît actif** depuis `0.20` (c'est
-au test de l'éteindre), un au fichier de version.
-
-**Vérifié en direct sous le binaire posé** (`0.20.1.1 Cresius`, SHA-256
-`26B1B8404839E6A6…`) : `GET /api/vram` rend la `Radeon AI PRO R9700`
-(32 624 MiB), `POST /api/engine/devices` la rend aussi (`free_mib` rempli),
-`18080/health` répond `model: swift-1.5-iq3_s`, et une génération passe —
-**75 jetons rendus à 83,6 jetons/s de décodage**, préfill 60,7 jetons/s,
-`finish: stop`.
-
-**Ce que la pose a réellement coûté** : arrêt de l'arbre du moteur, bascule du
-binaire, reprise — **environ 60 secondes** (interface de retour à 5 s, carte rendue
-à 15 s, moteur démarré à 36 s). ⚠️ Ce temps est celui d'**un lancement depuis un
-preset, relancé à la main par l'humain** : une série de redémarrages enchaînés par
-le moteur, dans son propre journal, montait à 154–208 s. **Ce sont deux régimes
-différents, et je les avais pris l'un pour l'autre.**
-
-## En-tête de la révision précédente (`0.18.17.1 Cresius`)
-
-La révision que cette version remplace avait pour titre le socle `v0.18.17`. Son
-en-tête est conservé tel quel ci-dessous, pour que l'historique reste lisible ; la
-révision en cours est décrite plus haut.
-
-Le socle amont de cette révision était `v0.18.17` : **l'erreur d'envoi puis le redémarrage après un compactage
+Le socle amont est `v0.18.17` : **l'erreur d'envoi puis le redémarrage après un compactage
 en plein tour** sont réparés (#181) ; l'**effort de réflexion** part en `reasoning_effort`
 natif vers les API externes, qui rejetaient le champ propre à llama.cpp (#178) ; la **mémoire
 GPU des cartes AMD** cesse d'être inversée sur les portables où la puce Radeon intégrée
@@ -79,6 +28,14 @@ plus la durée, les jetons et le débit (#173). S'y ajoutent deux fonctions neuv
 de Jean** (reconnaissance et synthèse, branchées sur un serveur `audio.cpp` lancé à part) et
 **le gestionnaire de fichiers du mode Jean**, qui retrouve un fichier **par le sens** et non
 plus seulement par le nom.
+- **Un modèle de la 0.18 lancé par sa propre unité système ne redémarrait plus après la mise à jour.** Son preset pointait encore vers l'unité que la 0.19 avait remplacée par un service ; le moteur s'arrêtait sur une erreur sudo. Au premier lancement, ce preset devient un preset Service avec la commande du service de la 0.19, et ses autres réglages sont gardés.
+- **`sudo ajean install` laissait des restes de la 0.19.** Les unités `ajean-svc-…` étaient seulement arrêtées. Elles sont maintenant supprimées, comme le gardien de mémoire (`ajean-guard`) et l'assistant administrateur de la 0.19 (`/usr/local/sbin/ajean-svc` et sa règle sudoers), que la 0.20 n'utilise plus.
+- **Les étapes affichées à la fin de `ajean install`** citaient des commandes retirées en 0.20 (`ajean llamacpp install`, `ajean edit`).
+
+## Presets Service
+
+- **La commande de lancement est affichée en entière** : le champ prend la hauteur de son texte, plus besoin de faire défiler.
+- **Plus de section API dans un preset Service.** L'adresse est déduite du `--port` de la commande et la clé de son `--api-key`. Restent le modèle, la réflexion, le contexte, la vision et le test de connexion. Une adresse ou une clé déjà enregistrées sur un preset restent utilisées.
 
 Côté ligne privée, cette révision 1 sur la nouvelle base conserve ce qui faisait sa raison
 d'être : le **catalogue de modèles lu dans le moteur** (l'écran Moteur affiche les familles
@@ -486,29 +443,6 @@ dès qu'ils portent des accents (illisibles sous PowerShell 5.1 sinon), les `.cm
 n'en portent **jamais**. Un `.exe` n'est jamais recodé en texte (mesure :
 19 946 496 → 29 027 591 octets).
 
-## La vision et la génération d'images : deux choses distinctes
-
-Il ne faut pas les confondre, et le code les sépare :
-
-- **La vision** (lire une image dans la conversation) **est installée et démarrée**
-  par AJEAN, quand le préréglage porte `MOE_VISION=1` : `backend_moe_strata.go`
-  vérifie l'exécutable et le `mmproj` de l'encodeur, et refuse d'activer l'option
-  sans eux — « encodeur vision absent ; préparer le modèle avec la vision avant de
-  l'activer ». Ce choix se fait **à la préparation du modèle**, pas après. Le
-  démarrage mesuré du 14/11 rend `strata-vision: model files loaded in 3.9 s`,
-  `warmed up at 1024 image tokens in 1.7 s`, et la santé du moteur répond
-  `images: true`.
-- **Le générateur d'images** (produire une image) **n'est pas une fonction de ce
-  fork**. `delete(out, "images")` dans `backend_moe_strata.go` : aucun générateur
-  n'est installé ni démarré par AJEAN. Un prototype mesuré, hors dépôt, est décrit
-  plus bas — il n'est ni installé, ni paqueté, ni garanti.
-
-⚠️ **La ligne qui retire la vision est un piège mesuré** : la réserve de VRAM
-choisie dans l'application gagnait sur les arguments de l'utilisateur, et la vision
-partait avec eux (le commentaire `backend_moe_strata.go:221` le consigne depuis le
-31/10). Elle est maintenue explicitement depuis, et `--vision` n'est retiré que
-quand `MOE_VISION` vaut autre chose que `1`.
-
 ## La génération d'images : un prototype mesuré, hors dépôt
 
 **À lire avant tout le reste : la génération d'images n'est pas une fonction de ce
@@ -616,23 +550,17 @@ livraison applique la même règle
 
 | Élément | Valeur |
 | --- | --- |
-| Version affichée | `0.20.1.1 Cresius` |
-| Étiquette Git | `v0.20.1+rev1` |
-| Socle amont | `v0.20.1` (commit `11a5808`) |
-| Moteur MoE | **Strata `0.1.59`** installé sous `data\moe\strata-0.1.59-hip\engine\` — le paquet est **plat** : il ne fournit que `engine\`, le reste (`python\`, `serve\`, les profils d'experts) vient du socle `0.1.54` resté en place |
+| Version affichée | `0.18.17.1 Cresius` |
+| Étiquette Git | `v0.18.17+rev1` |
+| Socle amont | `v0.18.16` |
+| Moteur MoE | Strata `0.2.8` — paquet moteur `0.1.54`, contrôle `0.1.54`, cinq paquets par carte, SHA-256 vérifiés |
 | Catalogue de modèles | **lu dans le moteur** (`tools/strata_mcp.py` importe `setup.py`) : 8 familles, 25 tailles, repli sur la liste interne si le moteur est muet |
 | Encodeur d'embeddings | EmbeddingGemma 2 `Q8_0`, 768 dimensions (mémoire **et** journal) |
-| Précédent | `0.18.17.1 Cresius`, étiquettes `v0.18.17+rev1` (la fusion `v0.18.17`) puis `v0.18.17+rev2` (`01d62e4`, les cinq briques du 1/11 : `mem_grep` déclaré, l'outil refusé relu et réinjecté, la balise d'auteur du canal) — **millésime inchangé** à `0.18.17.1 Cresius` : ces correctifs n'avaient pas été posés en binaire |
-| Binaire posé | `0.20.1.1 Cresius`, 19,36 Mo, SHA-256 `26B1B8404839E6A6…`, posé le 14/11 à 16:56 depuis l'atelier `fusion-0201` ; point de retour sous `archive-0.20.1.2 Cresius\` (l'ancien `0.20.1.2`, SHA `B9600B76…`, garde sa place) |
+| Précédent | `0.18.16.4 Cresius`, étiquette `v0.18.16+rev4` (moteur Strata `0.2.8`) |
 
 La règle de nommage de la ligne privée : **le numéro de l'amont, tel quel, suivi
-de notre numéro de révision**. `0.20.1` + révision `1` → `0.20.1.1 Cresius`,
-étiquette `v0.20.1+rev1`. Les deux désignent le même build. ⚠️ Le millésime se monte
-à **quatre endroits** et pas un de moins : `cmd/ajean-memory-test/versioninfo.json`
-(et ses deux `.syso`, qui sont ce qui équipe réellement l'exécutable),
-`internal/ajean/parallel_profile.go` (`buildFlavorSuffix`), le lanceur là où il y en
-a un. **Pas** `cmd/ajean/versioninfo.json`, **pas** `const Version` : un test de
-l'amont compare l'un à l'autre et ils restent à la base nue.
+de notre numéro de révision**. `0.18.16` + révision `4` → `0.18.17.1 Cresius`,
+étiquette `v0.18.17+rev1`. Les deux désignent le même build.
 
 ## Ce que la révision 2 ajoute sur la base `v0.18.16`
 
@@ -731,14 +659,14 @@ ajean update
 ou, depuis le dépôt :
 
 1. `git clone https://github.com/Cresius34/ajean`
-2. `git checkout v0.20.1+rev1`
+2. `git checkout v0.18.17+rev1`
 3. `go build -o ajean.exe ./cmd/ajean`
 
 ---
 
 # English
 
-# Release notes — AJEAN `0.20.1.1 Cresius` / tag `v0.20.1+rev1`
+# Release notes — AJEAN `0.18.17.1 Cresius` / tag `v0.18.17+rev1`
 
 **Derived project, personal use.** This build comes from the `Cresius34/ajean`
 repository, a fork of [**nathaninline/ajean**](https://github.com/nathaninline/ajean)
@@ -756,58 +684,9 @@ This build **absorbs upstream `v0.18.17`** — and therefore
 [`v0.18.16`](#upstream-v01816--exllama-from-the-interface-cuda-on-linux-smoother-chat) — into the
 `Cresius` patch line. The base is upstream's; the private line is reduced to what it still adds.
 
-## Upstream `v0.20.1` — the 14/11 merge, and the two regressions it produced
+## Headline
 
-Campaign of 14/11/2026, on the working branch `fusion-0201`. Upstream `v0.20.1`
-(commit `11a5808`) **resumes a corrected `0.19` installation** and adds the
-**Service preset editor**. It also brings **its own llama.cpp engine frontend** —
-`engine.go`, `engine_install.go`, `engine_status.go`, `engine_detect.go`,
-`web_engine.go`, `10-engine.js` — with its **seven `/api/engine` routes**.
-
-**Two rulings from the human, applied as given:**
-
-1. **Internet is enabled by default again**: `internetEnabled()` =
-   `getStr(bkState, "internet") != "0"`, on the exact model of `chat_agent.go:15`.
-   Only an explicit stop writes `"0"`.
-2. **Upstream's llama.cpp frontend is kept, ours is removed** (`web_llamacpp.go`
-   and its twelve routes), and upstream's seven `/api/engine` routes are brought in.
-
-**The two regressions the merge produced — seen on screen, causes MEASURED:**
-
-| Symptom | Measured cause | Fix |
-| --- | --- | --- |
-| The **Engine panel**, which the human chose, returned **404** | the merge had **never** brought the seven `/api/engine` routes: the frontend was grafted on **without its routes** | routes brought in `web_engine.go` |
-| The **Device panel** no longer named the card | upstream's guard tested the preset's `BIN` key, which **our MoE preset leaves empty** | guard moved **after** the `MODEL` read (`sys_service.go`), and the `serviceCmdOf` branch placed **before** `isExternalConfig` |
-
-The second is proven by a test: `internal/ajean/preflight_moe_cresius_test.go` is
-**green** as it stands, **red** if upstream's line is put back. A third defect is
-fixed along the way: my own merge filter was swallowing `/api/moe/install` because
-**its comment** cited `/api/llamacpp/job` — the Strata engine was losing its
-installation page. All five red tests of the merge are silenced **without deleting a
-single one**: two come from the guard ordering above, two from the fact that agent
-mode **is born active** since `0.20` (it is the test that must switch it off), one
-from the version resource.
-
-**Verified live under the shipped binary** (`0.20.1.1 Cresius`, SHA-256
-`26B1B8404839E6A6…`): `GET /api/vram` returns the `Radeon AI PRO R9700`
-(32 624 MiB), `POST /api/engine/devices` returns it too (`free_mib` filled),
-`18080/health` answers `model: swift-1.5-iq3_s`, and a generation goes through —
-**75 tokens rendered at 83.6 tokens/s of decoding**, prefill 60.7 tokens/s,
-`finish: stop`.
-
-**What the swap actually cost**: stopping the engine tree, swapping the binary,
-resuming — **about 60 seconds** (UI back at 5 s, card rendered at 15 s, engine
-started at 36 s). ⚠️ That figure is **a launch from a preset, restarted by hand by
-the human**: a run of restarts chained by the engine itself, in its own log, reached
-154–208 s. **Those are two different regimes, and I had taken one for the other.**
-
-## Headline of the previous revision (`0.18.17.1 Cresius`)
-
-The revision this one replaces was titled on the `v0.18.17` base. Its headline is
-kept as it stood, so the history stays readable; the current revision is described
-above.
-
-That revision's upstream base was `v0.18.17`: the **send error and restart after a compaction in the middle
+The upstream base is `v0.18.17`: the **send error and restart after a compaction in the middle
 of a turn** are fixed (#181); the **reasoning effort** now goes out as native `reasoning_effort`
 to external APIs, which used to reject the llama.cpp-specific field (#178); AMD **GPU memory**
 is no longer inverted on laptops where the integrated Radeon chip was taken for a dedicated
@@ -1197,29 +1076,6 @@ they carry accents (unreadable under PowerShell 5.1 otherwise), `.cmd` files nev
 carry one. An `.exe` is never re-encoded as text (measured: 19,946,496 →
 29,027,591 bytes).
 
-## Vision and image generation: two different things
-
-They should not be confused, and the code separates them:
-
-- **Vision** (reading an image inside the conversation) **is installed and started**
-  by AJEAN when the preset carries `MOE_VISION=1`: `backend_moe_strata.go` checks the
-  encoder's executable and its `mmproj`, and refuses to turn the option on without
-  them — "encodeur vision absent ; préparer le modèle avec la vision avant de
-  l'activer". The choice is made **when the model is prepared**, not afterwards. The
-  measured start of 14/11 reports `strata-vision: model files loaded in 3.9 s`,
-  `warmed up at 1024 image tokens in 1.7 s`, and the engine health answers
-  `images: true`.
-- **The image generator** (producing an image) **is not a feature of this fork**.
-  `delete(out, "images")` in `backend_moe_strata.go`: no generator is installed or
-  started by AJEAN. A measured prototype, outside the repository, is described
-  below — it is not installed, not packaged, not guaranteed.
-
-⚠️ **The line that removes vision is a measured trap**: the VRAM reserve chosen in
-the application used to win over the user's arguments, and vision left with them
-(the comment at `backend_moe_strata.go:221` has recorded it since 31/10). It is now
-maintained explicitly, and `--vision` is removed only when `MOE_VISION` is anything
-other than `1`.
-
 ## Image generation: a measured prototype, outside the repository
 
 **Read this first: image generation is not a feature of this build.** The
@@ -1407,23 +1263,17 @@ rule (`data\scripts\Preparer-Paquet-Sans-Data.ps1`).
 
 | Item | Value |
 | --- | --- |
-| Version displayed | `0.20.1.1 Cresius` |
-| Git tag | `v0.20.1+rev1` |
-| Upstream base | `v0.20.1` (commit `11a5808`) |
-| MoE engine | **Strata `0.1.59`** installed under `data\moe\strata-0.1.59-hip\engine\` — the package is **flat**: it only provides `engine\`, while `python\`, `serve\` and the expert profiles come from the `0.1.54` base left in place |
+| Version displayed | `0.18.17.1 Cresius` |
+| Git tag | `v0.18.17+rev1` |
+| Upstream base | `v0.18.16` |
+| MoE engine | Strata `0.2.8` — engine package `0.1.54`, control `0.1.54`, five packages per card, SHA-256 verified |
 | Model catalogue | **read from the engine** (`tools/strata_mcp.py` imports `setup.py`): 8 families, 25 sizes, falls back to the internal list when the engine is mute |
 | Embedding encoder | EmbeddingGemma 2 `Q8_0`, 768 dimensions (memory **and** journal) |
-| Previous | `0.18.17.1 Cresius`, tags `v0.18.17+rev1` (the `v0.18.17` merge) then `v0.18.17+rev2` (`01d62e4`, the five bricks of 1/11: `mem_grep` declared, the refused tool read back and re-injected, the bridge author tag) — **version stamp unchanged** at `0.18.17.1 Cresius`: those fixes had not been shipped as a binary |
-| Binary shipped | `0.20.1.1 Cresius`, 19.36 MB, SHA-256 `26B1B8404839E6A6…`, put in place on 14/11 at 16:56 from the `fusion-0201` worktree; rollback point under `archive-0.20.1.2 Cresius\` (the old `0.20.1.2`, SHA `B9600B76…`, keeps its place) |
+| Previous | `0.18.16.4 Cresius`, tag `v0.18.16+rev4` (Strata `0.2.8` engine) |
 
 The private line's naming rule: **upstream's number, as is, followed by our
-revision number**. `0.20.1` + revision `1` → `0.20.1.1 Cresius`, tag
-`v0.20.1+rev1`. Both names denote the same build. ⚠️ The version stamp is mounted in
-**four** places, not one fewer: `cmd/ajean-memory-test/versioninfo.json` (and its two
-`.syso`, which are what actually equips the executable),
-`internal/ajean/parallel_profile.go` (`buildFlavorSuffix`), and the launcher wherever
-one exists. **Not** `cmd/ajean/versioninfo.json`, **not** `const Version`: an
-upstream test compares the two, and they stay on the bare base number.
+revision number**. `0.18.16` + revision `4` → `0.18.17.1 Cresius`, tag
+`v0.18.17+rev1`. Both names denote the same build.
 
 ## Installation
 
@@ -1434,5 +1284,9 @@ ajean update
 or, from the repository:
 
 1. `git clone https://github.com/Cresius34/ajean`
-2. `git checkout v0.20.1+rev1`
+2. `git checkout v0.18.17+rev1`
 3. `go build -o ajean.exe ./cmd/ajean`
+Depuis la 0.19 sous Linux, relancer une fois `sudo ajean install` pour retirer les anciennes unités.
+
+Testé par les tests automatiques et sur un serveur Linux passé par la 0.18 puis la 0.19 (reprise du preset, nettoyage par `ajean install`, modèle relancé). L'éditeur Service n'a pas été vérifié à l'écran.
+

@@ -366,7 +366,7 @@ func anthropicHandler() http.Handler {
 		if ep.Key != "" {
 			req.Header.Set("Authorization", "Bearer "+ep.Key)
 		}
-		resp, err := doLLMPlain(req)
+		resp, err := doLLM(req)
 		if err != nil {
 			antError(w, http.StatusBadGateway, "api_error", "moteur injoignable : "+err.Error())
 			return

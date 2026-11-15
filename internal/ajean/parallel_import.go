@@ -281,7 +281,7 @@ func prepareParallelPreset(cfg map[string]string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if isExternalConfig(cfg) || isCloudConfig(cfg) || isMoeConfig(cfg) {
+	if isExternalConfig(cfg) || isMoeConfig(cfg) {
 		return normalizeParallelConfig(cfg)
 	}
 	next := make(map[string]string, len(cfg))
@@ -378,7 +378,7 @@ func importParallelPresets(args []string) error {
 			return err
 		}
 		cfg := parseEnv(string(raw))
-		if isCloudConfig(cfg) || isMoeConfig(cfg) {
+		if isMoeConfig(cfg) {
 			fmt.Printf("ignoré %s : moteur système Cloud/MoE (hors phase 1)\n", e.Name())
 			continue
 		}
@@ -449,3 +449,5 @@ func importParallelPresets(args []string) error {
 	fmt.Printf("Presets et fichiers copiés : %d ; presets déjà présents conservés : %d. Source lue uniquement.\n", copied, existing)
 	return nil
 }
+
+

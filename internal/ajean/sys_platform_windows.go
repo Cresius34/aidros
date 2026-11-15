@@ -3,12 +3,12 @@
 package ajean
 
 import (
-	"context"
+	"runtime"
 	"fmt"
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -103,68 +103,32 @@ func totalRAMGB() float64 {
 	return float64(m.ullTotalPhys) / (1024 * 1024 * 1024)
 }
 
-// setLibraryPath ensures llama-server can load its dependent DLLs. Windows
-// resolves them via PATH (and the binary's own directory), so we prepend dir.
-// For a CUDA build we must also add the CUDA Toolkit's bin: ggml-cuda.dll links
-// against cublas64_*/cublasLt64_*.dll which live there, not next to the binary —
-// without it the server dies with 0xC0000135 (DLL not found) unless the launching
-// shell happened to have CUDA on PATH.
-// libraryPathValue construit la valeur PATH pour CE moteur : son repertoire
-// d'abord, puis les repertoire supplementaires demandes, puis le CUDA Toolkit
-// trouve par findNvcc (ggml-cuda.dll a besoin de cublas64_*, qui n'est pas a cote
-// du binaire : sans lui le serveur meurt en 0xC0000135), puis le PATH existant.
+// setLibraryPath permet à llama-server de charger ses DLL. Windows les cherche
+// dans le dossier du binaire puis dans PATH : on y place ce dossier et, pour la
+// variante CUDA, celui des bibliothèques livrées avec le moteur (cudart, cublas).
+// Aucune dépendance au CUDA Toolkit de la machine : seul le pilote est requis.
+func setLibraryPath(dir string) {
+	_ = os.Setenv("PATH", libraryPathValue(dir, engineLibDirsFor(dir)))
+}
+
 func libraryPathValue(dir string, extra []string) string {
 	parts := append([]string{dir}, extra...)
-	if nvcc := findNvcc(); nvcc != "" {
-		binDir := filepath.Dir(nvcc) // ...\CUDA\vX.Y\bin
-		parts = append(parts, binDir)
-		// CUDA 13+ a deplace les DLL runtime (cublas64_*, cublasLt64_*, cudart64_*)
-		// dans bin\x64\ ; sur CUDA 12 elles sont directement dans bin\. Les deux
-		// couvrent les deux layouts.
-		if x64 := filepath.Join(binDir, "x64"); isDir(x64) {
-			parts = append(parts, x64)
-		}
-	}
 	if existing := os.Getenv("PATH"); existing != "" {
 		parts = append(parts, existing)
 	}
 	return strings.Join(parts, string(os.PathListSeparator))
 }
 
-
-func setLibraryPath(dir string) {
-	parts := []string{dir}
-	if nvcc := findNvcc(); nvcc != "" {
-		binDir := filepath.Dir(nvcc) // …\CUDA\vX.Y\bin
-		parts = append(parts, binDir)
-		// CUDA 13+ a déplacé les DLL runtime (cublas64_*, cublasLt64_*, cudart64_*)
-		// dans bin\x64\ ; sur CUDA 12 elles sont directement dans bin\. On ajoute
-		// les deux pour couvrir les deux layouts.
-		if x64 := filepath.Join(binDir, "x64"); isDir(x64) {
-			parts = append(parts, x64)
-		}
-	}
-	if existing := os.Getenv("PATH"); existing != "" {
-		parts = append(parts, existing)
-	}
-	_ = os.Setenv("PATH", strings.Join(parts, string(os.PathListSeparator)))
-}
-
 // libraryPathEnv : même chose pour une commande ponctuelle (ex. --list-devices
 // depuis l'UI), sans modifier le PATH du process web.
 func libraryPathEnv(dir string) []string {
-	parts := []string{dir}
-	if nvcc := findNvcc(); nvcc != "" {
-		binDir := filepath.Dir(nvcc)
-		parts = append(parts, binDir)
-		if x64 := filepath.Join(binDir, "x64"); isDir(x64) {
-			parts = append(parts, x64)
-		}
-	}
-	if existing := os.Getenv("PATH"); existing != "" {
-		parts = append(parts, existing)
-	}
-	return append(os.Environ(), "PATH="+strings.Join(parts, string(os.PathListSeparator)))
+	return libraryPathEnvWith(dir, engineLibDirsFor(dir))
+}
+
+// libraryPathEnvWith : variante qui reçoit les dossiers de bibliothèques, pour
+// sonder un moteur pas encore installé (voir engineProbe).
+func libraryPathEnvWith(dir string, extra []string) []string {
+	return append(os.Environ(), "PATH="+libraryPathValue(dir, extra))
 }
 
 // execServer runs llama-server as a child process and waits for it. Windows has
@@ -585,9 +549,5 @@ func killTree(pid int) {
 	_ = hideCmd(exec.Command("taskkill", "/PID", strconv.Itoa(pid), "/T", "/F")).Run()
 }
 
-// libraryPathEnvWith construit l'environnement du moteur : les variables du
-// processus, plus PATH oriente vers les bibliotheques de CE moteur. Windows n'a
-// qu'une variable a poser ; l'appelant lui donne les repertoire supplementaires.
-func libraryPathEnvWith(dir string, extra []string) []string {
-	return append(os.Environ(), "PATH="+libraryPathValue(dir, extra))
-}
+
+

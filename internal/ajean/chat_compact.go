@@ -792,7 +792,7 @@ Write the summary in the SAME language as the conversation.`
 	} else {
 		authHeader(req)
 	}
-	resp, err := doLLMPlain(req)
+	resp, err := doLLM(req)
 	if err != nil {
 		return "", friendlyLLMError(err)
 	}

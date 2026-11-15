@@ -61,6 +61,8 @@ import (
 // descriptions de schémas rallongés (menu latéral refait, appareil guidé). Le
 // garde-fou garde 277 caractères de marge et juge toujours le préambule du
 // produit, pas la configuration du poste.
+// Relèvement (12000 → 12400) en 0.20 : les outils d'apps repris de la 0.19 (tester
+// une app comme un utilisateur) laissaient 3 caractères de marge.
 const promptCharBudget = 12400 // ~3100 tokens, tout allumé (agent+web+mémoire+suivi+apps), outils séparés (regroupés en 0.18.2 puis abandonnés : plus d'appels mal formés)
 
 func TestSystemPromptStaysLean(t *testing.T) {
@@ -158,3 +160,4 @@ func TestSystemPromptEmptyWithoutTools(t *testing.T) {
 		t.Fatalf("préambule non vide sans outils : %q", sp)
 	}
 }
+

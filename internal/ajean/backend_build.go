@@ -939,7 +939,6 @@ func cudaToolkitRoot(nvcc string) string {
 	return root
 }
 
-
 // detectCudaArch queries every GPU's compute capability via nvidia-smi and
 // returns them as CMake-style arch codes (e.g. "8.6" → "86"), deduped and
 // joined with ';'. Empty when the driver is too old to report it (CMake then
@@ -977,8 +976,6 @@ func numJobs() int {
 	return n
 }
 
-
-
 // llamaServerBin returns the path to the built llama-server binary under repo,
 // probing the layouts the different CMake generators emit: the Visual Studio
 // multi-config generator nests it under build/bin/Release/ and Windows adds a
@@ -1001,8 +998,6 @@ func llamaServerBin(repo string) string {
 	}
 	return ""
 }
-
-
 
 func requireTools(tools ...string) error {
 	missing := missingTools(tools)
@@ -1485,3 +1480,4 @@ func cpuPlanHints(p buildPlan) []string {
 	}
 	return lines
 }
+

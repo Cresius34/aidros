@@ -50,6 +50,24 @@ func activePresetName() string {
 	return ""
 }
 
+// presetSysPrompt / setPresetSysPrompt : prompt système propre à un preset, stocké
+// en base (clé sysprompt/<id>), hors du fichier .env (qui ne gère pas le multi-ligne).
+func presetSysPrompt(id string) string {
+	if id == "" {
+		return ""
+	}
+	return getStr(bkState, "sysprompt/"+id)
+}
+
+
+func setPresetSysPrompt(id, text string) error {
+	if id == "" {
+		return nil
+	}
+	return putStr(bkState, "sysprompt/"+id, strings.TrimSpace(text))
+}
+
+
 // deletePresetSysPrompt efface le prompt système qu'un preset portait avant la
 // 0.20 (clé sysprompt/<id>).
 func deletePresetSysPrompt(id string) {
@@ -87,3 +105,4 @@ func handleSysPrompt(w http.ResponseWriter, r *http.Request) {
 		sendJSON(w, 405, map[string]any{"ok": false, "error": "méthode non autorisée"})
 	}
 }
+

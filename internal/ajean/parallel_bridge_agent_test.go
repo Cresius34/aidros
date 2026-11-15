@@ -31,13 +31,6 @@ func TestCanalNeDeclencheUnTourAgentQueSurDoubleAutorisation(t *testing.T) {
 	}
 	valide := requete("/v1/chat/completions", "1")
 
-	// Depuis la 0.20, le mode agent naît ACTIF d'office (chat_agent.go : l'absence
-	// de réglage vaut « actif »). Ce scénario exige la seconde autorisation dans
-	// son état éteint, donc c'est lui qui la pose — il ne peut plus la supposer.
-	if err := putStr(bkState, "agent", "0"); err != nil {
-		t.Fatal(err)
-	}
-
 	// Rien n'est allumé : le pont n'a pas le droit d'exécuter quoi que ce soit.
 	if canalDemande(valide) {
 		t.Fatal("par défaut le canal ne déclenche aucun tour d'agent")
@@ -45,8 +38,15 @@ func TestCanalNeDeclencheUnTourAgentQueSurDoubleAutorisation(t *testing.T) {
 	if parallelBridgeAgentOn() {
 		t.Fatal("l'autorisation du pont doit naître éteinte")
 	}
+	// Le mode agent est ACTIF d office depuis l amont 0.20.1 (store_test.go le
+	// verrouille). Ce test parle de la DOUBLE autorisation, pas du defaut : on
+	// pose donc l « agent éteint » explicitement, ce qui le rend independant
+	// du defaut amont. L invariante testee ne bouge pas : il faut les deux.
+	if err := setAgentEnabled(false); err != nil {
+		t.Fatal(err)
+	}
 	if agentEnabled() {
-		t.Fatal("le mode agent doit naître éteint dans cette installation de test")
+		t.Fatal("le mode agent doit pouvoir être éteint : le pont ne doit rien éxècuter sans lui")
 	}
 
 	// Une seule des deux autorisations ne suffit pas.
@@ -94,9 +94,10 @@ func TestCanalNeDeclencheUnTourAgentQueSurDoubleAutorisation(t *testing.T) {
 // heure pourquoi le voisin récite une réponse de modèle nu.
 func TestEtatDuPontDeclareLAuthorisationAgent(t *testing.T) {
 	parallelTestHome(t)
-	// Le mode agent naît actif d'office depuis la 0.20 : ce test veut observer le
-	// passage « une seule autorisation », il éteint donc le mode agent explicitement.
-	if err := putStr(bkState, "agent", "0"); err != nil {
+	// L amont rend le mode agent actif d office ; ici on veut l Ã©tat Â« Ã©teint Â»
+	// comme PRECONDITION nommee, pas comme un defaut herite. Le pont doit rester
+	// au modÃ¨le nu tant que ses DEUX autorisations ne sont pas reunies.
+	if err := setAgentEnabled(false); err != nil {
 		t.Fatal(err)
 	}
 	st := parallelBridgeStatus()
@@ -705,3 +706,5 @@ func TestOutilPeerCoupePendantUnTourDuCanal(t *testing.T) {
 		t.Fatalf("la coupure doit dire pourquoi (boucle) : %s", out)
 	}
 }
+
+
