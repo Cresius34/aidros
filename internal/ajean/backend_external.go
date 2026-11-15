@@ -29,7 +29,6 @@ type chatEndpoint struct {
 	Model    string // nom de modèle envoyé dans le payload
 	Key      string // Bearer ("" = aucun)
 	External bool   // true = API OpenAI-compatible (distante, ou service système local)
-	Cloud    bool   // true = deploiement cloud : le moteur n'est pas sur cette machine
 }
 
 // isExternalConfig indique si une configuration décrit un endpoint externe.

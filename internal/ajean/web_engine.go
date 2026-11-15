@@ -246,32 +246,6 @@ func handleEngine(w http.ResponseWriter, r *http.Request) {
 		out["dev_bin"] = p
 	}
 	out["variants"] = engineVariantChoices()
-	// Mode « binaires précompilés » : la 0.20 a remplacé /api/llamacpp par cette
-	// route, mais l'interface lit toujours prebuilt.{bin,dir,in_use} pour dire si
-	// le BIN de la config est le précompilé, un compilé ici, ou un fork perso.
-	// Ces trois champs vivaient dans handleLlamacpp ; ils sont rendus ici.
-	pbTag, _ := prebuiltVersion()
-	pbBin := prebuiltServerBin()
-	cfgBin := ReadConfig()["BIN"]
-	out["prebuilt"] = map[string]any{
-		"tag": pbTag,
-		"bin": pbBin,
-		"dir": prebuiltDir(),
-		// Tout BIN vivant sous le dossier prebuilt EST le moteur précompilé, même
-		// s'il porte le numéro d'une release remplacée depuis (chemin versionné).
-		"in_use": pbBin != "" && prebuiltOwns(cfgBin),
-	}
-	// Le moteur « compilé ici » n'est PAS la clé bin ci-dessus, qui désigne le
-	// moteur livré avec AJEAN (engineBin). D'où un objet à part : l'interface a
-	// besoin de distinguer précompilé / compilé ici / fork perso, et rend l'un ou
-	// l'autre de ces trois états dans la carte Moteur et dans l'éditeur de preset.
-	cBin := llamaServerBin(defaultRepoDir())
-	out["compiled"] = map[string]any{
-		"bin":    cBin,
-		"in_use": cBin != "" && samePath(cBin, cfgBin),
-	}
-	// L'éditeur de presets invite à déposer un backend dans ce dossier.
-	out["backends_dir"] = backendsDir()
 	sendJSON(w, 200, out)
 }
 
