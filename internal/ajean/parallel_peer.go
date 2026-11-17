@@ -504,9 +504,17 @@ func peerTool() Tool {
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
-					"action":  map[string]any{"type": "string", "enum": []string{"list", "status", "ask", "forget"}, "description": "Default list."},
-					"peer":    map[string]any{"type": "string", "description": "Peer name (or its number from list). Omit when there is only one peer."},
+					"action": map[string]any{"type": "string", "enum": []string{"list", "status", "ask", "forget", "files", "send", "get", "drop"}, "description": "Default list. files/send/get/drop move FILES through the bridge; the rest move text."},
+					"peer":   map[string]any{"type": "string", "description": "Peer name (or its number from list). Omit when there is only one peer."},
+					// Un message de plusieurs lignes est l'usage normal d'ask. FAUTIF MESURÉ le
+					// 2026-10-28 : sans cette description, l'action arrivait vide et l'outil rendait
+					// LA LISTE DES VOISINS sans un mot d'erreur. Même piège pour `fichier` et `nom` :
+					// sans description explicite, l'agent met le chemin dans `message` et l'action
+					// répond « paramètre manquant ».
 					"message": map[string]any{"type": "string", "description": "What to say to that peer (ask)."},
+					"fichier": map[string]any{"type": "string", "description": "send: LOCAL path of the file to deposit in the peer's exchange folder (data/echange). Max 32 MiB. The path is read on THIS machine; only its base name crosses."},
+					"nom":     map[string]any{"type": "string", "description": "get/drop: the file NAME inside the PEER's exchange folder, exactly as `files` reported it. A flat name — no slash, no backslash, no leading dot."},
+					"remplacer": map[string]any{"type": "boolean", "description": "send: overwrite a file the peer already has under that name. Without it the peer answers 409 and nothing is destroyed. Ask before setting it."},
 				},
 			},
 		},
@@ -596,8 +604,66 @@ func runPeerTool(args map[string]any) string {
 			return "[erreur] " + err.Error()
 		}
 		return fmt.Sprintf("[ok] souvenir du canal avec %s effacé (le voisin reste déclaré)", p.Name)
+	// Les trois actions fichiers, révisé 5 le 17/11/2026. Le canal ne transportait QUE du texte :
+	// mesuré ce jour-là, j'ai écrit un script de 3 263 octets DANS LE MESSAGE pour le poser chez la
+	// voisine, et j'ai dû lui dire que le binaire de 20 080 640 octets, je ne pouvais pas le lui
+	// envoyer. La route est sous /v1/files (parallel_bridge_files.go), ces actions la rendent
+	// utilisable par l'agent. Le garde-fou anti-boucle du haut de cette fonction les couvre déjà :
+	// un tour déclenché par le canal n'a pas le droit d'envoyer des fichiers à qui vient de lui
+	// écrire, pas plus que de lui poser une question.
+	case "files", "fichiers":
+		ctx, cancel := peerFichiersBornes(context.Background())
+		defer cancel()
+		out, err := peerListeFichiers(ctx, p)
+		if err != nil {
+			return "[erreur] " + err.Error()
+		}
+		return out
+	case "send", "envoyer":
+		chemin, _ := args["fichier"].(string)
+		if strings.TrimSpace(chemin) == "" {
+			return "[erreur] action send : donner le CHEMIN DU FICHIER LOCAL à envoyer (paramètre fichier)."
+		}
+		remplacer := false
+		switch v := args["remplacer"].(type) {
+		case bool:
+			remplacer = v
+		case string:
+			switch strings.ToLower(strings.TrimSpace(v)) {
+			case "1", "true", "oui", "yes":
+				remplacer = true
+			}
+		}
+		ctx, cancel := peerFichiersBornes(context.Background())
+		defer cancel()
+		out, err := peerEnvoiFichier(ctx, p, chemin, remplacer)
+		if err != nil {
+			return "[erreur] " + err.Error()
+		}
+		return out
+	case "get", "recuperer", "récupérer":
+		nom, _ := args["nom"].(string)
+		if strings.TrimSpace(nom) == "" {
+			return "[erreur] action get : donner le NOM du fichier, tel que `files` l'a rendu (paramètre nom)."
+		}
+		ctx, cancel := peerFichiersBornes(context.Background())
+		defer cancel()
+		out, err := peerPriseFichier(ctx, p, nom)
+		if err != nil {
+			return "[erreur] " + err.Error()
+		}
+		return out
+	case "drop", "retirer":
+		nom, _ := args["nom"].(string)
+		ctx, cancel := peerFichiersBornes(context.Background())
+		defer cancel()
+		out, err := peerOubliFichier(ctx, p, nom)
+		if err != nil {
+			return "[erreur] " + err.Error()
+		}
+		return out
 	default:
-		return "[erreur] action inconnue : list, status, ask, forget"
+		return "[erreur] action inconnue : list, status, ask, forget, files, send, get, drop"
 	}
 }
 
