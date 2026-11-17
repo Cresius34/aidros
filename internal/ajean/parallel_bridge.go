@@ -183,6 +183,16 @@ func parallelBridgeHandler() http.Handler {
 			sendJSON(w, http.StatusUnauthorized, map[string]any{"ok": false, "error": "clé API invalide"})
 			return
 		}
+		// L'échange de fichiers, révisé 5 le 17/11/2026. Branché ICI, et pas plus bas : le
+		// contrôle de clé est passé (L174 et L181), et canalDemande (L191) est la branche
+		// suivante. Un appel portant l'en-tête du canal partrait dans un tour d'AGENT : l'upload
+		// serait avalé comme un message. Placé trop bas, la route répond 404 (garde L168, qui ne
+		// connaît que /v1/*) ; placé trop bas et après le canal, elle répond avec la voix de
+		// l'agent. Les deux échecs sont silencieux, donc le test ci-dessous porte sur l'aiguillage.
+		if echangeRoute(r.URL.Path) {
+			handleEchange(w, r)
+			return
+		}
 		// Le canal d'abord : quand l'appelant est un AUTRE Ajean, ce n'est pas notre
 		// modèle qu'il cherche, c'est notre agent. Le pont lui rend donc un vrai tour
 		// d'agent local (outils, mémoire, projet) au lieu de proxifier une complétion
