@@ -4,7 +4,17 @@
 // cette carte ne va jamais allumer quelque chose d'elle-même, elle lit l'état.
 //
 // Ce que le pont expose : uniquement /v1/* (l'API du modèle), verrouillé par la
-// clé API de la machine. Ni la mémoire, ni le chat, ni le pilotage.
+// clé API de la machine. Ni la mémoire, ni le chat.
+//
+// TROIS PORTES, trois réglages, parce que trois gravités différentes. Les
+// confondre est ce qui a fait chercher midi à quatorze heures le 17/11 : une
+// route qui répond 403 pour la mauvaise raison ne se débusque pas toute seule.
+//   1. le pont lui-même  — prêter le modèle (complétions seules)
+//   2. l'agent du voisin — autoriser un tour d'agent ICI : shell, disque, mémoire
+//   3. le pilotage       — autoriser le voisin à CHANGER cette machine : son
+//      preset actif, son agent. La plus grave : basculer un preset arrête le
+//      moteur en place, et sur un poste où texte et image se partagent un port,
+//      le mauvais clic éteint le cerveau — et le pont qui porte la conversation.
 
 let bridgeEtat = null;
 
@@ -25,6 +35,16 @@ function renderBridge(d){
   }
   const on = document.getElementById('bridge-on');
   if(on) on.checked = !!d.enabled;
+
+  // Les portes s'affichent par SOURCE, pas par effet. agent_on côté Go est le ET
+  // de deux sources ; cocher la case pendant que le mode Agent de la machine est
+  // éteint ne déclenche rien (mesuré, parallel_bridge.go:825). Afficher la source
+  // évite une case qui semble allumée sans effet.
+  const ag = document.getElementById('bridge-agent');
+  if(ag) ag.checked = !!d.agent_requested;
+  const ct = document.getElementById('bridge-control');
+  if(ct) ct.checked = !!d.control_on;
+
   const port = document.getElementById('bridge-port');
   if(port) port.value = d.port || '';
   const url = document.getElementById('bridge-url');
@@ -142,6 +162,42 @@ async function bridgeToggle(wanted){
   }catch(e){
     if(box) box.checked = !wanted;
     toast('Pont : ' + e.message);
+  }
+}
+
+// Porte 2 : le tour d'agent du voisin sur CETTE machine.
+async function bridgeSetAgent(wanted){
+  const box = document.getElementById('bridge-agent');
+  try{
+    const r = await jpost('/api/bridge', { agent: !!wanted });
+    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    renderBridge(r);
+    // Le voisin peut ouvrir cette porte pendant que la machine tient la sienne
+    // fermée : le dire tout de suite, sinon la case coche sans effet.
+    if(wanted && r.agent_requested && !r.agent_mode_local){
+      toast('Autorisation prise, mais le mode Agent de cette machine est éteint : rien ne se déclenchera');
+    } else {
+      toast(wanted ? 'Agent du voisin autorisé ici' : 'Agent du voisin refusé');
+    }
+  }catch(e){
+    if(box) box.checked = !wanted;
+    toast('Agent du voisin : ' + e.message);
+  }
+}
+
+// Porte 3 : le pilotage. La plus grave des trois — elle permet au voisin
+// d'arrêter le moteur de cette machine.
+async function bridgeSetControl(wanted){
+  const box = document.getElementById('bridge-control');
+  try{
+    const r = await jpost('/api/bridge', { control: !!wanted });
+    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    renderBridge(r);
+    toast(wanted ? 'Le voisin peut changer le moteur de cette machine'
+                 : 'Pilotage coupé — le voisin ne reçoit plus que le modèle nu');
+  }catch(e){
+    if(box) box.checked = !wanted;
+    toast('Pilotage : ' + e.message);
   }
 }
 

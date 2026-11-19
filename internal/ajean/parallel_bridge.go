@@ -706,6 +706,10 @@ func parallelBridgeStatus() map[string]any {
 		"agent_on":         parallelBridgeAgentOn() && agentEnabled(),
 		"agent_requested":  parallelBridgeAgentOn(),
 		"agent_mode_local": agentEnabled(),
+		// control_on : la porte du PILOTAGE, séparée de celle de l'agent. La carte
+		// l'affiche à sa propre ligne : deux portes, deux réglages, et une route
+		// qui répond 403 pour la mauvaise raison ne se débusque pas toute seule.
+		"control_on": parallelBridgeControlOn(),
 		"model":       model,
 		"urls":        parallelBridgeLanURLs(),
 		// engine_port : le port du RÉGLAGE d'instance ; engine_serving : le port
@@ -737,6 +741,10 @@ func handleParallelBridge(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Enabled *bool  `json:"enabled"`
 			Agent   *bool  `json:"agent"`
+			// Control : autoriser un voisin à piloter CETTE machine — basculer son
+			// preset, allumer/éteindre son agent (les routes /v1/presets et /v1/mode).
+			// Même forme qu'Agent : un *bool, pour distinguer « pas demandé » de « faux ».
+			Control *bool  `json:"control"`
 			Port    string `json:"port"`
 			Apply   bool   `json:"apply"`
 		}
@@ -782,6 +790,16 @@ func handleParallelBridge(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if err := stopParallelBridge(); err != nil {
+				sendJSON(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": err.Error()})
+				return
+			}
+		}
+		// Le pilotage s'écrit sans toucher au pont lui-même : l'ouvrir ou le
+		// fermer est une décision, autoriser un voisin à la prendre en est une
+		// autre. Aucun redémarrage ici — la route /v1/presets/switch, elle,
+		// redémarre le poste PILOTÉ, pas celui qui demande.
+		if req.Control != nil {
+			if err := setParallelBridgeControlOn(*req.Control); err != nil {
 				sendJSON(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": err.Error()})
 				return
 			}
