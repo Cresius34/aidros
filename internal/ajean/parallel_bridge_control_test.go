@@ -226,6 +226,43 @@ func TestPilotageMessageCiteUneCommandeQuiExiste(t *testing.T) {
 	}
 }
 
+// TestPontLaissePasserLesImages : la route des images TRAVERSIE le pont sans
+// rien ajouter. oaiHandler (llm_oai.go:67) proxifie tout ce qui commence par
+// /v1 vers le moteur, donc /v1/images/generations y passe déjà.
+//
+// Le test ne prouve pas que la génération marche — le moteur de test n'a pas de
+// générateur d'images. Il prouve ce qui compte pour le chantier : le pont
+// n'est pas le verrou. Les deux issues se distinguent au code de retour, et le
+// moteur est ARRÊTÉ dans ce test, donc :
+//   - 502 « llama-server injoignable » = la requête a été ROUTÉE vers le moteur
+//     (le pont l'a laissée passer) ;
+//   - 404 « surface OpenAI uniquement » = le pont l'a écartée avant le moteur.
+// C'est 502 qui est attendu.
+func TestPontLaissePasserLesImages(t *testing.T) {
+	parallelTestHome(t)
+	if err := writeAPIKey("sk-pilotage-test"); err != nil {
+		t.Fatal(err)
+	}
+	h := parallelBridgeHandler()
+
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, pilotageTestRequete("POST", "/v1/images/generations",
+		`{"prompt":"un renard sur une roche moussue","size":"512x512","n":1,"response_format":"b64_json"}`, nil))
+
+	if w.Code == http.StatusNotFound && strings.Contains(w.Body.String(), "surface OpenAI") {
+		t.Fatalf("le pont écarte /v1/images/generations avant le moteur : le chantier image\n" +
+			"passe par le pont, il faudra l'ajouter à la liste. Corps : %s", w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "injoignable") {
+		t.Fatalf("code %d, corps inattendu — le routage vers le moteur n'est pas prouvé :\n%s",
+			w.Code, w.Body.String())
+	}
+	// 502 avec « injoignable » : la requête est sortie du pont vers le moteur.
+	if w.Code != http.StatusBadGateway {
+		t.Logf("code %d (attendu 502) mais la preuve est là : %s", w.Code, w.Body.String())
+	}
+}
+
 // TestPilotageMillésimeDuChemin : la fonction pure, sur les formes réelles.
 func TestPilotageMillésimeDuChemin(t *testing.T) {
 	for _, c := range []struct{ chemin, attendu string }{
