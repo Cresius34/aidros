@@ -678,6 +678,18 @@ details>summary+.subhead{margin-top:4px}
    pages mémoire) : même rembourrage et même filet de séparation qu'une ligne,
    pour qu'il ne flotte pas au milieu de la carte. */
 .slist>.rowbody{padding:9px 10px}
+/* Le panneau « Moteurs » d'un voisin : la liste de SES presets, dépliée sous sa
+   ligne. Imbriquée dans #peers-list, donc hors de la portée de .slist>.rowbody
+   ci-dessus (sélecteur enfant direct) — sans ce rembourrage ici, ses lignes
+   flottent collées au bord de la carte. Léger retrait à gauche pour qu'on voie
+   qu'il appartient à la ligne du voisin, pas à la carte. */
+.pilot-block{padding:2px 10px 4px 18px;border-top:1px solid var(--border)}
+.pilot-block>.switchrow:first-child{padding-top:8px}
+/* Le millésime qui ne correspond pas au moteur épinglé par l'exe du voisin : son
+   preset sera REFUSÉ, pas démarré. Le dire en couleur d'avertissement (même
+   --warn que les pastilles), pas en rouge erreur — ce n'est pas une panne, c'est
+   un choix qui ne prendra pas. */
+.pilot-block b.warn{color:var(--warn)}
 .slist>.rowbody:not(:first-child),.slist>.pages-bar:not(:first-child){border-top:1px solid var(--border)}
 /* …sauf juste après une ligne de réglage : elle porte DÉJÀ son filet bas, les
    deux se cumuleraient en un trait double. */

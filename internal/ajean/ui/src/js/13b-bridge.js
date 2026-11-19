@@ -15,6 +15,11 @@
 //      preset actif, son agent. La plus grave : basculer un preset arrête le
 //      moteur en place, et sur un poste où texte et image se partagent un port,
 //      le mauvais clic éteint le cerveau — et le pont qui porte la conversation.
+//
+// ET DANS L'AUTRE SENS (19/11) : piloter le voisin. La carte « Parler à un autre
+// Ajean » a un bouton par voisin qui lit SES presets et permet d'en activer un.
+// Le trajet passe par /api/peers/pilot, jamais par le navigateur : la clé du
+// voisin ne sort pas du magasin local (GET /api/peers ne rend que has_key).
 
 let bridgeEtat = null;
 
@@ -113,13 +118,110 @@ function renderPeers(){
     const can = p.thread ? ' · canal ' + p.thread + ' messages' : '';
     return '<div class="switchrow"><span class="sw-txt"><span>' + escHtml(p.name) +
       '</span><span class="sw-sub">' + escHtml(p.url) + ' · ' + cle + can + '</span></span>' +
+      // Piloter le voisin : lire SES moteurs, en activer un. Le bouton ne fait
+      // qu'afficher le panneau — aucun appel réseau à l'affichage du menu, vers
+      // une machine qui peut être éteinte.
+      '<button type="button" class="sw-action" onclick="peerPilotToggleIdx(' + i + ')">Moteurs</button>' +
       '<button type="button" class="sw-action" onclick="peerForgetIdx(' + i + ')">Oublier</button>' +
-      '<button type="button" class="sw-action" onclick="peerRemoveIdx(' + i + ')">Retirer</button></div>';
+      '<button type="button" class="sw-action" onclick="peerRemoveIdx(' + i + ')">Retirer</button></div>' +
+      '<div class="pilot-block" id="pilot-' + i + '" hidden></div>';
   }).join('');
 }
 
 function peerForgetIdx(i){ if(peersList[i]) peerForget(peersList[i].name); }
 function peerRemoveIdx(i){ if(peersList[i]) peerRemove(peersList[i].name); }
+
+// ---- piloter le voisin : ses moteurs, et en activer un -------------------
+//
+// POURQUOI AU CLIC, et pas au chargement du menu : le voisin peut être éteint.
+// Un appel à l'ouverture de la page ferait une erreur rouge pour une simple
+// lecture de réglages locaux.
+//
+// LE MILLÉSIME EST LA PIÈCE QUI COMPTE. Chez la voisine le 17/11, deux presets
+// GYRO-S, l'interface n'affichait que le # NAME du fichier — « FLASH NEXT GYRO-S
+// HIP » et « FLASH NEXT GYRO-S HIP 1.48 ». Elle a choisi le mauvais, qui pointait
+// strata-0.1.48-hip, et son moteur était refusé. Quatre tours perdus parce
+// qu'aucun écran ne disait le millésime. Ici il vient du poste qui le sait.
+let pilotOuvert = -1;
+
+function peerPilotToggleIdx(i){
+  const box = document.getElementById('pilot-' + i);
+  if(!box || !peersList[i]) return;
+  // Un seul panneau ouvert : deux listes de moteurs côte à côte prêtent à
+  // cliquer sur le mauvais voisin, ce qui est exactement l'erreur du 17/11.
+  if(pilotOuvert === i){
+    box.hidden = true; box.innerHTML = ''; pilotOuvert = -1; return;
+  }
+  if(pilotOuvert >= 0){
+    const avant = document.getElementById('pilot-' + pilotOuvert);
+    if(avant){ avant.hidden = true; avant.innerHTML = ''; }
+  }
+  pilotOuvert = i;
+  box.hidden = false;
+  box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">Lecture de ses moteurs…</p></div>';
+  peerPilotLoad(i);
+}
+
+async function peerPilotLoad(i){
+  const box = document.getElementById('pilot-' + i);
+  if(!box) return;
+  const p = peersList[i];
+  if(!p) return;
+  try{
+    const r = await jpost('/api/peers/pilot', { name: p.name, action: 'presets' });
+    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    const ps = r.presets || [];
+    const epingle = r.moteur_epingle || '';
+    let html = '';
+    if(!ps.length){
+      html = '<div class="rowbody"><p class="muted" style="margin:0">Ce voisin n’a aucun preset.</p></div>';
+    } else {
+      html = ps.map(function(pre, j){
+        // Le millésime, et s'il correspond au moteur que l'exe du voisin sait
+        // lancer. Un preset qui pointe un autre millésime sera REFUSÉ, pas démarré :
+        // le dire avant le clic vaut mieux que le découvrir après.
+        const moteur = pre.moteur ? ' · moteur ' + escHtml(pre.moteur) : '';
+        const doute = pre.moteur && epingle && pre.moteur !== epingle
+          ? ' <b class="warn">— son application est épinglée ' + escHtml(epingle) + ', celui-là sera refusé</b>'
+          : '';
+        const actif = pre.active ? ' <b>· actif</b>' : '';
+        return '<div class="switchrow"><span class="sw-txt"><span>' + escHtml(pre.name || pre.id) +
+          actif + '</span><span class="sw-sub">' + (pre.external ? 'API distante' : (pre.moe ? 'MoE local' : 'preset') + moteur + doute) +
+          '</span></span>' +
+          (pre.active ? '' : '<button type="button" class="sw-action" onclick="peerPilotSwitchIdx(' + i + ',' + j + ')">Activer</button>') +
+          '</div>';
+      }).join('');
+    }
+    // L'avertissement, dans la panneau et pas seulement dans le toast : l'acte
+    // est grave et irréversible en un clic.
+    html += '<div class="rowbody"><p class="muted" style="margin:0">⚠ Basculer arrête le moteur en place chez lui et redémarre son application : le canal se coupe quelques secondes. Chez elle comme ici, un seul moteur par instance.</p></div>';
+    box.innerHTML = html;
+    // La liste est gardée pour que le clic trouve l'id, jamais une position
+    // périmée : si le voisin a modifié ses presets depuis, la position désignerait
+    // un autre preset.
+    box._presets = ps;
+  }catch(e){
+    box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">Injoignable : ' + escHtml(e.message || 'erreur') + '</p></div>';
+  }
+}
+
+async function peerPilotSwitchIdx(i, j){
+  const box = document.getElementById('pilot-' + i);
+  const p = peersList[i];
+  if(!box || !p) return;
+  const ps = box._presets || [];
+  const pre = ps[j];
+  if(!pre || !pre.id){ toast('Preset introuvable dans la liste relue'); return; }
+  try{
+    const r = await jpost('/api/peers/pilot', { name: p.name, action: 'switch', id: pre.id });
+    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    toast('« ' + p.name + ' » passe sur ' + (r.preset || pre.id) + ' — son application redémarre, le canal se coupe quelques secondes');
+    // Le panneau se referme : sa liste est périmée dès que le preset actif a
+    // changé, et la rouvrir coûte un appel, pas un risque de clic sur du vieux.
+    box.hidden = true; box.innerHTML = ''; box._presets = null;
+    if(pilotOuvert === i) pilotOuvert = -1;
+  }catch(e){ toast('Voisin ' + p.name + ' : ' + e.message); }
+}
 
 async function peerAdd(){
   const g = function(id){ const e = document.getElementById(id); return e ? e.value.trim() : ''; };

@@ -400,6 +400,9 @@ details>summary+.subhead{margin-top:4px}
 .slist.pad>:first-child{margin-top:0}
 .slist.pad>:last-child{margin-bottom:0}
 .slist>.rowbody{padding:9px 10px}
+.pilot-block{padding:2px 10px 4px 18px;border-top:1px solid var(--border)}
+.pilot-block>.switchrow:first-child{padding-top:8px}
+.pilot-block b.warn{color:var(--warn)}
 .slist>.rowbody:not(:first-child),.slist>.pages-bar:not(:first-child){border-top:1px solid var(--border)}
 .slist>.switchrow+.rowbody,.slist>.switchrow+.pages-bar{border-top:0}
 .slist>.rowbody>:first-child{margin-top:0}
@@ -12422,12 +12425,79 @@ function renderPeers(){
     const can = p.thread ? ' · canal ' + p.thread + ' messages' : '';
     return '<div class="switchrow"><span class="sw-txt"><span>' + escHtml(p.name) +
       '</span><span class="sw-sub">' + escHtml(p.url) + ' · ' + cle + can + '</span></span>' +
+      '<button type="button" class="sw-action" onclick="peerPilotToggleIdx(' + i + ')">Moteurs</button>' +
       '<button type="button" class="sw-action" onclick="peerForgetIdx(' + i + ')">Oublier</button>' +
-      '<button type="button" class="sw-action" onclick="peerRemoveIdx(' + i + ')">Retirer</button></div>';
+      '<button type="button" class="sw-action" onclick="peerRemoveIdx(' + i + ')">Retirer</button></div>' +
+      '<div class="pilot-block" id="pilot-' + i + '" hidden></div>';
   }).join('');
 }
 function peerForgetIdx(i){ if(peersList[i]) peerForget(peersList[i].name); }
 function peerRemoveIdx(i){ if(peersList[i]) peerRemove(peersList[i].name); }
+let pilotOuvert = -1;
+function peerPilotToggleIdx(i){
+  const box = document.getElementById('pilot-' + i);
+  if(!box || !peersList[i]) return;
+  if(pilotOuvert === i){
+    box.hidden = true; box.innerHTML = ''; pilotOuvert = -1; return;
+  }
+  if(pilotOuvert >= 0){
+    const avant = document.getElementById('pilot-' + pilotOuvert);
+    if(avant){ avant.hidden = true; avant.innerHTML = ''; }
+  }
+  pilotOuvert = i;
+  box.hidden = false;
+  box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">Lecture de ses moteurs…</p></div>';
+  peerPilotLoad(i);
+}
+async function peerPilotLoad(i){
+  const box = document.getElementById('pilot-' + i);
+  if(!box) return;
+  const p = peersList[i];
+  if(!p) return;
+  try{
+    const r = await jpost('/api/peers/pilot', { name: p.name, action: 'presets' });
+    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    const ps = r.presets || [];
+    const epingle = r.moteur_epingle || '';
+    let html = '';
+    if(!ps.length){
+      html = '<div class="rowbody"><p class="muted" style="margin:0">Ce voisin n’a aucun preset.</p></div>';
+    } else {
+      html = ps.map(function(pre, j){
+        const moteur = pre.moteur ? ' · moteur ' + escHtml(pre.moteur) : '';
+        const doute = pre.moteur && epingle && pre.moteur !== epingle
+          ? ' <b class="warn">— son application est épinglée ' + escHtml(epingle) + ', celui-là sera refusé</b>'
+          : '';
+        const actif = pre.active ? ' <b>· actif</b>' : '';
+        return '<div class="switchrow"><span class="sw-txt"><span>' + escHtml(pre.name || pre.id) +
+          actif + '</span><span class="sw-sub">' + (pre.external ? 'API distante' : (pre.moe ? 'MoE local' : 'preset') + moteur + doute) +
+          '</span></span>' +
+          (pre.active ? '' : '<button type="button" class="sw-action" onclick="peerPilotSwitchIdx(' + i + ',' + j + ')">Activer</button>') +
+          '</div>';
+      }).join('');
+    }
+    html += '<div class="rowbody"><p class="muted" style="margin:0">⚠ Basculer arrête le moteur en place chez lui et redémarre son application : le canal se coupe quelques secondes. Chez elle comme ici, un seul moteur par instance.</p></div>';
+    box.innerHTML = html;
+    box._presets = ps;
+  }catch(e){
+    box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">Injoignable : ' + escHtml(e.message || 'erreur') + '</p></div>';
+  }
+}
+async function peerPilotSwitchIdx(i, j){
+  const box = document.getElementById('pilot-' + i);
+  const p = peersList[i];
+  if(!box || !p) return;
+  const ps = box._presets || [];
+  const pre = ps[j];
+  if(!pre || !pre.id){ toast('Preset introuvable dans la liste relue'); return; }
+  try{
+    const r = await jpost('/api/peers/pilot', { name: p.name, action: 'switch', id: pre.id });
+    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    toast('« ' + p.name + ' » passe sur ' + (r.preset || pre.id) + ' — son application redémarre, le canal se coupe quelques secondes');
+    box.hidden = true; box.innerHTML = ''; box._presets = null;
+    if(pilotOuvert === i) pilotOuvert = -1;
+  }catch(e){ toast('Voisin ' + p.name + ' : ' + e.message); }
+}
 async function peerAdd(){
   const g = function(id){ const e = document.getElementById(id); return e ? e.value.trim() : ''; };
   const name = g('peer-name'), url = g('peer-url'), key = g('peer-key');

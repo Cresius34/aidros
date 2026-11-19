@@ -278,6 +278,10 @@ func newWebMux() *http.ServeMux {
 	api("/api/embeddings/demo", handleEmbeddingDemo)
 	api("/api/bridge", handleParallelBridge) // pont Ajean↔Ajean : état, allumer/couper, déplacer le port
 	api("/api/peers", handleParallelPeers)   // le canal : voisins déclarés (jamais la clé)
+	// Piloter UN VOISIN depuis la carte : la route qui relaie vers son pont.
+	// La clé du voisin ne traverse pas le navigateur — GET /api/peers ne rend
+	// que has_key, et je ne veux pas la faire sortir du magasin local.
+	api("/api/peers/pilot", handlePeerPilot)
 	api("/api/network", handleNetwork) // écoute LAN du moteur + pare-feu (Windows)
 	api("/api/open", handleOpenURL)    // ouvre un lien externe dans le navigateur choisi (la fenêtre AJEAN ne bouge pas)
 	api("/api/prefs", handleWebPrefs)
