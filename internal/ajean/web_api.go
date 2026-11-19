@@ -1346,16 +1346,46 @@ func handleSwitch(w http.ResponseWriter, r *http.Request) {
 		}
 		target = list[req.N-1]
 	}
-	// On écrit config.env TOUT DE SUITE (c'est lui qui décide du preset actif),
-	// puis on répond — le redémarrage du service part en arrière-plan. Passer par
-	// SwitchToPreset bloquait la réponse pendant tout l'arrêt de llama-server plus
-	// les 2 s de vérification de checkStarted : côté UI, le clic paraissait mou et
-	// la sélection ne bougeait qu'au bout de plusieurs secondes, pour rien.
-	if err := applyPresetFile(target.Path); err != nil {
+	nom, err := switchToPresetByPath(target.Path)
+	if err != nil {
 		sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
 		return
 	}
-	fmt.Printf("%s config.env <- %s\n", green("[ok]"), filepath.Base(target.Path))
+	sendJSON(w, 200, map[string]any{"ok": true, "preset": nom})
+}
+
+// switchToPresetByID applique le preset désigné par son identifiant et lance le
+// redémarrage en arrière-plan. C'est le corps de handleSwitch, extrait pour que
+// le pont puisse basculer un preset SANS repasser par l'interface — et sans
+// dupliquer la logique, qui a ses pièges (preset externe = on ARRÊTE le moteur
+// au lieu de le relancer, preset position = dangereux).
+//
+// L'erreur rendue est celle qu'un appelant distant doit entendre : « introuvable
+// » si l'id n'est pas dans la liste, jamais un chemin reconstitué à l'aveugle.
+func switchToPresetByID(id string) (string, error) {
+	list, err := ListPresets()
+	if err != nil {
+		return "", err
+	}
+	for _, p := range list {
+		if p.ID == id {
+			return switchToPresetByPath(p.Path)
+		}
+	}
+	return "", fmt.Errorf("preset introuvable (supprimé ou renommé ?)")
+}
+
+// switchToPresetByPath écrit config.env TOUT DE SUITE (c'est lui qui décide du
+// preset actif), puis rend la main — le redémarrage du service part en
+// arrière-plan. Passer par SwitchToPreset bloquait la réponse pendant tout
+// l'arrêt de llama-server plus les 2 s de vérification de checkStarted : côté
+// UI, le clic paraissait mou et la sélection ne bougeait qu'au bout de plusieurs
+// secondes, pour rien.
+func switchToPresetByPath(targetPath string) (string, error) {
+	if err := applyPresetFile(targetPath); err != nil {
+		return "", err
+	}
+	fmt.Printf("%s config.env <- %s\n", green("[ok]"), filepath.Base(targetPath))
 	// Preset externe : aucun moteur local à (re)démarrer — il n'a pas de MODEL et
 	// crash-looperait. On ARRÊTE plutôt le llama-server encore en vie pour libérer
 	// la VRAM, puisque le chat part désormais vers l'API distante.
@@ -1374,8 +1404,7 @@ func handleSwitch(w http.ResponseWriter, r *http.Request) {
 				fmt.Printf("%s service externe: %v\n", red("[ERREUR]"), err)
 			}
 		}()
-		sendJSON(w, 200, map[string]any{"ok": true, "preset": target.Name})
-		return
+		return presetDisplayNameOf(targetPath), nil
 	}
 	fmt.Println(dim("[info] redémarrage du service..."))
 	go func() {
@@ -1387,7 +1416,20 @@ func handleSwitch(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("%s redémarrage après bascule: %v\n", red("[ERREUR]"), err)
 		}
 	}()
-	sendJSON(w, 200, map[string]any{"ok": true, "preset": target.Name})
+	return presetDisplayNameOf(targetPath), nil
+}
+
+// presetDisplayNameOf : le nom à rendre à l'appelant. handleSwitch rendait
+// target.Name, venu de la liste ; ici on n'a que le chemin, et # NAME= est la
+// seule source fiable (c'est aussi ce que l'UI affiche, d'où le piège du 17/11
+// où le nom affiché ne disait pas le millésime). En cas de lecture impossible,
+// le nom du fichier vaut mieux que rien : il est au moins vérifiable sur disque.
+func presetDisplayNameOf(path string) string {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	}
+	return presetDisplayName(string(b), strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)))
 }
 
 // svcHandler returns an HTTP handler that triggers a start/stop/restart through

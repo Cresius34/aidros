@@ -193,6 +193,15 @@ func parallelBridgeHandler() http.Handler {
 			handleEchange(w, r)
 			return
 		}
+		// Le pilotage (preset, mode agent), révisé le 19/11/2026. Branché au même
+		// étage que l'échange de fichiers, pour les mêmes raisons : après le contrôle
+		// de clé, avant le canal. Un POST de pilotage placé après canalDemande serait
+		// avalé comme un MESSAGE d'agent — l'agent du voisin partirait en discussion
+		// au lieu de changer le preset, et la réponse ressemblerait à un texte.
+		if controlRoute(r.URL.Path) {
+			handleControl(w, r)
+			return
+		}
 		// Le canal d'abord : quand l'appelant est un AUTRE Ajean, ce n'est pas notre
 		// modèle qu'il cherche, c'est notre agent. Le pont lui rend donc un vrai tour
 		// d'agent local (outils, mémoire, projet) au lieu de proxifier une complétion
