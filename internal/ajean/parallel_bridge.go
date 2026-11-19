@@ -817,6 +817,35 @@ func cmdParallelBridge(args []string) error {
 		sub = strings.ToLower(strings.TrimSpace(args[0]))
 		args = args[1:]
 	}
+	// `bridge control on|off` : autoriser un AUTRE Ajean à piloter CETTE machine
+	// (basculer son preset, allumer/éteindre son agent). Séparée de `bridge agent`
+	// parce que ce n'est pas la même chose prêter un tour d'agent et changer le
+	// cerveau de la machine : basculer un preset ARRÊTE le moteur en place, et sur
+	// un poste où texte et image se partagent un port, le mauvais clic éteint tout.
+	if sub == "control" || sub == "pilotage" {
+		qui := "on"
+		if len(args) > 0 {
+			qui = strings.ToLower(strings.TrimSpace(args[0]))
+		}
+		switch qui {
+		case "on", "activer", "oui", "1":
+			if err := setParallelBridgeControlOn(true); err != nil {
+				return err
+			}
+			fmt.Printf("%s un Ajean voisin peut basculer le preset et l'agent de ce poste.\n", green("[ok]"))
+			fmt.Printf("%s rappel : basculer un preset arrête le moteur en place et redémarre\n", yellow("[!]"))
+			fmt.Printf("             l'application — le pont de ce poste se coupe quelques secondes.\n")
+			return nil
+		case "off", "couper", "non", "0":
+			if err := setParallelBridgeControlOn(false); err != nil {
+				return err
+			}
+			fmt.Printf("%s le pilotage est coupé : le voisin ne reçoit plus que le modèle nu\n", green("[ok]"))
+			return nil
+		default:
+			return fmt.Errorf("usage : ajean bridge control [on|off]")
+		}
+	}
 	// `bridge agent on|off` : l'autorisation de déclencher un tour d'agent local
 	// depuis le canal. Séparée de `bridge on` parce que ce n'est pas la même chose
 	// prêter un modèle et prêter le shell de sa machine.
@@ -866,6 +895,15 @@ func cmdParallelBridge(args []string) error {
 			if parallelBridgeAgentOn() && !agentEnabled() {
 				fmt.Printf("             (l'autorisation du pont est prise, mais le mode agent de cette machine est éteint)\n")
 			}
+		}
+		// Le pilotage s'affiche à part de l'agent : ce sont deux portes distinctes,
+		// et les confondre fait chercher une route qui répond 403 pour la mauvaise
+		// raison.
+		if parallelBridgeControlOn() {
+			fmt.Printf("pilotage     : %s le voisin peut basculer ce preset et cet agent\n", green("ouvert"))
+		} else {
+			fmt.Printf("pilotage     : %s. L'ouvrir : %s\n",
+				yellow("coupé — /v1/presets et /v1/mode répondent 403"), bold("ajean bridge control on"))
 		}
 		if ep, ok := st["engine_serving"].(string); ok {
 			fmt.Printf("moteur prêté : 127.0.0.1:%s\n", ep)

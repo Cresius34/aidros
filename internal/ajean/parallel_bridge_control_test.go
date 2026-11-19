@@ -187,6 +187,45 @@ func TestPilotageListeEtMillésime(t *testing.T) {
 	}
 }
 
+// TestPilotageMessageCiteUneCommandeQuiExiste : le 403 rendu au voisin dit
+// « allumer : ajean bridge control on ». Un message qui nomme une commande
+// inexistante envoie l'humain dans le mur, et c'est le genre de mensonge qu'on
+// écrit sans le vouloir. Ce test ferme la boucle : la commande citée dans
+// l'erreur est la même que celle qu'accepte la CLI, et elle change bien l'état.
+func TestPilotageMessageCiteUneCommandeQuiExiste(t *testing.T) {
+	parallelTestHome(t)
+
+	// La commande citée mot pour mot dans le 403 (handleControl). La CLI reçoit
+	// les arguments APRES « bridge » : cmdParallelBridge(["control","on"]) pour
+	// « ajean bridge control on ». Couper le préfixe « ajean bridge » fait partie
+	// du test, sinon on enverrait sub="bridge" et la CLI répondrait autre chose.
+	const citée = "ajean bridge control on"
+	args := strings.Fields(strings.TrimPrefix(citée, "ajean bridge "))
+	if len(args) != 2 || args[0] != "control" {
+		t.Fatalf("préfixe mal coupé sur %q -> %q", citée, args)
+	}
+
+	if err := setParallelBridgeControlOn(false); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdParallelBridge(args); err != nil {
+		t.Fatalf("la CLI refuse la commande citée dans le 403 (%q) : %v", citée, err)
+	}
+	if !parallelBridgeControlOn() {
+		t.Fatalf("« %s » rendu par la CLI n'allume pas l'interrupteur que le 403 éteint", citée)
+	}
+	if err := cmdParallelBridge([]string{"control", "off"}); err != nil {
+		t.Fatal(err)
+	}
+	if parallelBridgeControlOn() {
+		t.Fatal("« control off » n'a rien coupé")
+	}
+	// Une valeur floue doit refuser, pas deviner dans le sens le plus dangereux.
+	if err := cmdParallelBridge([]string{"control", "peut-etre"}); err == nil {
+		t.Fatal("« control peut-etre » accepté : la CLI devine, elle ne devrait pas")
+	}
+}
+
 // TestPilotageMillésimeDuChemin : la fonction pure, sur les formes réelles.
 func TestPilotageMillésimeDuChemin(t *testing.T) {
 	for _, c := range []struct{ chemin, attendu string }{
