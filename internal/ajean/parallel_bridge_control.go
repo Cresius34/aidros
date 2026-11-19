@@ -32,14 +32,9 @@ import (
 	"strings"
 )
 
-const (
-	// parallelBridgeControlKey : autoriser un voisin à basculer le preset actif
-	// et à allumer/éteindre l'agent de CETTE machine. ÉTEINT par défaut.
-	parallelBridgeControlKey = "parallel_bridge_control"
-	// controlEnTete : un appel de pilotage vient d'un autre Ajean, on le marque.
-	// Le journal du poste piloté doit pouvoir dire QUI a changé le preset.
-	controlEnTete = "X-Ajean-Pilotage"
-)
+// parallelBridgeControlKey : autoriser un voisin à basculer le preset actif et à
+// allumer/éteindre l'agent de CETTE machine. ÉTEINT par défaut.
+const parallelBridgeControlKey = "parallel_bridge_control"
 
 // parallelBridgeControlOn : le pont a-t-il le droit de piloter cette machine ?
 // AJEAN_BRIDGE_CONTROL=1 l'allume pour un test ou un lanceur, sans écrire en base
@@ -53,6 +48,25 @@ func parallelBridgeControlOn() bool {
 
 func setParallelBridgeControlOn(on bool) error {
 	return putBool(bkState, parallelBridgeControlKey, on)
+}
+
+// piloteCanal : QUI a donné cet ordre, en deux dimensions — la machine d'où il
+// vient (canalFromHeader) et QUI l'a écrit (canalOrigine : « agent » ou « humain »).
+//
+// Je n'invente PAS d'en-tête pour ça. Ma première version posait un
+// X-Ajean-Pilotage dont la valeur était une prose libre venue du réseau, que
+// j'imprimais dans mon journal. Or mon propre code énonce la règle pour un autre
+// en-tête (parallel_bridge_agent.go:92-96) : « un en-tête HTTP non ASCII est une
+// source de bugs, et une raison en prose fuirait vers n'importe quel client ».
+// J'ai fait exactement ce que mon commentaire interdit, à quatre fichiers de lui.
+// Ici les deux valeurs sont courtes, connues, et déjà posées par peerAsk (L308)
+// et peerOrigineCLI (L489) : rien de neuf à valider.
+func piloteCanal(r *http.Request) (machine, auteur string) {
+	machine = strings.TrimSpace(r.Header.Get(canalFromHeader))
+	if machine == "" {
+		machine = "machine voisine"
+	}
+	return machine, canalOrigine(r)
 }
 
 // controlRoute : la surface de pilotage. Sous /v1/, pour la même raison que
@@ -74,14 +88,10 @@ func handleControl(w http.ResponseWriter, r *http.Request) {
 	if !parallelBridgeControlOn() {
 		sendJSON(w, http.StatusForbidden, map[string]any{
 			"ok":    false,
-			"error": "le pilotage à distance est éteint sur ce poste. L'allumer : ajean bridge control on (le basculement d'un preset arrête le moteur en place)",
+			"error": "le pilotage à distance est éteint sur ce poste. L'allumer : ajean bridge control on, ou le menu Pont (le basculement d'un preset arrête le moteur en place)",
 		})
 		return
 	}
-	// Le nom du preset vient du réseau et sert à chercher un fichier : il est
-	// coupable jusqu'à preuve du contraire. ListPresets ne rend que des identifiants
-	// déjà assainis, donc la comparaison se fait sur cette liste — jamais sur le
-	// chemin reconstitué depuis le corps de la requête.
 	switch {
 	case r.URL.Path == "/v1/presets" && r.Method == http.MethodGet:
 		handleControlPresets(w)
@@ -203,18 +213,17 @@ func handleControlSwitch(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	qui := strings.TrimSpace(r.Header.Get(controlEnTete))
-	if qui == "" {
-		qui = "un autre Ajean"
-	}
+	machine, auteur := piloteCanal(r)
 	nom, err := switchToPresetByID(id)
 	if err != nil {
 		sendJSON(w, http.StatusNotFound, map[string]any{"ok": false, "error": err.Error()})
 		return
 	}
-	// Trace locale : qui a changé le preset de cette machine. Sans ça, un matin
-	// le moteur ne serait plus celui d'hier et personne ne saurait d'où ça vient.
-	fmt.Printf("%s pilotage du pont : %s a basculé le preset sur %s\n", green("[ok]"), qui, nom)
+	// Trace locale : QUI a changé le preset de cette machine, et si c'était une
+	// personne ou une IA. Sans ça, un matin le moteur ne serait plus celui d'hier
+	// et personne ne saurait d'où ça vient — ni si c'est un ordre ou une initiative.
+	fmt.Printf("%s pilotage du pont : %s (poste « %s ») a basculé le preset sur %s\n",
+		green("[ok]"), auteur, machine, nom)
 	sendJSON(w, http.StatusOK, map[string]any{
 		"ok": true, "preset": nom,
 		"effet": "le moteur en place est arrêté, l'application redémarre : le pont de ce poste coupe quelques secondes",
@@ -223,12 +232,12 @@ func handleControlSwitch(w http.ResponseWriter, r *http.Request) {
 
 func handleControlModeGet(w http.ResponseWriter) {
 	sendJSON(w, http.StatusOK, map[string]any{
-		"ok":          true,
+		"ok": true,
+		// Les deux niveaux de l'agent : l'autorisation du pont ET le mode agent de
+		// la machine. L'un sans l'autre ne déclenche rien (mesuré, parallel_bridge.go:825).
 		"agent":       parallelBridgeAgentOn(),
 		"agent_local": agentEnabled(),
 		"pilotage":    parallelBridgeControlOn(),
-		// Les deux sont nécessaires : l'autorisation du pont SANS le mode agent de
-		// la machine ne déclenche rien (mesuré, parallel_bridge.go:825).
 		"declenchable": parallelBridgeAgentOn() && agentEnabled(),
 	})
 }
@@ -243,9 +252,12 @@ func handleControlModePost(w http.ResponseWriter, r *http.Request) {
 		sendJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": err.Error()})
 		return
 	}
-	qui := strings.ToLower(strings.TrimSpace(req.Agent))
+	// `demande` et non `qui` : ce mot décrit la VALEUR demandée ("on"/"off"), pas la
+	// personne. Ma première version nommait les deux `qui`, dans la même fonction,
+	// et l'un écrasait l'autre — le compilateur l'a crié, je ne l'avais pas vu.
+	demande := strings.ToLower(strings.TrimSpace(req.Agent))
 	var on bool
-	switch qui {
+	switch demande {
 	case "on", "activer", "oui", "1", "vrai", "true":
 		on = true
 	case "off", "couper", "non", "0", "faux", "false":
@@ -256,10 +268,7 @@ func handleControlModePost(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	pilote := strings.TrimSpace(r.Header.Get(controlEnTete))
-	if pilote == "" {
-		pilote = "un autre Ajean"
-	}
+	machine, auteur := piloteCanal(r)
 	if err := setParallelBridgeAgentOn(on); err != nil {
 		sendJSON(w, http.StatusServiceUnavailable, map[string]any{"ok": false, "error": err.Error()})
 		return
@@ -270,6 +279,7 @@ func handleControlModePost(w http.ResponseWriter, r *http.Request) {
 		// côté : le lui DIRE, sinon il appellera en croyant que ça marche.
 		reponse["attention"] = "l'autorisation du pont est prise, mais le mode agent de cette machine est éteint : rien ne se déclenchera tant que l'interface n'est pas en mode Projet/Agent"
 	}
-	fmt.Printf("%s pilotage du pont : agent %s par %s\n", green("[ok]"), map[bool]string{true: "allumé", false: "éteint"}[on], pilote)
+	fmt.Printf("%s pilotage du pont : agent %s par %s (poste « %s »)\n",
+		green("[ok]"), map[bool]string{true: "allumé", false: "éteint"}[on], auteur, machine)
 	sendJSON(w, http.StatusOK, reponse)
 }

@@ -299,8 +299,12 @@ func TestPilotageMode(t *testing.T) {
 		t.Fatalf("/v1/mode valeur floue : %d, attendu 400\n%s", w.Code, w.Body.String())
 	}
 
+	// Les deux en-têtes du canal, posés par peerAsk (parallel_peer.go:308) et
+	// peerOrigineCLI (L489). Le poste piloté doit savoir QUI il a en face : la
+	// machine, et si c'est une personne ou une IA. C'est l'arbitrage du 27/10.
 	w = httptest.NewRecorder()
-	h.ServeHTTP(w, pilotageTestRequete("POST", "/v1/mode", `{"agent":"on"}`, map[string]string{controlEnTete: "Cresius"}))
+	h.ServeHTTP(w, pilotageTestRequete("POST", "/v1/mode", `{"agent":"on"}`,
+		map[string]string{canalFromHeader: "Cresius", canalOriginHeader: canalOrigineHumain}))
 	if w.Code != http.StatusOK {
 		t.Fatalf("/v1/mode on : %d\n%s", w.Code, w.Body.String())
 	}
