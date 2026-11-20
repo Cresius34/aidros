@@ -175,8 +175,33 @@ func moeStrataPreflight(c map[string]string) (string, map[string]any, error) {
 		return "", nil, err
 	}
 	meta, err := strataReadConfig(filepath.Join(filepath.Dir(exe), "BUILD.json"))
-	if err != nil || meta["version"] != strataVersion {
+	if err != nil {
 		return "", nil, errors.New("moteur MoE différent de la version figée : reprendre son installation")
+	}
+	// LE MILLÉSIME NE REFUSE PLUS, depuis l'ordre de l'humain du 21/11 : « prévoir
+	// avertissement + millésime sur presets en vert si endpoint = moteur installé
+	// sinon rouge ». La garde rendait un exe incapable de démarrer le moteur que
+	// SON PRESET pointe, alors que le preset nomme déjà le dossier (les trois
+	// chemins MOE_* viennent de lui, pas de strataSourceDir, qui ne sert qu'à
+	// l'installeur). Un seul exe peut donc servir plusieurs millésimes : c'est ce
+	// qui manquait chez la voisine, où changer de moteur coûtait un rebuild.
+	//
+	// CE QUE LA GARDE PROTÉGEAIT, nommément : c'est cet exe qui écrit la config de
+	// lancement (moeStrataBuildConfig) avec les drapeaux de SON Control. Mesuré le
+	// 14/11 dans un seul sens : les 15 drapeaux de NOTRE run config sont acceptés
+	// par 0.1.59. L'autre sens (un vieux moteur lisant une config écrite par un exe
+	// neuf) n'a jamais été mesuré. Sans chien de garde (backend_moe_windows.go
+	// n'a aucun respawn, cmd.Wait L354) et 154-208 s de trou, un drapeau refusé
+	// était une panne obscure. D'ou l'avertissement visible, et non le silence :
+	// strataMillésimeDivergent, rendu par /api/status et par la liste des presets.
+	//
+	// L'INSTALLEUR, LUI, ÉPINGLE TOUJOURS : moe_portable_install.ps1 compare le
+	// moteur installé à engine_version du manifeste et throw. Baisser cette garde
+	// ne veut pas dire « installer n'importe quoi », mais « ne pas refuser ce qui
+	// est déjà sur le disque ». Précédent de la même forme : les verrous Gyro-S
+	// devenus avertissements le 26/10.
+	if meta["version"] != strataVersion {
+		fmt.Fprintf(os.Stderr, "[ajean] attention : moteur MoE %v, application épinglée %s — le preset demarre quand meme\n", meta["version"], strataVersion)
 	}
 	if c["MOE_BACKEND"] == "hip" && meta["backend"] != "hip" {
 		return "", nil, errors.New("le preset HIP ne référence pas un moteur HIP")
@@ -368,6 +393,96 @@ func strataSyncUserFlags(out map[string]any, applied map[string]string) {
 			out["args_written"] = copie
 		}
 	}
+}
+
+// strataMillésimeDuMoteur : le millésime QUE LE MOTEUR POSÉ SUR LE DISQUE se
+// déclare, lu dans le BUILD.json posé à côté de son exe, et la raison qui le rend
+// injoignable quand il n'est pas là. Lecture seule : stat + un JSON, aucun
+// processus, aucun modèle chargé.
+//
+// DEUX MILLÉSIMES, DEUX SENS, à ne jamais confondre (l'erreur qui a coûté quatre
+// tours de diagnostic chez la voisine le 17/11) :
+//   - moeMillésimeDe(cfg)    lit ce que LE PRESET veut dire, dans ses chemins
+//     MOE_CONFIG / MOE_PYTHON / MOE_SOURCE. C'est une INTENTION, écrite à la main.
+//   - cette fonction lit ce qui EST LÀ, dans le BUILD.json du moteur visé.
+//
+// Les deux peuvent diverger, et c'est le cas Bekka : son preset pointait
+// strata-0.1.48-hip, l'exe épinglé 0.1.57. Elle voyait « FLASH NEXT GYRO-S HIP »
+// dans l'interface, et l'interface ne dit le millésime nulle part.
+//
+// Le critère « VERT » de l'humain (21/11) : « en vert si endpoint = moteur
+// installé, sinon rouge ». Il est rendu ici, et porté par handlePresets.
+func strataMillésimeDuMoteur(c map[string]string) (millésime, avis string) {
+	if !isStrataMoe(c) {
+		return "", ""
+	}
+	path := strataPath(c["MOE_CONFIG"])
+	if path == "" {
+		return "", "MOE_CONFIG non défini"
+	}
+	base, err := strataReadConfig(path)
+	if err != nil {
+		return "", "configuration du moteur introuvable"
+	}
+	// DÉCODER, comme le fait moeStrataPreflight juste avant de tester ses chemins.
+	// La config du moteur porte ses chemins ENCODÉS sous ${AJEAN_HOME}/ (écrits par
+	// strataPortableJSON(…, true)) : testés tels quels, ils sont faux et le moteur
+	// paraît absent. Faute mesurée par mon propre filet au premier essai.
+	decoded, err := strataPortableJSON(base, false)
+	if err != nil {
+		return "", "configuration du moteur illisible"
+	}
+	base, _ = decoded.(map[string]any)
+	exe, _ := base["exe"].(string)
+	if exe == "" || !isFile(strataPath(exe)) {
+		return "", "moteur MoE absent du disque"
+	}
+	meta, err := strataReadConfig(filepath.Join(filepath.Dir(strataPath(exe)), "BUILD.json"))
+	if err != nil {
+		return "", "BUILD.json absent à côté du moteur"
+	}
+	v := fmt.Sprint(meta["version"])
+	if v == "" || v == "<nil>" {
+		return "", "BUILD.json sans version"
+	}
+	return v, ""
+}
+
+// strataMillésimePreset : le verdict affiché sur la ligne d'un preset MoE.
+//
+//	VERT  : le millésime que le preset demande, celui que le moteur posé déclare
+//	        et celui qu'a épinglé CETTE application sont les trois mêmes.
+//	ROUGE : ils diffèrent, avec le nom de l'écart dans l'avis.
+//
+// ⚠ CE QUE ROUGE NE VEUT PLUS DIRE, depuis que la garde du préflight est devenue
+// un avertissement (ordre du 21/11) : un preset rouge DÉMARRE QUAND MÊME. Rouge
+// veut dire « le millésime demandé n'est pas celui que cette application épingle,
+// ça peut ne pas marcher », plus « c'est refusé ». L'avis doit le dire, sinon la
+// couleur ment.
+func strataMillésimePreset(c map[string]string) (millésime string, ok bool, avis string) {
+	// Un preset qui n'est pas un moteur Strata n'a NI vert NI rouge : une couleur
+	// sur un preset sans rapport ferait mentir la légende. Faute mesurée par mon
+	// propre filet au premier essai — le preset llama.cpp tombait en rouge avec
+	// « le preset ne nomme pas son moteur », parce que la question du millésime
+	// n'est jamais posée pour lui.
+	if !isStrataMoe(c) {
+		return "", false, ""
+	}
+	demande := moeMillésimeDe(c)
+	pose, avis := strataMillésimeDuMoteur(c)
+	if avis != "" {
+		return pose, false, avis
+	}
+	if demande == "" {
+		return pose, false, "le preset ne nomme pas son moteur"
+	}
+	if demande != pose {
+		return pose, false, fmt.Sprintf("le preset demande %s, le moteur posé est %s", demande, pose)
+	}
+	if pose != strataVersion {
+		return pose, false, fmt.Sprintf("moteur %s, cette application épinglée %s", pose, strataVersion)
+	}
+	return pose, true, ""
 }
 
 func serveStrataMoe(c map[string]string) error {

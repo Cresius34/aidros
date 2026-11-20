@@ -103,6 +103,20 @@ async function loadPresets(){
         meta.appendChild(c);
       }
     }
+    // Millésime du moteur MoE, en vert ou en rouge : « vert si endpoint = moteur
+    // installé, sinon rouge » (ordre de l'humain du 21/11). x.moteur n'existe que
+    // pour un preset MoE : un preset llama.cpp ou externe ne porte pas de pastille,
+    // une couleur sur un preset sans rapport ferait mentir la légende.
+    // Le titre porte l'avis complet, car la couleur seule ne dit pas QUOI — un
+    // refus qui ne nomme pas sa cause a coûté quatre tours chez la voisine (17/11).
+    if(x.moteur){
+      const mt=document.createElement('span');
+      mt.className='mtag '+(x.moteur_ok?'ok':'err');
+      mt.textContent='moteur '+x.moteur;
+      mt.title=x.moteur_ok ? t('settings.presets.moteur_ok')
+                           : (x.moteur_avis || t('settings.presets.moteur_avis'));
+      meta.appendChild(mt);
+    }
     // Bench : local, ou moteur tiers lancé par ajean (le serveur n'en renvoie
     // pas pour une simple API distante).
     if(x.bench){

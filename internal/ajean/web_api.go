@@ -70,6 +70,38 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	if !health && !external {
 		loadErr = modelLoadError()
 	}
+	// Le millésime du preset ACTIF, en avertissement visible depuis que la garde du
+	// préflight ne refuse plus (ordre de l'humain du 21/11 : « prévoir avertissement
+	// + millésime sur presets en vert si endpoint = moteur installé sinon rouge »).
+	// Baisser une garde sans la rendre lisible aurait été pire qu'un refus : un
+	// refus nommait le problème, un silence l'enterre. La voisine a passé des
+	// dizaines de tours sur « Strata est HS » alors que son preset pointait un
+	// millésime que son exe ne pouvait pas voir, et l'interface ne dit le millésime
+	// NULLE PART (elle affiche le # NAME du fichier, pas son contenu).
+	// Coût : deux petits JSON lus par tour de sondage, même ordre de grandeur que
+	// modelLoadError() juste au-dessus, qui relit la fin du journal du service.
+	engineWarn := ""
+	if id := activePresetID(); id != "" {
+		if content, err := ReadPreset(id); err == nil {
+			if cfg := parseEnv(content); isStrataMoe(cfg) {
+				mv, ok, avis := strataMillésimePreset(cfg)
+				if !ok && avis != "" {
+					engineWarn = fmt.Sprintf("preset MoE « %s » : %s", activePresetName(), avis)
+					if mv != "" {
+						engineWarn += fmt.Sprintf(" — l'application épinglée %s", strataVersion)
+					}
+				}
+			}
+		}
+	}
+	warn := appWarning()
+	if engineWarn != "" {
+		if warn != "" {
+			warn += " · " + engineWarn
+		} else {
+			warn = engineWarn
+		}
+	}
 	sendJSON(w, 200, map[string]any{
 		"state":       state,
 		"active":      active,
@@ -77,7 +109,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		"port":        LLMPort(),
 		"ctx":         ctx,
 		"version":     displayVersion(),
-		"warn":        appWarning(),       // ex. App Translocation macOS — vide si tout va bien
+		"warn":        warn,        // ex. App Translocation macOS, millésime MoE divergent — vide si tout va bien
 		"load_error":  loadErr,            // modèle qui ne charge pas (incompat moteur…) — vide sinon
 		"boot":        procBoot,           // empreinte de démarrage du process (détecte un redémarrage côté UI)
 		"preset":      activePresetID(),   // id du preset actif : un autre appareil a pu basculer, l'UI se resynchronise sans reload (voir loadStatus)
@@ -429,6 +461,21 @@ func handlePresets(w http.ResponseWriter, r *http.Request) {
 				item["moe"] = true
 				if cfg["MOE_VISION"] != "0" {
 					item["vision"] = true
+				}
+				// LE MILLÉSIME, en vert ou en rouge (ordre de l'humain du 21/11).
+				// Ce champ est la réponse au piège du 17/11 : l'interface affiche le
+				// # NAME du fichier preset, pas son contenu, et le millésime ne se lit
+				// que dans MOE_CONFIG / MOE_PYTHON / MOE_SOURCE. Deux presets GYRO-S
+				// chez la voisine, un seul pointait le bon ; elle a renommé le mauvais,
+				// et quatre tours y sont passés.
+				if isStrataMoe(cfg) {
+					if mv, ok, avis := strataMillésimePreset(cfg); mv != "" {
+						item["moteur"] = mv
+						item["moteur_ok"] = ok
+						if avis != "" {
+							item["moteur_avis"] = avis
+						}
+					}
 				}
 			} else if name := removedEngine(parseEnv(content)); name != "" {
 				// Preset d'un moteur retiré en 0.20 : l'UI le montre grisé, avec

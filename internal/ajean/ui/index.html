@@ -211,6 +211,9 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .rtag{flex-shrink:0;display:inline-flex;align-items:center;gap:3px;font-size:9px;padding:1px 6px;border:1px solid var(--border);color:var(--dim);border-radius:8px;letter-spacing:.03em}
 .btag{flex-shrink:0;display:inline-flex;align-items:center;gap:3px;font-size:9px;padding:1px 6px;border:1px solid var(--border);color:var(--dim);border-radius:8px;letter-spacing:.03em}
 .captag{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;font-size:9px;padding:1px 6px;border:1px solid var(--border);color:var(--dim);border-radius:8px}
+.mtag{flex-shrink:0;display:inline-flex;align-items:center;gap:3px;font-size:9px;padding:1px 6px;border:1px solid var(--border);border-radius:8px;letter-spacing:.03em;font-variant-numeric:tabular-nums}
+.mtag.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,transparent);background:color-mix(in srgb,var(--ok) 10%,transparent)}
+.mtag.err{color:var(--err);border-color:color-mix(in srgb,var(--err) 45%,transparent);background:color-mix(in srgb,var(--err) 10%,transparent)}
 .captag::before{content:"\200b";margin-right:-5px}
 .captag svg{display:block;width:1.35em;height:1.35em}
 .preset-drag{cursor:grabbing;background:var(--row-bg-on);border:none;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.35);outline:none;opacity:1!important}
@@ -4625,6 +4628,8 @@ fr: {
   "settings.presets.external_title": "API Externe (distante)",
   "settings.presets.cloud_title": "GPU Cloud",
   "settings.presets.external_model_title": "modèle distant",
+  "settings.presets.moteur_ok": "millésime du moteur installé, identique à celui que ce preset désigne et à celui qu'épinglette cette application",
+  "settings.presets.moteur_avis": "millésime du moteur incertain",
   "external.title": "API Externe",
   "external.new_title": "Nouvelle API Externe",
   "external.cfg_type_label": "Type",
@@ -6191,6 +6196,8 @@ en: {
   "settings.presets.external_title": "external API (remote)",
   "settings.presets.cloud_title": "cloud GPU",
   "settings.presets.external_model_title": "remote model",
+  "settings.presets.moteur_ok": "engine build installed here, matching both the one this preset points at and the one this application pins",
+  "settings.presets.moteur_avis": "engine build uncertain",
   "external.title": "External API",
   "external.new_title": "New external API",
   "external.cfg_type_label": "Type",
@@ -7936,6 +7943,14 @@ async function loadPresets(){
         c.textContent=x.ctx;
         meta.appendChild(c);
       }
+    }
+    if(x.moteur){
+      const mt=document.createElement('span');
+      mt.className='mtag '+(x.moteur_ok?'ok':'err');
+      mt.textContent='moteur '+x.moteur;
+      mt.title=x.moteur_ok ? t('settings.presets.moteur_ok')
+                           : (x.moteur_avis || t('settings.presets.moteur_avis'));
+      meta.appendChild(mt);
     }
     if(x.bench){
       const bt=document.createElement('span'); bt.className='btag';
