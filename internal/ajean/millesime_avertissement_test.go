@@ -27,6 +27,18 @@ import (
 func strataMoteurFixture(t *testing.T, dossier, versionMoteur string) map[string]string {
 	t.Helper()
 	parallelTestHome(t)
+	return strataMoteurDansLeHome(t, dossier, versionMoteur)
+}
+
+// strataMoteurDansLeHome : pose un moteur SANS toucher au home. Séparé de la
+// fixture parce que testHome (store_test.go:10) crée un NOUVEAU t.TempDir() à
+// chaque appel, et que strataPortableJSON encode les chemins du moteur
+// RELATIVEMENT À AjeanHome() AU MOMENT OÙ IL ÉCRIT. Poser deux moteurs en
+// appelant la fixture deux fois préparerait donc un premier moteur dont la
+// config ne se décode plus sous le second home : il passerait pour absent.
+// Faute vue en relisant le code, avant de la jouer.
+func strataMoteurDansLeHome(t *testing.T, dossier, versionMoteur string) map[string]string {
+	t.Helper()
 	home := moeHome()
 	src := filepath.Join(home, "strata-"+dossier)
 	exe := filepath.Join(src, "engine", "strata.exe")
