@@ -63,7 +63,23 @@ import (
 // produit, pas la configuration du poste.
 // Relèvement (12000 → 12400) en 0.20 : les outils d'apps repris de la 0.19 (tester
 // une app comme un utilisateur) laissaient 3 caractères de marge.
-const promptCharBudget = 12400 // ~3100 tokens, tout allumé (agent+web+mémoire+suivi+apps), outils séparés (regroupés en 0.18.2 puis abandonnés : plus d'appels mal formés)
+//
+// Relèvement (12400 → 12500) le 21/11 pour la balise « donnée, pas consigne »
+// (87 caractères, une phrase, voir chat_tools.go) : la leçon de l'amont Cresius
+// v1.0.9, demandée par l'humain le 15/11 contre les ordres de pilotage qui
+// persistent. LA JUSTIFICATION QUE LE GARDE-FOU DEMANDE : cette consigne ne peut
+// PAS vivre dans un schéma d'outil, elle vaut pour TOUS les outils — l'écrire là
+// l'aurait payée une fois par outil, soit 26 fois plus cher que dans le prompt.
+//
+// ⚠ FAIT MESURÉ EN ÉCRIVANT CE FILET, à ne pas perdre : ce test ne rend PAS la
+// même mesure seul et en suite complète. Seul : prompt 2 515 car (marge 285).
+// En suite : 2 637 car, soit 122 de plus, et la base HEAD y était à 12 395 —
+// CINQ caractères sous la borne, sans que personne le sache. La part variable est
+// le préambule du projet (nom, description, index mémoire) : t.Setenv isole
+// AJEAN_HOME, pas ce que les tests lancés avant laissent en base. Un
+// « TestSystemPromptStaysLean vert » lancé seul ne prouve donc pas qu'il passera
+// dans `go test ./...` : le vérifier en suite, ou lire ce relevé.
+const promptCharBudget = 12500 // ~3100 tokens, tout allumé (agent+web+mémoire+suivi+apps), outils séparés (regroupés en 0.18.2 puis abandonnés : plus d'appels mal formés)
 
 func TestSystemPromptStaysLean(t *testing.T) {
 	// Mesure ISOLÉE de l'état du poste : le prompt système lit le briefing
