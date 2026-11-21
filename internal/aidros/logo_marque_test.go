@@ -215,3 +215,56 @@ func TestLogoAidrosContreEpreuve(t *testing.T) {
 		t.Error("le garde resterait vert sur un logo revenu à JEAN")
 	}
 }
+
+// TestPageSemantiquePorteUnNom : la page /semantic-memory est SERVIE (web_server.go:158
+// → handleEmbeddingPage → web_embeddings.go:173), donc ce qu'elle affiche se voit.
+// Son <title> disait « AJEAN · Mémoire sémantique TEST » — une trace que ma passe du
+// 21/11 sur l'interface affichée avait MANQUÉE, parce que je cherchais dans le gabarit
+// et l'i18n, pas dans les pages satellites.
+//
+// Le garde n'affirme PAS le mot « Aidros » nu : depuis le renommage il est partout,
+// le chercher ne distingue rien. Il affirme DEUX choses qui se contredisent si
+// quelqu'un renomme à l'aveugle :
+//
+//	(1) les quatre chaînes AFFICHÉES portent Aidros — le titre, l'étiquette de
+//	    navigation, le libellé du champ, la phrase d'aide ;
+//	(2) la CLÉ DE STOCKAGE 'ajean.key' est INTACTE, à ses deux endroits (lire et
+//	    écrire). C'est le nom d'une clé localStorage que le navigateur de l'humain
+//	    relit après mon geste : la renommer perd la clé enregistrée, en silence.
+//
+// Un renommage aveugle par motif satisferait (1) et casserait (2). Le garde exige
+// les deux, et c'est (2) qui le rend utile.
+func TestPageSemantiquePorteUnNom(t *testing.T) {
+	brut, err := os.ReadFile("ui/semantic-memory.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	texte := string(brut)
+
+	affichees := []string{
+		"<title>Aidros · Mémoire sémantique TEST</title>",
+		`<span class="tag">Aidros · ESSAI PARALLÈLE</span>`,
+		"<label>Clé Aidros TEST<input",
+		"Démarre ton Aidros habituel, puis vérifie la connexion.",
+	}
+	for _, voulu := range affichees {
+		if n := strings.Count(texte, voulu); n != 1 {
+			t.Errorf("%q : trouvé %d fois, attendu 1 — ce texte s'AFFICHE (ui/semantic-memory.html)", voulu, n)
+		}
+	}
+
+	// (2) la clé de stockage garde son nom. Deux endroits : elle est lue ET écrite.
+	lues := strings.Count(texte, "localStorage.getItem('ajean.key')")
+	ecrites := strings.Count(texte, "localStorage.setItem('ajean.key'")
+	if lues < 1 || ecrites < 1 {
+		t.Errorf("clé localStorage 'ajean.key' : lue %d fois, écrite %d fois — renommée, la clé déjà enregistrée chez l'humain est perdue en silence", lues, ecrites)
+	}
+
+	// (3) le compte du nom, insensible à la casse. Il ne doit rester QUE la clé :
+	// deux occurrences. Mesuré avant d'écrire le garde — la page en portait six,
+	// dont quatre affichées, que ce test répare. Un compte, et non « le mot Aidros
+	// présent » : le présent ne distingue rien depuis le renommage.
+	if n := strings.Count(strings.ToLower(texte), "ajean"); n != lues+ecrites {
+		t.Errorf("le nom « ajean » reste présent %d fois, attendu %d (les seules occurrences admises sont la clé localStorage)", n, lues+ecrites)
+	}
+}
