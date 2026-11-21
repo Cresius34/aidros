@@ -4,6 +4,7 @@ package aidros
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -201,8 +202,65 @@ func gpuToolkitLibDirs() []string {
 			add(filepath.Join(root, "lib64"))
 		}
 	}
+	return dirs
+}
+
+// autoInstallTool installe un outil de compilation manquant avec le gestionnaire
+// de paquets du système (apt/dnf/pacman sous Linux, brew sous macOS). Best-effort :
+// renvoie une erreur quand aucun gestionnaire connu n'est disponible ou quand
+// l'installation échoue. Utilise sudo sous Linux quand on n'est pas déjà root
+// (brew, lui, refuse de tourner en root).
+//
+// RETABLI le 21/11 : cette fonction existait chez l'amont et a été AVALEE par ma
+// fusion 93c24d0 du 14/11, qui a recollé sa derniere ligne a la fin de
+// gpuToolkitLibDirs ci-dessus. Le fichier ne compilait plus sur aucun unix depuis
+// cette fusion ; Windows ne le voyait pas, le fichier etant exclu de sa compilation.
+func autoInstallTool(name string) error {
+	managers := []struct {
+		bin     string
+		install []string // args before the package name
+	}{
+		{"apt-get", []string{"install", "-y"}},
+		{"dnf", []string{"install", "-y"}},
+		{"pacman", []string{"-S", "--noconfirm"}},
+		{"brew", []string{"install"}},
+	}
+	for _, m := range managers {
+		if _, err := exec.LookPath(m.bin); err != nil {
+			continue
+		}
+		argv := append(append([]string{m.bin}, m.install...), name)
+		if m.bin != "brew" && os.Geteuid() != 0 {
+			if _, err := exec.LookPath("sudo"); err != nil {
+				return fmt.Errorf("%s requiert root (ni root ni sudo disponibles)", m.bin)
+			}
+			argv = append([]string{"sudo"}, argv...)
+		}
+		cmd := exec.Command(argv[0], argv[1:]...)
+		cmd.Stdout, cmd.Stderr, cmd.Stdin = os.Stdout, os.Stderr, os.Stdin
+		return cmd.Run()
+	}
 	return fmt.Errorf("aucun gestionnaire de paquets connu — installe %s manuellement", name)
 }
+
+// refreshToolPath est vide cote unix : les gestionnaires de paquets installent
+// dans des dossiers deja au PATH (/usr/bin, /usr/local/bin), contrairement a
+// Windows ou il faut relire le registre.
+func refreshToolPath() {}
+
+// cudaPathEnv est vide cote unix : aucun environnement CUDA a injecter dans un
+// processus fils, les bibliotheques sont trouvees par gpuToolkitLibDirs.
+func cudaPathEnv(toolkitDir string) []string { return nil }
+
+// ensureCudaVSIntegration est propre a Windows (l'integration MSBuild de CUDA,
+// verifiee aupres de Visual Studio). Aucun equivalent cote unix.
+func ensureCudaVSIntegration(toolkitDir string) error { return nil }
+
+// msvcDevEnv est propre a Windows : le generateur Ninja a besoin de
+// l'environnement MSVC pose par vcvars. Cote unix la chaine d'outils est deja
+// au PATH, il n'y a rien a injecter. La fonction n'existe que pour que le code
+// de compilation partage compile.
+func msvcDevEnv() ([]string, error) { return nil, nil }
 
 // ensureCompiler makes sure a C/C++ toolchain (cc + c++ + make) is present,
 // installing it via the system package manager when missing. build-essential on
