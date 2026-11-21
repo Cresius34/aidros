@@ -39,7 +39,19 @@ import (
 // NE PAS retourner avec celui-ci : moeReleaseBase (backend_moe.go:50) télécharge
 // le PAQUET DU MOTEUR MoE chez nathaninline, où les assets existent. Le
 // retourner là casserait l'installation du moteur, pas notre mise à jour.
-const updateRepo = "Cresius34/ajean"
+//
+// Passé à « Cresius34/aidros » le 21/11 au soir, quand le dépôt a été créé sous
+// le nom de la marque. Deux choses mesurées, pas supposées :
+//   - l'appel ci-dessous est NON AUTHENTIFIÉ (http.NewRequest sans en-tête
+//     Authorization) : le dépôt doit donc rester PUBLIC, sinon chaque appel
+//     tombe sur le quota non authentifié de GitHub (60/h par IP) ou sur un 404,
+//     et l'UI affiche une erreur de mise à jour. Le dépôt aïeul était public
+//     (mesuré : HTTP 200 sans jeton) ; le nouveau l'est aussi.
+//   - le build PORTABLE, celui qui tourne chez la voisine, ne lit jamais cette
+//     constante : parallel_profile.go:213 sert « available: false » avant
+//     d'arriver ici, avec sa raison au message (« cette version portable se met
+//     à jour à la main »). Changer cette ligne ne change donc RIEN pour elle.
+const updateRepo = "Cresius34/aidros"
 
 type ghRelease struct {
 	TagName string `json:"tag_name"`
