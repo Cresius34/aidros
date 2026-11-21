@@ -109,10 +109,15 @@ async function loadPresets(){
     // une couleur sur un preset sans rapport ferait mentir la légende.
     // Le titre porte l'avis complet, car la couleur seule ne dit pas QUOI — un
     // refus qui ne nomme pas sa cause a coûté quatre tours chez la voisine (17/11).
-    if(x.moteur){
+    // ⚠ x.moteur PEUT ÊTRE ABSENT avec un avis présent : quand la config du moteur
+    // est introuvable, AUCUN millésime n'est connu, seul l'avis existe. Le garde
+    // `if(x.moteur)` seul faisait alors disparaître la pastille, et un preset sans
+    // avis visible est le défaut trouvé le 21/11 sur l'installation réelle. Donc
+    // afficher aussi sur l'avis seul, et ne jamais écrire « moteur » tout court.
+    if(x.moteur||x.moteur_avis){
       const mt=document.createElement('span');
       mt.className='mtag '+(x.moteur_ok?'ok':'err');
-      mt.textContent='moteur '+x.moteur;
+      mt.textContent=x.moteur ? 'moteur '+x.moteur : t('settings.presets.moteur_sans');
       mt.title=x.moteur_ok ? t('settings.presets.moteur_ok')
                            : (x.moteur_avis || t('settings.presets.moteur_avis'));
       meta.appendChild(mt);

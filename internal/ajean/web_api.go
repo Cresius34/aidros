@@ -103,17 +103,17 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	sendJSON(w, 200, map[string]any{
-		"state":       state,
-		"active":      active,
-		"health":      health,
-		"port":        LLMPort(),
-		"ctx":         ctx,
-		"version":     displayVersion(),
-		"warn":        warn,        // ex. App Translocation macOS, millésime MoE divergent — vide si tout va bien
-		"load_error":  loadErr,            // modèle qui ne charge pas (incompat moteur…) — vide sinon
-		"boot":        procBoot,           // empreinte de démarrage du process (détecte un redémarrage côté UI)
-		"preset":      activePresetID(),   // id du preset actif : un autre appareil a pu basculer, l'UI se resynchronise sans reload (voir loadStatus)
-		"external":    external,           // preset actif = API OpenAI-compatible distante (pas de moteur local)
+		"state":      state,
+		"active":     active,
+		"health":     health,
+		"port":       LLMPort(),
+		"ctx":        ctx,
+		"version":    displayVersion(),
+		"warn":       warn,                             // ex. App Translocation macOS, millésime MoE divergent — vide si tout va bien
+		"load_error": loadErr,                          // modèle qui ne charge pas (incompat moteur…) — vide sinon
+		"boot":       procBoot,                         // empreinte de démarrage du process (détecte un redémarrage côté UI)
+		"preset":     activePresetID(),                 // id du preset actif : un autre appareil a pu basculer, l'UI se resynchronise sans reload (voir loadStatus)
+		"external":   external,                         // preset actif = API OpenAI-compatible distante (pas de moteur local)
 		"service":    serviceCmdOf(ReadConfig()) != "", // preset actif = Â« Service systÃ¨me Â» (commande lancÃ©e par AJEAN)
 		"ui":         uiBuildID(),                      // empreinte de l interface servie : si elle change, la page ouverte est pÃ©rimÃ©e et se recharge
 		// Anciens drapeaux --mlock/--no-mmap présents alors que le moteur attend
@@ -469,8 +469,20 @@ func handlePresets(w http.ResponseWriter, r *http.Request) {
 				// chez la voisine, un seul pointait le bon ; elle a renommé le mauvais,
 				// et quatre tours y sont passés.
 				if isStrataMoe(cfg) {
-					if mv, ok, avis := strataMillésimePreset(cfg); mv != "" {
-						item["moteur"] = mv
+					// ⚠ LE GARDE ÉTAIT `mv != ""` SEUL, et il jetait l'avis (mesuré
+					// le 21/11 sur l'installation réelle, invisible à mes filets qui
+					// jouaient vert, rouge et llama.cpp — jamais moteur illisible).
+					// strataMillésimeDuMoteur rend un AVIS NON VIDE avec un millésime
+					// VIDE quand la config du moteur est introuvable : le preset ne
+					// rendait donc AUCUNE clé. Ni vert, ni rouge, ni la cause. Exacte
+					// reproduction du piège que cette greffe vient fermer : un refus
+					// qui ne nomme pas sa cause (17/11, quatre tours chez la voisine).
+					// D'où : rendre dès qu'UN des deux parle, et ne pas rendre un
+					// millésime vide qui s'afficherait « moteur » tout court.
+					if mv, ok, avis := strataMillésimePreset(cfg); mv != "" || avis != "" {
+						if mv != "" {
+							item["moteur"] = mv
+						}
 						item["moteur_ok"] = ok
 						if avis != "" {
 							item["moteur_avis"] = avis
@@ -1593,10 +1605,3 @@ func presetContentOrEmpty(id string) string {
 	c, _ := ReadPreset(id)
 	return c
 }
-
-
-
-
-
-
-

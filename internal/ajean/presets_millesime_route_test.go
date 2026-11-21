@@ -40,6 +40,22 @@ func TestPresetsMoERendentLeMillesime(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// UN QUATRIÈME CAS, celui que mes trois filets ne jouaient JAMAIS : le moteur
+	// ILLISIBLE. Trouvé le 21/11 sur l'installation réelle — la config du moteur
+	// portait un BOM, strataReadConfig l'a refusée, et le preset ne rendait AUCUNE
+	// clé : ni vert, ni rouge, ni la cause. strataMillésimeDuMoteur rend alors un
+	// millésime VIDE avec un avis NON VIDE, et le garde `mv != ""` de web_api.go
+	// jetait l'avis. Ici, pas de BOM à jouer : une config absente suffit à rendre
+	// la même paire (« introuvable », "").
+	envIllisible := strataPresetEnv(vert)
+	envIllisible = strings.Replace(envIllisible,
+		filepath.ToSlash(vert["MOE_CONFIG"]),
+		"moe/strata-inexistant-9/strata-qui-n-existe-pas.json", 1)
+	idIllisible, err := SavePreset("", "MoE Illisible", envIllisible)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	w := httptest.NewRecorder()
 	handlePresets(w, httptest.NewRequest("GET", "/api/presets", nil))
 
@@ -92,6 +108,28 @@ func TestPresetsMoERendentLeMillesime(t *testing.T) {
 		if !strings.Contains(avis, veut) {
 			t.Errorf("rouge : l'avis doit nommer %q, rendu : %q", veut, avis)
 		}
+	}
+
+	// LE MOTEUR ILLISIBLE : la pastille doit être ROUGE et porter la CAUSE, alors
+	// qu'aucun millésime n'est connu. C'est le cœur du défaut : « moteur_ok » et
+	// « moteur_avis » rendus SANS « moteur ». Ne pas rendre l'avis serait laisser
+	// le preset muet, et un preset muet ne dit pas qu'il est cassé.
+	il, ok := byID[idIllisible]
+	if !ok {
+		t.Fatalf("preset MoE illisible absent de /api/presets (id %q)", idIllisible)
+	}
+	if mv, existe := il["moteur"]; existe {
+		t.Errorf("illisible : la cle moteur doit etre ABSENTE (aucun millésime connu), recu %v", mv)
+	}
+	if il["moteur_ok"] != false {
+		t.Errorf("illisible : moteur_ok = %v, attendu false — la pastille serait verte sur un moteur introuvable", il["moteur_ok"])
+	}
+	a2, _ := il["moteur_avis"].(string)
+	if a2 == "" {
+		t.Fatal("illisible sans moteur_avis : le défaut du 21/11 est de retour, le preset ne dit pas pourquoi il est rouge")
+	}
+	if !strings.Contains(a2, "moteur") {
+		t.Errorf("illisible : l'avis doit nommer le moteur, rendu %q", a2)
 	}
 
 	// Un preset sans moteur MoE ne doit pas porter de couleur : une pastille sur
