@@ -365,7 +365,7 @@ func peerAsk(ctx context.Context, p peerEndpoint, message, origine string) (stri
 	// à lire dix fois qu'il se parle à lui-même.
 	//
 	// La balise dit AUSSI ce qui a répondu de l'autre côté. Un tour d'agent s'annonce
-	// model:"ajean-agent" (envoiOpenAI), le modèle nu répond sous le nom de son gguf :
+	// model:"aidros-agent" (envoiOpenAI, modelAgentCanal), le modèle nu répond sous le nom de son gguf :
 	// c'est suffisant pour étiqueter, sans inventer de protocole. Cette différence est
 	// décisive pour celui qui lit — de l'agent, ou du texte de modèle nu ?
 	//
@@ -381,9 +381,9 @@ func peerAsk(ctx context.Context, p peerEndpoint, message, origine string) (stri
 	// rester intacts et en dernier — c'est ce que l'agent cite, et ce qu'il doit
 	// pouvoir distinguer de notre propre commentaire.
 	facon, detail := "modèle nu", ""
-	if strings.TrimSpace(out.Model) == "ajean-agent" {
+	if modelCanalEstAgent(out.Model) {
 		facon = "agent"
-	} else if refus := peerRefusCanal(resp.Header.Get(canalAgentRefusHeader)); refus != "" {
+	} else if refus := peerRefusCanal(lireEnTeteProtocole(resp.Header, canalAgentRefusHeader)); refus != "" {
 		detail = refus
 	}
 	return fmt.Sprintf("[Réponse du canal Aidros↔Aidros · voisin « %s » · il a répondu par son %s%s] %s",

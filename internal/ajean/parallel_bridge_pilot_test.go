@@ -218,13 +218,13 @@ func TestRelaisPilotageVoisin(t *testing.T) {
 	// voit du logiciel tiers : la route répond 404 ou 403, et le pilote ne sait pas
 	// qui commande. C'est le contrat, pas un détail d'implémentation.
 	if !recus.canal {
-		t.Error("X-Ajean-Canal absent chez le voisin : son pont traiterait ça comme du logiciel tiers")
+		t.Error("X-Aidros-Canal absent chez le voisin : son pont traiterait ça comme du logiciel tiers")
 	}
 	if recus.de == "" {
-		t.Error("X-Ajean-De absent : le voisin ne sait pas quelle machine commande")
+		t.Error("X-Aidros-Canal-From absent : le voisin ne sait pas quelle machine commande")
 	}
 	if recus.origine != canalOrigineHumain {
-		t.Errorf("X-Ajean-Origine = %q, attendu %q : depuis l'interface c'est la personne qui a cliqué, et elle ne doit pas se faire passer pour une IA",
+		t.Errorf("X-Aidros-Canal-Origin = %q, attendu %q : depuis l'interface c'est la personne qui a cliqué, et elle ne doit pas se faire passer pour une IA",
 			recus.origine, canalOrigineHumain)
 	}
 	if recus.cle != "Bearer cle-voisine" {

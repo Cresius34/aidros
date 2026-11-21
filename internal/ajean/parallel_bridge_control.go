@@ -62,7 +62,7 @@ func setParallelBridgeControlOn(on bool) error {
 // Ici les deux valeurs sont courtes, connues, et déjà posées par peerAsk (L308)
 // et peerOrigineCLI (L489) : rien de neuf à valider.
 func piloteCanal(r *http.Request) (machine, auteur string) {
-	machine = strings.TrimSpace(r.Header.Get(canalFromHeader))
+	machine = lireEnTeteProtocole(r.Header, canalFromHeader)
 	if machine == "" {
 		machine = "machine voisine"
 	}

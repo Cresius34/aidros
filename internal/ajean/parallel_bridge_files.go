@@ -22,7 +22,7 @@ package ajean
 //   - taille MAXIMALE affichée : la dépasser est une ERREUR qui le dit, jamais un troncage
 //     silencieux. Un log de 70 000 lignes ne doit pas pouvoir entrer par là.
 //   - rien n'écrasé en silence : un fichier déjà présent avec un contenu DIFFÉRENT répond 409, et
-//     l'en-tête X-Ajean-Remplacer est demandé pour passer outre.
+//     l'en-tête X-Aidros-Remplacer est demandé pour passer outre.
 
 import (
 	"crypto/sha256"
@@ -47,9 +47,9 @@ const echangeLimiteOctets int64 = 32 << 20
 // echangeNomMax : un nom plat, pas un chemin, et pas un pavé.
 const echangeNomMax = 128
 
-const echangeEnTeteRemplacer = "X-Ajean-Remplacer"
-const echangeEnTeteSha = "X-Ajean-Sha256"
-const echangeEnTeteNom = "X-Ajean-Fichier"
+const echangeEnTeteRemplacer = "X-Aidros-Remplacer"
+const echangeEnTeteSha = "X-Aidros-Sha256"
+const echangeEnTeteNom = "X-Aidros-Fichier"
 
 // echangeDir : le dossier d'échange, sous le dossier de données du poste. Calé comme moeHome()
 // et presetsDir() (backend_moe.go:188, run.go:262) : même racine, même comportement en portable.
@@ -236,7 +236,7 @@ func handleEchangePost(w http.ResponseWriter, r *http.Request) {
 	// Écrasement : jamais en silence. Un fichier déjà là, avec un autre contenu, répond 409.
 	if info, err := os.Stat(p); err == nil && !info.IsDir() {
 		ancien, _, _ := echangeEmpreinte(p)
-		enTete := strings.TrimSpace(strings.ToLower(r.Header.Get(echangeEnTeteRemplacer)))
+		enTete := strings.ToLower(lireEnTeteProtocole(r.Header, echangeEnTeteRemplacer))
 		if enTete != "1" && enTete != "true" && enTete != "oui" {
 			sendJSON(w, http.StatusConflict, map[string]any{
 				"ok": false, "nom": filepath.Base(p), "sha256": ancien,

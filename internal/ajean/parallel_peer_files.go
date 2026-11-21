@@ -228,7 +228,7 @@ func peerPriseFichier(ctx context.Context, p peerEndpoint, nom string) (string, 
 		corps, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		return "", peerFichiersStatut(p, resp.StatusCode, corps)
 	}
-	annonce := strings.ToLower(strings.TrimSpace(resp.Header.Get(echangeEnTeteSha)))
+	annonce := strings.ToLower(lireEnTeteProtocole(resp.Header, echangeEnTeteSha))
 
 	// Le nom vient du voisin : il passe par le même filtre que celui que le voisin applique à ce
 	// que je lui envoie. Sans ça, un voisin de mauvaise foi écrirait hors de mon dossier.

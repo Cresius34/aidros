@@ -239,10 +239,86 @@ func parallelBridgeHandler() http.Handler {
 }
 
 // canalHeader : marqueur posé par l'outil peer (parallel_peer.go) sur une
-// complétion qui vient d'UN AUTRE Ajean. Il distingue le canal d'un simple
+// complétion qui vient d'UN AUTRE Aidros. Il distingue le canal d'un simple
 // logiciel tiers branché sur le pont — et c'est ce qui autorise le pont à
 // parler de lui-même dans la requête.
-const canalHeader = "X-Ajean-Canal"
+//
+// Renommé le 21/11 (ordre de l'humain : « modifie aussi le protocole du pont,
+// l'exe de Bekka sera remplacé aussi »). Les en-têtes s'appellent X-Aidros-*.
+const canalHeader = "X-Aidros-Canal"
+
+// enTeteProtocoleAvant : le préfixe d'hier. UN SEUL endroit le connaît, parce
+// qu'une règle tient en une ligne là où neuf paires écrites à la main dérivent.
+const enTeteProtocoleAvant = "X-Ajean-"
+
+// enTeteProtocoleNouveau : le préfixe d'aujourd'hui.
+const enTeteProtocoleNouveau = "X-Aidros-"
+
+// lireEnTeteProtocole lit un en-tête du canal sous son nom d'aujourd'hui, puis
+// sous son nom d'hier.
+//
+// C'est le patron des trois renommages du jour (le dossier de repli, la base,
+// le dialogue), et la raison est la même : le renommage du nom change la
+// LECTURE, et une lecture qui ne trouve plus rien ne se plaint pas — elle rend
+// le vide. Ici le vide n'est pas une erreur, c'est un DIAGNOSTIC FAUX : sans
+// X-Aidros-Canal, le pont d'en face traite l'appelant comme « un logiciel tiers
+// ordinaire » (parallel_bridge_agent.go:128, parallel_bridge.go:267). Il
+// répond quand même. Le canal semble marcher, et le tour d'agent est mort.
+//
+// La fenêtre est réelle : entre la pose de CET exe et celle de l'exe d'en face,
+// l'un des deux postes nomme, l'autre non. Sans admission, le canal se coupe
+// silencieusement pendant ce temps-là. Avec, les deux extrémités se parlent
+// quel que soit l'ordre des poses — et l'ancien nom peut disparaître plus tard,
+// d'un seul côté, sans rien casser.
+//
+// L'ÉCRITURE, elle, ne connaît que le nouveau nom (Header.Set sur la
+// constante). Émettre les deux serait mentir sur qui parle ; lire les deux est
+// de la tolérance.
+func lireEnTeteProtocole(h http.Header, nom string) string {
+	if v := strings.TrimSpace(h.Get(nom)); v != "" {
+		return v
+	}
+	if avant := enTeteAvant(nom); avant != "" {
+		return strings.TrimSpace(h.Get(avant))
+	}
+	return ""
+}
+
+// modelAgentCanal : la valeur du champ "model" qu'annonce un tour d'AGENT du
+// canal (envoiOpenAI, parallel_bridge_agent.go). C'est la seule façon, pour
+// l'appelant, de distinguer un tour d'agent d'un modèle nu — le nu répond sous
+// le nom de son gguf. Le pont s'en sert pour étiqueter sa propre balise, « sans
+// inventer de protocole » (parallel_peer.go:367-370).
+//
+// C'est donc un FIL, pas une étiquette d'affichage : le renommage doit passer
+// par la même admission que les en-têtes. Un voisin au r43 annonce encore
+// « ajean-agent » et compare encore « ajean-agent ». Sans admission, ma
+// comparaison rate, et le diagnostic devient FAUX sans erreur : la balise dirait
+// « il a répondu par son modèle nu » alors que le voisin a bien lancé un agent,
+// avec ses outils et son disque. Exactement le registre des trois défauts du
+// jour — un symptôme qui n'est jamais « une erreur », jamais « rien ne se plaint ».
+const modelAgentCanal = "aidros-agent"
+
+// modelAgentCanalAvant : la valeur d'hier, admise à la lecture.
+const modelAgentCanalAvant = "ajean-agent"
+
+// modelCanalEstAgent : le modèle annoncé est-il celui d'un tour d'agent, sous
+// son nom d'aujourd'hui ou celui d'hier ? Comparaison insensible aux espaces
+// superflus, comme avant (TrimSpace).
+func modelCanalEstAgent(annonce string) bool {
+	a := strings.TrimSpace(annonce)
+	return a == modelAgentCanal || a == modelAgentCanalAvant
+}
+
+// enTeteAvant dérive le nom d'hier depuis celui d'aujourd'hui. Renvoie "" si le
+// nom n'est pas un nom du canal (dont le cas « on m'a déjà passé l'ancien » :
+// pas la peine de relire la même ligne deux fois).
+func enTeteAvant(nom string) string {
+	if !strings.HasPrefix(nom, enTeteProtocoleNouveau) {
+		return ""
+	}
+	return enTeteProtocoleAvant + nom[len(enTeteProtocoleNouveau):]
+}
 
 // bridgeDeclareSelf : le modèle prêté reçoit le texte brut, sans prompt système.
 // Sans rien pour le situer, il invente ce qu'il est. Mesuré le 2026-10-27, à qui

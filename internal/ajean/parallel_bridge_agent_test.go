@@ -483,7 +483,7 @@ func TestEnvoiOpenAIRendLaFormeAttendueParLoutilPeer(t *testing.T) {
 	}
 	// Le modèle annoncé n'est pas un gguf : c'est un agent, et l'appelant doit
 	// pouvoir le lire (le vérificateur du patch s'appuie sur ce delta de contexte).
-	if out.Model != "ajean-agent" {
+	if out.Model != modelAgentCanal {
 		t.Fatalf("modèle annoncé : %q", out.Model)
 	}
 	if out.Usage.PromptTokens != 4210 || out.Usage.CompletionTokens != len("voici le journal") {
@@ -556,7 +556,7 @@ func TestRefusDuPontReserveAuCanal(t *testing.T) {
 		strings.NewReader(`{"model":"x","messages":[{"role":"user","content":"bonjour"}]}`))
 	req.RemoteAddr = "192.168.1.42:51515"
 	req.Header.Set("Authorization", "Bearer sk-refus-test2")
-	// Pas de X-Ajean-Canal : un logiciel tiers ordinaire.
+	// Pas de X-Aidros-Canal : un logiciel tiers ordinaire.
 	h.ServeHTTP(w, req)
 
 	if got := w.Header().Get(canalAgentRefusHeader); got != "" {

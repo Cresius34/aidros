@@ -407,7 +407,7 @@ func dirRel(root, abs string) (string, bool) {
 // e2eInnerHeader marque une requête dispatchée depuis le proxy chiffré
 // (relay_e2e.go). Cf. handleChatFile : c'est le seul moyen pour un handler de
 // savoir que sa réponse sera réemballée en JSON.
-const e2eInnerHeader = "X-Ajean-E2E"
+const e2eInnerHeader = "X-Aidros-E2E"
 
 // handleChatFile sert un fichier du dossier de travail, en pièce jointe. Le
 // client passe le chemin RELATIF que le modèle a écrit dans sa réponse.
@@ -479,7 +479,7 @@ func handleChatFile(w http.ResponseWriter, r *http.Request) {
 			"ok": true, "name": name, "size": st.Size(),
 			// Le client ne peut pas deviner seul qu'il passe par le tunnel : le
 			// proxy lui rend des réponses JSON parfaitement ordinaires.
-			"e2e": r.Header.Get(e2eInnerHeader) != "",
+			"e2e": lireEnTeteProtocole(r.Header, e2eInnerHeader) != "",
 		})
 		return
 	}

@@ -65,8 +65,8 @@ func peerPilotURL(p peerEndpoint, route string) string {
 // peerPilotDo : la requête vers le voisin, avec les en-têtes du canal.
 //
 // Les en-têtes ne sont pas décoratifs, et c'est la leçon de peerAsk (L299-321) :
-// sans X-Ajean-Canal, le pont d'en face traite ça comme du logiciel tiers.
-// X-Ajean-De dit qui parle ; X-Ajean-Origine dit QUI a écrit — la seule pièce qui
+// sans X-Aidros-Canal, le pont d'en face traite ça comme du logiciel tiers.
+// X-Aidros-Canal-From dit qui parle ; X-Aidros-Canal-Origin dit QUI a écrit — la seule pièce qui
 // permette à l'IA d'en face de savoir si l'ordre vient d'une personne ou d'une
 // autre IA, donc si elle est visée.
 func peerPilotDo(ctx context.Context, p peerEndpoint, method, route string, corps []byte, origine string) ([]byte, int, error) {

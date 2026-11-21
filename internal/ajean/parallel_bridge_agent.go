@@ -54,14 +54,14 @@ import (
 
 // canalFromHeader : la machine qui APPELLE, déclarée par peerAsk. L'appelé ne
 // connaît pas le réseau de son voisin ; c'est ce nom qui entre dans la balise.
-const canalFromHeader = "X-Ajean-Canal-From"
+const canalFromHeader = "X-Aidros-Canal-From"
 
 // canalOriginHeader : QUI a écrit. C'est la pièce qui manquait pour que deux Ajean
 // distinguent trois choses qui n'ont pas la même autorité : la parole de leur humain
 // local, les mots de l'IA d'à côté, et les mots d'un humain d'ailleurs. Sans auteur
 // explicite tout arrive en texte nu — et une IA peut obéir à un ordre qui visait
 // l'autre machine (« coupe-toi » dit chez le voisin ne regarde pas celui qui reçoit).
-const canalOriginHeader = "X-Ajean-Canal-Origin"
+const canalOriginHeader = "X-Aidros-Canal-Origin"
 
 // Les deux auteurs possibles d'un message du canal.
 const (
@@ -73,7 +73,7 @@ const (
 // absente retombe sur « agent » : on n'invente jamais un humain pour rendre un
 // message plus faisant-authorité qu'il n'est.
 func canalOrigine(r *http.Request) string {
-	if strings.EqualFold(strings.TrimSpace(r.Header.Get(canalOriginHeader)), canalOrigineHumain) {
+	if strings.EqualFold(lireEnTeteProtocole(r.Header, canalOriginHeader), canalOrigineHumain) {
 		return canalOrigineHumain
 	}
 	return canalOrigineIA
@@ -84,7 +84,7 @@ func canalOrigine(r *http.Request) string {
 // coupure réelle de la récursion est canalTurnActive (l'outil peer est indisponible
 // pendant un tour du canal), cette borne-là n'attrape que les clients qui fabriquent
 // l'en-tête eux-mêmes.
-const canalHopHeader = "X-Ajean-Canal-Hop"
+const canalHopHeader = "X-Aidros-Canal-Hop"
 
 const canalHopMax = 2
 
@@ -94,7 +94,7 @@ const canalHopMax = 2
 // une source de bugs, et une raison en prose fuirait vers n'importe quel client. La
 // traduction en geste actionnable vit chez l'appelant — un seul endroit à corriger.
 // Absent = le tour d'agent a été pris, ou l'appelant n'était pas un Ajean.
-const canalAgentRefusHeader = "X-Ajean-Canal-Agent-Refus"
+const canalAgentRefusHeader = "X-Aidros-Canal-Agent-Refus"
 
 // canalBalise : la balise de début de message. Elle est dans le TEXTE et pas
 // seulement dans un en-tête, parce que c'est ce que l'agent lit et ce que
@@ -125,7 +125,7 @@ func canalDemande(r *http.Request) bool {
 	if r.Method != http.MethodPost || r.URL.Path != "/v1/chat/completions" {
 		return false
 	}
-	if strings.TrimSpace(r.Header.Get(canalHeader)) == "" {
+	if lireEnTeteProtocole(r.Header, canalHeader) == "" {
 		return false
 	}
 	return parallelBridgeAgentOn() && agentEnabled()
@@ -243,7 +243,7 @@ func bridgeAgentTurn(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	if hop := strings.TrimSpace(r.Header.Get(canalHopHeader)); hop != "" {
+	if hop := lireEnTeteProtocole(r.Header, canalHopHeader); hop != "" {
 		var n int
 		if _, err := fmt.Sscanf(hop, "%d", &n); err == nil && n >= canalHopMax {
 			sendJSON(w, http.StatusLoopDetected, map[string]any{
@@ -323,7 +323,7 @@ func bridgeAgentTurn(w http.ResponseWriter, r *http.Request) {
 	applyChatMode(&b, mode)
 	caps := capsFromBody(b)
 
-	texte := canalMessageTexte(strings.TrimSpace(r.Header.Get(canalFromHeader)), canalOrigine(r), dernier)
+	texte := canalMessageTexte(lireEnTeteProtocole(r.Header, canalFromHeader), canalOrigine(r), dernier)
 
 	// Repères AVANT le tour : tout ce que celui-ci ajoutera porte un Seq supérieur à
 	// seq0, et les messages neufs commencent à l'index nbMsg0. Sans cette borne, la
@@ -495,7 +495,7 @@ func envoiOpenAI(w http.ResponseWriter, reponse string, promptTokens int) {
 		"id":      "chatcmpl-pont-" + fmt.Sprint(time.Now().UnixNano()),
 		"object":  "chat.completion",
 		"created": time.Now().Unix(),
-		"model":   "ajean-agent",
+		"model":   modelAgentCanal,
 		"choices": []any{map[string]any{
 			"index":         0,
 			"message":       map[string]any{"role": "assistant", "content": reponse},
