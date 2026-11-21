@@ -24,7 +24,22 @@ import (
 // l'OS/arch courant, remplace le binaire en place, puis affiche quoi redémarrer.
 // AUCUN redémarrage de service automatique (choix volontaire, plus sûr).
 
-const updateRepo = "nathaninline/ajean"
+// updateRepo : OU l'on se met à jour. Retourne le 21/11 vers notre dépôt : la
+// scission est actée, v1.0.x de nathaninline est un projet sans ancêtre commun
+// et ses étiquettes ne sont pas les nôtres (mesuré : `git merge-base HEAD
+// upstream/main` ne rend rien). Continuer à pointer chez eux ferait proposer
+// LEUR binaire à chaque mise à jour — et avec notre millésime à 1.0.0, leur
+// v1.0.10 passerait même pour « plus récent » (semver.Compare, ligne ~163).
+//
+// ⚠ Ce dépôt n'a PAS ENCORE de release publiée (mesuré le 21/11 : l'API
+// GitHub répond 404 sur releases/latest). checkForUpdate sert alors son erreur
+// tant qu'aucun résultat frais n'est en cache : ni « à jour », ni « disponible
+// », une erreur. Publier la release v1.0.0+rev0 éteint ça.
+//
+// NE PAS retourner avec celui-ci : moeReleaseBase (backend_moe.go:50) télécharge
+// le PAQUET DU MOTEUR MoE chez nathaninline, où les assets existent. Le
+// retourner là casserait l'installation du moteur, pas notre mise à jour.
+const updateRepo = "Cresius34/ajean"
 
 type ghRelease struct {
 	TagName string `json:"tag_name"`
