@@ -175,7 +175,17 @@
       <label class="switchrow"><span class="switch"><input type="checkbox" id="oai-public-toggle" onchange="toggleOAIPublic()"><span class="slider"></span></span> <span data-i18n="api.public_toggle">exposer en public (ajean.link)</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="api.public_help" data-i18n-html>Rend votre IA joignable depuis <b>n'importe où</b> via <code>https://&lt;machine&gt;.oai.ajean.link/v1</code> (pour brancher un SaaS). Le trafic est chiffré <b>de bout en bout</b> jusqu'à ce serveur — le relais ajean.link ne voit rien. Nécessite l'accès distant actif.</span></span></label>
     </div>
   </details>
-  <details id="remote-details"><summary><span class="stitle" data-i18n="link.title">AJEAN LINK</span><span id="remote-badge" class="sbadge"></span></summary>
+  <!-- AJEAN LINK : carte MASQUEE sur l'ordre de l'humain du 21/11/2026 ('je ne m'en sers pas').
+     Le code, lui, RESTE : les cinq routes /api/link/*, les 1 938 lignes de relay_*.go
+     (tunnel sortant multiplexe yamux, chiffrement bout en bout X25519, anti-rejeu,
+     TLS ALPN-01 servi A TRAVERS le tunnel) et le CLI. C'est la matiere premiere
+     d'un reseau pair a pair, pas du mort : ne pas supprimer.
+     POUR LA FAIRE REVENIR : retirer le display:none ci-dessous, rien d'autre a
+     brancher -- 13-remote.js remplit l'etat de la carte tout seul.
+     Son HTML reste la seule trace lisible de l'UI de l'abonnement, et le portable
+     bloque deja /api/link/* a l'entree (403), ce qui rendait l'etat visible quand meme.
+-->
+<details id="remote-details" style="display:none"><summary><span class="stitle" data-i18n="link.title">AJEAN LINK</span><span id="remote-badge" class="sbadge"></span></summary>
     <div class="subhead"><span data-i18n="link.remote_subhead">Accès distant</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="link.remote_help" data-i18n-html>Accédez à ce serveur Aidros depuis <b>n'importe où</b>, sans ouvrir de port, à travers le relais <b>ajean.link</b>. Le trafic est chiffré de <b>bout en bout</b> : le relais ne voit rien. Abonnement 4,80 €/mois.</span></span></div>
     <!-- Non connecté : on met en avant les avantages de l'abonnement AJEAN LINK pour
          donner envie de s'abonner, puis le bouton (tout se passe dans la popup). -->
