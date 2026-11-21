@@ -4,8 +4,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="AJEAN">
-<title>AJEAN</title>
+<meta name="apple-mobile-web-app-title" content="Aidros">
+<title>Aidros</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><rect width='12' height='12' rx='2' ry='2' fill='%23000'/><rect x='6' y='3' width='2' height='2' fill='%23fff'/><rect x='6' y='5' width='2' height='2' fill='%23fff'/><rect x='4' y='7' width='2' height='2' fill='%23fff'/></svg>">
 <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAABBUlEQVR42u3SAQkAAAwCQfuX3lI4GNxF0E8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIArU2NbcYhDHOIQhzgQB+JAHIgDcSAOxIE4xCEOcYhDHIgDcSAOxIE4EAfiQBziEIc4xCEOcYgDcSAOxIE4EAfiQBziEIc4xCEOcYgDcSAOxIE4EAfiQByIQxziEIc4xIE4EAfiQByIA3EgDsQhDnGIQxziEIc4EAfiQByIAxciDsSBOBAH4kAc4hCHOMQhDnGIA3EgDsSBOBAH4kAc4hCHOMQhDnGIA3EgDsSBOBAH4kAciEMc4hCHOMQBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADfLBHMhi4TnG6EAAAAAElFTkSuQmCC">
 <link rel="manifest" href="manifest.webmanifest">
@@ -2325,14 +2325,14 @@ audio.jf-media{width:min(520px,100%);margin-top:18vh}
     </div>
     <div id="remote-perks-mini" class="link-perks-mini" style="display:none" data-i18n="link.perks_mini" data-i18n-html>Inclus dans <b>AJEAN LINK</b> : accès distant chiffré de bout en bout · sauvegarde de vos réglages, presets, historique et mémoire.</div>
   </details>
-  <details id="bridge-details" hidden><summary><span class="stitle">Pont Ajean ↔ Ajean</span><span id="bridge-badge" class="sbadge"></span></summary>
+  <details id="bridge-details" hidden><summary><span class="stitle">Pont Aidros ↔ Aidros</span><span id="bridge-badge" class="sbadge"></span></summary>
     <div class="slist api-conn">
       <div class="api-ent">
-        <div class="api-lbl"><span>Adresse à coller chez l’autre Ajean</span><span id="bridge-state" class="api-state"></span></div>
+        <div class="api-lbl"><span>Adresse à coller chez l’autre Aidros</span><span id="bridge-state" class="api-state"></span></div>
         <div class="api-line"><input id="bridge-url" readonly class="api-val">
           <button class="sw-ic" onclick="copyText(document.getElementById('bridge-url').value,'adresse copiée');flashCopied(this)" title="copier"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div>
       </div>
-      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-on" onchange="bridgeToggle(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span>Prêter ce modèle à un autre Ajean</span><span class="sw-sub">n’ouvre que l’API du modèle (/v1) sur le réseau local, verrouillée par la clé API de cette machine. Ni la mémoire, ni le chat.</span></span></label>
+      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-on" onchange="bridgeToggle(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span>Prêter ce modèle à un autre Aidros</span><span class="sw-sub">n’ouvre que l’API du modèle (/v1) sur le réseau local, verrouillée par la clé API de cette machine. Ni la mémoire, ni le chat.</span></span></label>
       <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-agent" onchange="bridgeSetAgent(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span>Laisser l’agent du voisin travailler ici</span><span class="sw-sub">un message du canal déclenche un tour d’agent sur CETTE machine : outils, shell, disque. Nécessite aussi le mode Agent de cette machine, sinon rien ne se déclenche.</span></span></label>
       <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-control" onchange="bridgeSetControl(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span>Laisser le voisin changer le moteur de cette machine</span><span class="sw-sub">lui ouvre « basculer le preset actif » et « allumer/couper l’agent ». ⚠ basculer un preset <b>arrête le moteur en place</b> et redémarre l’application : le pont de cette machine se coupe quelques secondes, et le canal avec lui.</span></span></label>
       <div class="api-line"><span class="api-lbl">Port d’écoute <span class="pe-sub">doit différer du port de l’interface et de celui du moteur</span></span>
@@ -2341,10 +2341,10 @@ audio.jf-media{width:min(520px,100%);margin-top:18vh}
     </div>
     <div class="slist">
       <div class="subhead"><span>Recevoir un cerveau</span></div>
-      <div class="rowbody"><p class="muted" style="margin:0">Pour que CETTE installation utilise le modèle d’un autre Ajean : Presets → <b>API Externe</b>, et y coller l’adresse du pont de l’autre machine avec la clé API de cette machine-là. L’adresse d’un pont allumé sur cette même machine est refusée — une instance ne se parle pas à elle-même.</p></div>
+      <div class="rowbody"><p class="muted" style="margin:0">Pour que CETTE installation utilise le modèle d’un autre Aidros : Presets → <b>API Externe</b>, et y coller l’adresse du pont de l’autre machine avec la clé API de cette machine-là. L’adresse d’un pont allumé sur cette même machine est refusée — une instance ne se parle pas à elle-même.</p></div>
     </div>
     <div class="slist" id="peers-block" hidden>
-      <div class="subhead"><span>Parler à un autre Ajean</span></div>
+      <div class="subhead"><span>Parler à un autre Aidros</span></div>
       <div class="rowbody"><p class="muted" style="margin:0">Un voisin garde son propre modèle et sa propre mémoire : l’outil <code>peer</code> lui envoie des messages et garde le souvenir de l’échange. Rien ne s’exécute de l’autre côté, et rien ici à sa demande.</p></div>
       <div id="peers-list"></div>
       <div class="api-line"><input id="peer-name" class="api-val" placeholder="nom (ex. poste-salon)" style="max-width:150px">
@@ -2360,7 +2360,7 @@ audio.jf-media{width:min(520px,100%);margin-top:18vh}
         <span class="eng-name">llama.cpp <span id="eng-version"></span></span>
         <span class="eng-state" id="eng-state"></span>
       </div>
-      <div class="eng-sub" data-i18n="engine.bundled_desc">Livré avec AJEAN et installé automatiquement. Il change avec les mises à jour d'AJEAN.</div>
+      <div class="eng-sub" data-i18n="engine.bundled_desc">Livré avec Aidros et installé automatiquement. Il change avec les mises à jour d'Aidros.</div>
       <div class="eng-actions">
         <label class="eng-variant" id="eng-variant-wrap" hidden>
           <span data-i18n="engine.variant_label">accélération</span>
@@ -2428,7 +2428,7 @@ audio.jf-media{width:min(520px,100%);margin-top:18vh}
       </div>
     </div>
     <div id="voice-block">
-      <div class="subhead"><span data-i18n="voice.title">Voix de Jean</span><span id="voice-badge" class="sbadge"></span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="voice.help" data-i18n-html>Conversation à voix haute en mode Jean : bouton micro sur sa scène. La transcription et la voix passent par un <b>serveur audio.cpp</b> (Qwen3-ASR et VoxCPM2). Les voix sont enregistrées dans AJEAN.</span></span></div>
+      <div class="subhead"><span data-i18n="voice.title">Voix de Jean</span><span id="voice-badge" class="sbadge"></span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="voice.help" data-i18n-html>Conversation à voix haute en mode Jean : bouton micro sur sa scène. La transcription et la voix passent par un <b>serveur audio.cpp</b> (Qwen3-ASR et VoxCPM2). Les voix sont enregistrées dans Aidros.</span></span></div>
       <div class="slist">
         <label class="switchrow"><span class="switch"><input type="checkbox" id="voice-toggle" onchange="voiceSave({on:this.checked})"><span class="slider"></span></span> <span data-i18n="voice.toggle">conversation vocale</span></label>
         <label class="switchrow"><span data-i18n="voice.server">serveur audio</span><input id="voice-url" class="sctl" type="text" spellcheck="false" autocomplete="off" placeholder="http://127.0.0.1:8095" onchange="voiceSave({url:this.value})"></label>
@@ -2451,9 +2451,9 @@ audio.jf-media{width:min(520px,100%);margin-top:18vh}
         <div class="switchrow agent-gated compact-frac-row"><span data-i18n="agent.compact_frac">compactage à</span><input type="range" id="compact-frac" min="50" max="100" step="5" value="75" oninput="showCompactFrac(this.value)" onchange="setCompactFrac()"><output id="compact-frac-out" class="cfrac-out">75 %</output><span class="cfrac-note" id="compact-frac-note"></span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="agent.compact_frac_help">Le contexte se compacte quand il atteint ce pourcentage de la fenêtre du modèle. 75 % par défaut. Plus haut = moins souvent, mais il reste moins de place pour le tour suivant : une marge de sécurité (5 % de la fenêtre, 8 192 jetons au minimum) est toujours gardée libre au-dessus du seuil. Le nombre affiché à droite est le seuil réel en jetons.</span></span></div>
         <div class="switchrow agent-gated compact-max-row"><span data-i18n="agent.compact_max">compacter au plus tard à</span><select id="compact-max" class="sctl" onchange="setCompactMax()"><option value="0" data-i18n="agent.compact_max_auto">75 % du contexte</option><option value="16384">16K</option><option value="24576">24K</option><option value="32768">32K</option><option value="49152">48K</option><option value="65536">64K</option><option value="98304">96K</option><option value="131072">128K</option></select><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="agent.compact_max_help">Par défaut, le contexte est compacté à 75 % de la fenêtre du modèle. Avec une très grande fenêtre, ce seuil n'est presque jamais atteint et les longues conversations deviennent lentes. Un plafond compacte plus tôt, quelle que soit la fenêtre.</span></span></div>
         <label class="switchrow"><span class="switch"><input type="checkbox" id="prewarm-toggle" onchange="togglePrewarm()"><span class="slider"></span></span> <span data-i18n="agent.prewarm_toggle">pré-chauffage du prompt</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="agent.prewarm_help">Activé par défaut. Quand une nouvelle conversation est ouverte, le moteur lit à l'avance les consignes et les outils. Le premier message obtient sa réponse en quelques dixièmes de seconde au lieu de plusieurs secondes. Le moteur travaille quelques secondes en arrière-plan à chaque nouvelle conversation.</span></span></label>
-        <label class="switchrow"><span class="switch"><input type="checkbox" id="push-toggle" onchange="togglePush()"><span class="slider"></span></span> <span data-i18n="agent.push_toggle">me prévenir quand la réponse est prête</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="agent.push_help" data-i18n-html>Le serveur t'envoie une <b>notification</b> à la fin de chaque réponse, même l'app fermée ou le téléphone verrouillé. Sur iPhone : <b>ajoute d'abord AJEAN à l'écran d'accueil</b> puis active depuis l'app installée. À régler sur chaque appareil.</span></span></label>
+        <label class="switchrow"><span class="switch"><input type="checkbox" id="push-toggle" onchange="togglePush()"><span class="slider"></span></span> <span data-i18n="agent.push_toggle">me prévenir quand la réponse est prête</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="agent.push_help" data-i18n-html>Le serveur t'envoie une <b>notification</b> à la fin de chaque réponse, même l'app fermée ou le téléphone verrouillé. Sur iPhone : <b>ajoute d'abord Aidros à l'écran d'accueil</b> puis active depuis l'app installée. À régler sur chaque appareil.</span></span></label>
         <label class="switchrow"><span class="switch"><input type="checkbox" id="mem-enc-toggle" onchange="toggleMemEncrypt()"><span class="slider"></span></span> <span data-i18n="agent.encrypt_toggle">activer le chiffrement</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="agent.encrypt_help" data-i18n-html>Chiffre ta <b>mémoire</b> ET tes <b>conversations</b> au repos (AES-256), protégées par ta <b>clé d'accès</b> : si tu as accès à l'interface, c'est déjà déverrouillé ; sinon on te demande ta clé d'accès. Une <b>clé de récupération</b> t'est donnée à l'activation (garde-la). Rien n'est perdu : snapshots automatiques avant chaque bascule.</span></span></label>
-        <label class="switchrow"><span data-i18n="settings.link_browser_label">liens externes dans</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="settings.link_browser_help" data-i18n-html>Les liens cliqués dans AJEAN s'ouvrent dans ce navigateur. La fenêtre AJEAN elle-même ne change pas : seuls les liens cliqués changent de navigateur. « Navigateur par défaut » suit le réglage de ta machine et couvre aussi les navigateurs absents de cette liste.</span></span>
+        <label class="switchrow"><span data-i18n="settings.link_browser_label">liens externes dans</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="settings.link_browser_help" data-i18n-html>Les liens cliqués dans Aidros s'ouvrent dans ce navigateur. La fenêtre Aidros elle-même ne change pas : seuls les liens cliqués changent de navigateur. « Navigateur par défaut » suit le réglage de ta machine et couvre aussi les navigateurs absents de cette liste.</span></span>
           <select id="link-browser" class="sctl" onchange="setLinkBrowser(this.value)">
             <option value="auto" data-i18n="settings.link_browser_auto">navigateur par défaut</option>
             <option value="chrome">Google Chrome</option>
@@ -3901,7 +3901,7 @@ fr: {
   "agent.push_toggle": "me prévenir quand la réponse est prête",
   "agent.prewarm_toggle": "pré-chauffage du prompt",
   "agent.prewarm_help": "Activé par défaut. Quand une nouvelle conversation est ouverte, le moteur lit à l'avance les consignes et les outils. Le premier message obtient sa réponse en quelques dixièmes de seconde au lieu de plusieurs secondes. Le moteur travaille quelques secondes en arrière-plan à chaque nouvelle conversation.",
-  "agent.push_help": "Le serveur t'envoie une <b>notification</b> à la fin de chaque réponse, même l'app fermée ou le téléphone verrouillé. Sur iPhone : <b>ajoute d'abord AJEAN à l'écran d'accueil</b> puis active depuis l'app installée. À régler sur chaque appareil.",
+  "agent.push_help": "Le serveur t'envoie une <b>notification</b> à la fin de chaque réponse, même l'app fermée ou le téléphone verrouillé. Sur iPhone : <b>ajoute d'abord Aidros à l'écran d'accueil</b> puis active depuis l'app installée. À régler sur chaque appareil.",
   "agent.encrypt_toggle": "activer le chiffrement",
   "agent.encrypt_help": "Chiffre ta <b>mémoire</b> ET tes <b>conversations</b> au repos (AES-256), protégées par ta <b>clé d'accès</b> : si tu as accès à l'interface, c'est déjà déverrouillé ; sinon on te demande ta clé d'accès. Une <b>clé de récupération</b> t'est donnée à l'activation (garde-la). Rien n'est perdu : snapshots automatiques avant chaque bascule.",
   "memory.title": "Mémoire",
@@ -4006,7 +4006,7 @@ fr: {
   "link.backup_now": "Sauvegarder maintenant",
   "link.backup_restore": "Restaurer…",
   "engine.title": "Moteur",
-  "engine.bundled_desc": "Livré avec AJEAN et installé automatiquement. Il change avec les mises à jour d'AJEAN.",
+  "engine.bundled_desc": "Livré avec Aidros et installé automatiquement. Il change avec les mises à jour d'Aidros.",
   "engine.cannot_dismiss": "impossible de masquer",
   "engine.chip_install": "Installation du moteur",
   "engine.chip_missing": "Moteur non installé",
@@ -4016,11 +4016,11 @@ fr: {
   "engine.failed_toast": "échec — voir les détails",
   "engine.install_now": "installer maintenant",
   "engine.interrupted": "interrompue",
-  "engine.legacy_note": "Dossiers d'anciennes versions, qu'AJEAN n'utilise plus (vous pouvez les supprimer) :",
+  "engine.legacy_note": "Dossiers d'anciennes versions, qu'Aidros n'utilise plus (vous pouvez les supprimer) :",
   "engine.network_error": "erreur réseau",
   "engine.ready_toast": "c'est prêt ✓",
   "engine.repair": "réparer",
-  "engine.repair_confirm": "Retélécharger llama.cpp dans la version livrée avec AJEAN. Le modèle est déchargé le temps de l'opération, puis rechargé.",
+  "engine.repair_confirm": "Retélécharger llama.cpp dans la version livrée avec Aidros. Le modèle est déchargé le temps de l'opération, puis rechargé.",
   "engine.repair_title": "Réparer le moteur",
   "engine.state_installing": "installation…",
   "engine.state_missing": "pas encore installé",
@@ -4120,7 +4120,7 @@ fr: {
   "jean.embed_ready": " · {t} souvenirs indexés",
   "jean.files_title": "Fichiers de Jean",
   "voice.title": "Voix de Jean",
-  "voice.help": "Conversation à voix haute en mode Jean : bouton micro sur sa scène. La transcription et la voix passent par un <b>serveur audio.cpp</b> (Qwen3-ASR et VoxCPM2). Les voix sont enregistrées dans AJEAN.",
+  "voice.help": "Conversation à voix haute en mode Jean : bouton micro sur sa scène. La transcription et la voix passent par un <b>serveur audio.cpp</b> (Qwen3-ASR et VoxCPM2). Les voix sont enregistrées dans Aidros.",
   "voice.toggle": "conversation vocale",
   "voice.server": "serveur audio",
   "voice.voice": "voix",
@@ -4258,7 +4258,7 @@ fr: {
   "settings.link_browser_label": "liens externes dans",
   "settings.link_browser_auto": "navigateur par défaut",
   "settings.link_browser_saved": "réglage enregistré",
-  "settings.link_browser_help": "Les liens cliqués dans AJEAN s'ouvrent dans ce navigateur. La fenêtre AJEAN elle-même ne change pas : seuls les liens cliqués changent de navigateur. « Navigateur par défaut » suit le réglage de ta machine et couvre aussi les navigateurs absents de cette liste.",
+  "settings.link_browser_help": "Les liens cliqués dans Aidros s'ouvrent dans ce navigateur. La fenêtre Aidros elle-même ne change pas : seuls les liens cliqués changent de navigateur. « Navigateur par défaut » suit le réglage de ta machine et couvre aussi les navigateurs absents de cette liste.",
   "chat.projects_button_title": "Projets (mémoire + conversations cloisonnées)",
   "chat.input_placeholder": "Discuter avec Jean",
   "chat.plus_button_title": "Ajouter",
@@ -4535,8 +4535,8 @@ fr: {
   "uikit.ok": "OK",
   "uikit.validate": "Valider",
   "uikit.confirm": "Confirmer",
-  "api.timeout_error": "requête sans réponse après 30 s (trop d'onglets AJEAN ouverts ?)",
-  "api.key_required_msg": "Clé de pilotage AJEAN requise :",
+  "api.timeout_error": "requête sans réponse après 30 s (trop d'onglets Aidros ouverts ?)",
+  "api.key_required_msg": "Clé de pilotage Aidros requise :",
   "api.auth_title": "Authentification",
   "api.key_placeholder": "clé…",
   "status.stopped": "arrêté",
@@ -4556,7 +4556,7 @@ fr: {
   "status.error": "erreur",
   "status.loading": "chargement…",
   "status.stale_currently": "actuellement",
-  "status.stale_intro": "Le serveur AJEAN de cette machine n'est pas à jour",
+  "status.stale_intro": "Le serveur Aidros de cette machine n'est pas à jour",
   "status.stale_new_version": "La version",
   "status.stale_recommend": "est disponible. Il est recommandé de le mettre à jour pour profiter de toutes les fonctionnalités et éviter d'éventuels bugs de compatibilité.",
   "status.update_btn": "Mettre à jour",
@@ -4577,7 +4577,7 @@ fr: {
   "status.error_prefix": "Erreur :",
   "status.new_version_prefix": "Nouvelle version",
   "status.new_version_suffix": "disponible.",
-  "status.up_to_date": "AJEAN est à jour ✓",
+  "status.up_to_date": "Aidros est à jour ✓",
   "status.update_confirm": "Installer la mise à jour maintenant ? Le service va redémarrer.",
   "status.network_error": "Erreur réseau",
   "status.loading_dots": "…",
@@ -4990,7 +4990,7 @@ fr: {
   "remote.fingerprint_label": "Empreinte :",
   "remote.pairing_code_label": "Code d'appairage (valable 10 min, usage unique)",
   "remote.code_unavailable": "code indisponible",
-  "push.ios_add_to_home": "Sur iPhone : ajoute d'abord AJEAN à l'écran d'accueil, puis rouvre-le depuis l'icône pour activer les notifications.",
+  "push.ios_add_to_home": "Sur iPhone : ajoute d'abord Aidros à l'écran d'accueil, puis rouvre-le depuis l'icône pour activer les notifications.",
   "push.not_supported": "Ce navigateur ne prend pas en charge les notifications.",
   "push.blocked_in_browser": "Notifications bloquées dans les réglages du navigateur — réautorise-les pour ce site.",
   "push.enabled_status": "Activées : une notif à chaque réponse terminée.",
@@ -5470,7 +5470,7 @@ en: {
   "agent.push_toggle": "notify me when the response is ready",
   "agent.prewarm_toggle": "prompt prewarming",
   "agent.prewarm_help": "On by default. When a new conversation is opened, the engine reads the instructions and tools in advance. The first message gets its answer in a few tenths of a second instead of several seconds. The engine works for a few seconds in the background for each new conversation.",
-  "agent.push_help": "The server sends you a <b>notification</b> at the end of each response, even with the app closed or the phone locked. On iPhone: <b>first add AJEAN to the home screen</b>, then enable it from the installed app. Must be set up on each device.",
+  "agent.push_help": "The server sends you a <b>notification</b> at the end of each response, even with the app closed or the phone locked. On iPhone: <b>first add Aidros to the home screen</b>, then enable it from the installed app. Must be set up on each device.",
   "agent.encrypt_toggle": "enable encryption",
   "agent.encrypt_help": "Encrypts your <b>memory</b> AND your <b>conversations</b> at rest (AES-256), protected by your <b>access key</b>: if you have access to the interface, it's already unlocked; otherwise you'll be asked for your access key. A <b>recovery key</b> is given to you when you enable it (keep it safe). Nothing is lost: automatic snapshots before every switch.",
   "memory.title": "Memory",
@@ -5575,7 +5575,7 @@ en: {
   "link.backup_now": "Back up now",
   "link.backup_restore": "Restore…",
   "engine.title": "Engine",
-  "engine.bundled_desc": "Shipped with AJEAN and installed automatically. It changes with AJEAN updates.",
+  "engine.bundled_desc": "Shipped with Aidros and installed automatically. It changes with Aidros updates.",
   "engine.cannot_dismiss": "cannot dismiss",
   "engine.chip_install": "Installing the engine",
   "engine.chip_missing": "Engine not installed",
@@ -5585,11 +5585,11 @@ en: {
   "engine.failed_toast": "failed — see details",
   "engine.install_now": "install now",
   "engine.interrupted": "interrupted",
-  "engine.legacy_note": "Folders left by earlier versions, no longer used by AJEAN (you can delete them):",
+  "engine.legacy_note": "Folders left by earlier versions, no longer used by Aidros (you can delete them):",
   "engine.network_error": "network error",
   "engine.ready_toast": "it's ready ✓",
   "engine.repair": "repair",
-  "engine.repair_confirm": "Download llama.cpp again, in the version shipped with AJEAN. The model is unloaded during the operation, then reloaded.",
+  "engine.repair_confirm": "Download llama.cpp again, in the version shipped with Aidros. The model is unloaded during the operation, then reloaded.",
   "engine.repair_title": "Repair the engine",
   "engine.state_installing": "installing…",
   "engine.state_missing": "not installed yet",
@@ -5689,7 +5689,7 @@ en: {
   "jean.embed_ready": " · {t} memories indexed",
   "jean.files_title": "Jean's files",
   "voice.title": "Jean's voice",
-  "voice.help": "Spoken conversation in Jean mode: microphone button on the stage. Transcription and speech go through an <b>audio.cpp server</b> (Qwen3-ASR and VoxCPM2). Voices are stored in AJEAN.",
+  "voice.help": "Spoken conversation in Jean mode: microphone button on the stage. Transcription and speech go through an <b>audio.cpp server</b> (Qwen3-ASR and VoxCPM2). Voices are stored in Aidros.",
   "voice.toggle": "voice conversation",
   "voice.server": "audio server",
   "voice.voice": "voice",
@@ -5827,7 +5827,7 @@ en: {
   "settings.link_browser_label": "external links in",
   "settings.link_browser_auto": "system default",
   "settings.link_browser_saved": "setting saved",
-  "settings.link_browser_help": "Links clicked in AJEAN open in this browser. The AJEAN window itself does not change: only clicked links switch browser. “System default” follows your machine's setting and also covers browsers missing from this list.",
+  "settings.link_browser_help": "Links clicked in Aidros open in this browser. The Aidros window itself does not change: only clicked links switch browser. “System default” follows your machine's setting and also covers browsers missing from this list.",
   "chat.projects_button_title": "Projects (isolated memory + conversations)",
   "chat.input_placeholder": "Chat with Jean",
   "chat.plus_button_title": "Add",
@@ -6104,8 +6104,8 @@ en: {
   "uikit.ok": "OK",
   "uikit.validate": "Validate",
   "uikit.confirm": "Confirm",
-  "api.timeout_error": "no response after 30s (too many AJEAN tabs open?)",
-  "api.key_required_msg": "AJEAN control key required:",
+  "api.timeout_error": "no response after 30s (too many Aidros tabs open?)",
+  "api.key_required_msg": "Aidros control key required:",
   "api.auth_title": "Authentication",
   "api.key_placeholder": "key…",
   "status.stopped": "stopped",
@@ -6125,7 +6125,7 @@ en: {
   "status.error": "error",
   "status.loading": "loading…",
   "status.stale_currently": "currently",
-  "status.stale_intro": "This machine's AJEAN server is out of date",
+  "status.stale_intro": "This machine's Aidros server is out of date",
   "status.stale_new_version": "Version",
   "status.stale_recommend": "is available. It's recommended to update to get all the features and avoid possible compatibility issues.",
   "status.update_btn": "Update",
@@ -6146,7 +6146,7 @@ en: {
   "status.error_prefix": "Error:",
   "status.new_version_prefix": "New version",
   "status.new_version_suffix": "available.",
-  "status.up_to_date": "AJEAN is up to date ✓",
+  "status.up_to_date": "Aidros is up to date ✓",
   "status.update_confirm": "Install the update now? The service will restart.",
   "status.network_error": "Network error",
   "status.loading_dots": "…",
@@ -6559,7 +6559,7 @@ en: {
   "remote.fingerprint_label": "Fingerprint:",
   "remote.pairing_code_label": "Pairing code (valid 10 min, single use)",
   "remote.code_unavailable": "code unavailable",
-  "push.ios_add_to_home": "On iPhone: first add AJEAN to the home screen, then reopen it from the icon to enable notifications.",
+  "push.ios_add_to_home": "On iPhone: first add Aidros to the home screen, then reopen it from the icon to enable notifications.",
   "push.not_supported": "This browser doesn't support notifications.",
   "push.blocked_in_browser": "Notifications blocked in the browser settings — re-allow them for this site.",
   "push.enabled_status": "Enabled: a notification each time a response finishes.",

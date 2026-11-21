@@ -23,11 +23,23 @@ var BuildFlavor string
 // v0.18.4.1 Cresius : le bandeau affiche un intitulé, plus un numéro de revue.
 const parallelMemoryRevision = 7
 
-// buildFlavorSuffix est l'identité publique de ce build : la base amont
-// (Version, reprise telle quelle du tag nathaninline fusionné) suivie du
-// millésime Cresius. Version = "0.18.15" + ".5 Cresius" donne donc
-// « 0.18.15.5 Cresius », c'est-à-dire la base 0.18.15 et notre révision 5
-// (tag git v0.18.15+rev5) : la révision 1 était le patch correctif, la 2
+// buildFlavorSuffix est l'identité publique de ce build. Depuis la scission
+// actée le 21/11, la base n'est PLUS « reprise telle quelle du tag nathaninline
+// fusionné » : elle est la nôtre, et le nom du patch n'entre plus dans le
+// millésime (ordre de l'humain du 21/11 : « supprime Cresius du millésime »).
+// Version = "1.0" suivi de ".0" rend donc « 1.0.0 » (étiquette git
+// v1.0.0+rev0), et la correction suivante rendra « 1.0.1 ». Le suffixe reste un
+// incrément de correctif en « . », jamais un « + » : c'est la forme qu'admet le
+// test de version Windows, et celle que le lanceur d'un poste sait lire.
+//
+// Ce qui GARDE encore le nom du patch, et ne le perd pas avec cette décision :
+// l'étiquette git (+revN), l'intitulé affiché sous le logo (uiBadgeLabel), et
+// le verrou $expectedVersion du lanceur de l'autre poste.
+//
+// HISTORIQUE de la lignée, sur les bases amont 0.18.x puis 0.20.1 (la
+// numérotation d'avant la scission, conservée pour que les étiquettes +rev*
+// restent lisibles). Sur la base 0.18.15 : « 0.18.15.5 Cresius » (tag git
+// v0.18.15+rev5) : la révision 1 était le patch correctif, la 2
 // ajoute le canal Ajean↔Ajean (pont + outil peer), la 3 rend ce canal honnête —
 // le modèle prêté sait enfin qu'il est prêté et qu'il n'a aucun outil, et un
 // refus du build portable explique POURQUOI il refuse ; la 4 fait rendre au pont
@@ -69,11 +81,35 @@ const parallelMemoryRevision = 7
 // Doit rester identique à
 // cmd/ajean-memory-test/versioninfo.json (StringFileInfo.ProductVersion et
 // FileVersion), vérifié par TestVersionFlavorWindowsSuit.
-const buildFlavorSuffix = ".4 Cresius"
+const buildFlavorSuffix = ".0"
 
 // uiBadgeLabel : intitulé affiché sous le logo par le build portable, à la
-// place du repère « TEST mémoire · R6 ». C'est le nom du patch, pas un numéro.
-const uiBadgeLabel = "Patch correctif de Cresius"
+// place du repère « TEST mémoire · R6 ». Ce n'est plus « le nom du patch » :
+// depuis le millésime 1.0.0, ce build n'est pas un correctif posé sur la base
+// de l'amont, c'est la base (ordre de l'humain du 21/11 : « on est plus sur un
+// patch correctif, mention à supprimer »). Le nom du patch ne disparaît pas
+// pour autant : il vit dans l'étiquette git (+revN).
+const uiBadgeLabel = "Aidros"
+
+// uiBadgeMarker : la SIGNATURE du badge, pas son mot. Le garde de livraison
+// doit pouvoir dire « le badge est posé » ou « il ne l'est pas ». Avant le
+// renommage, il cherchait le mot nu (uiBadgeLabel) : le mot suffisait à lui
+// seul à désigner le badge, puisqu'il n'apparaissait qu'là.
+//
+// Depuis que l'application s'appelle Aidros, ce mot est aussi dans <title>,
+// dans le manifeste PWA, dans les libellés du pont, dans les chaînes i18n. Le
+// mot nu ne distingue plus rien :
+//
+//	· le test positif passerait même si le badge disparaissait — un VERT QUI
+//	  NE VÉRIFIE RIEN, le pire des états ;
+//	· le test négatif (« badge absent du point d'entrée normal ») serait
+//	  ROUGE sur une page parfaitement correcte.
+//
+// La balise, elle, est propre au badge : le <div id="memory-test-build"> du
+// gabarit est « hidden », celui du badge porte un style. Si le balisage du
+// badge change, le marqueur ne se trouve plus et le test positif vire rouge :
+// le garde reste branché sur ce qu'il prétend garder.
+const uiBadgeMarker = `<div id="memory-test-build" style=`
 
 func displayVersion() string {
 	if parallelBuild() {

@@ -10,7 +10,16 @@ import (
 	"strings"
 )
 
-const Version = "0.20.1"
+// Version est NOTRE millésime, plus celui de l'amont. La scission est actée le
+// 21/11 : v1.0.x de nathaninline est un projet SANS ANCRÊTRE COMMUN avec nous
+// (racine sans parent, historique réécrit, 689 fichiers qui ne se recouvrent
+// pas), et ses étiquettes v1.0.0→v1.0.10 vivent dans notre dépôt local sans
+// être nos ancêtres. Reprendre sa base (« 0.20.1 ») n'a plus de sens : la base
+// est la nôtre. La forme reste à DEUX chiffres (1.0, 1.1, 2.0) parce que
+// buildFlavorSuffix y ajoute le cran de correctif : "1.0" + ".0" rend
+// « 1.0.0 », la mise à jour suivante « 1.0.1 ». Le nom du patch ne figure plus
+// dans le millésime (ordre de l'humain du 21/11) : il vit dans l'étiquette git.
+const Version = "1.0"
 
 // Main est le vrai main() du binaire (cmd/ajean ne fait que l'appeler).
 func Main() {

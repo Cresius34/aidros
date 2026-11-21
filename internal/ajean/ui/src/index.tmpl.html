@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="AJEAN">
-<title>AJEAN</title>
+<meta name="apple-mobile-web-app-title" content="Aidros">
+<title>Aidros</title>
 <!-- Favicon (même marque « ajean » que la landing/portail) + icône PWA (écran d'accueil
      iOS). SVG inline pour le favicon, PNG 180×180 en data-URI pour apple-touch-icon
      (iOS n'accepte pas le SVG pour l'icône d'accueil). Aucun fichier externe requis. -->
@@ -235,14 +235,14 @@
        ailleurs) et éteint par défaut : rien ne s'expose tout seul, la carte se
        montre seule quand /api/bridge répond. Texte en français ici, comme le
        bloc Mémoire plus bas : cette carte n'existe que sur la ligne Cresius. -->
-  <details id="bridge-details" hidden><summary><span class="stitle">Pont Ajean ↔ Ajean</span><span id="bridge-badge" class="sbadge"></span></summary>
+  <details id="bridge-details" hidden><summary><span class="stitle">Pont Aidros ↔ Aidros</span><span id="bridge-badge" class="sbadge"></span></summary>
     <div class="slist api-conn">
       <div class="api-ent">
-        <div class="api-lbl"><span>Adresse à coller chez l’autre Ajean</span><span id="bridge-state" class="api-state"></span></div>
+        <div class="api-lbl"><span>Adresse à coller chez l’autre Aidros</span><span id="bridge-state" class="api-state"></span></div>
         <div class="api-line"><input id="bridge-url" readonly class="api-val">
           <button class="sw-ic" onclick="copyText(document.getElementById('bridge-url').value,'adresse copiée');flashCopied(this)" title="copier"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div>
       </div>
-      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-on" onchange="bridgeToggle(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span>Prêter ce modèle à un autre Ajean</span><span class="sw-sub">n’ouvre que l’API du modèle (/v1) sur le réseau local, verrouillée par la clé API de cette machine. Ni la mémoire, ni le chat.</span></span></label>
+      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-on" onchange="bridgeToggle(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span>Prêter ce modèle à un autre Aidros</span><span class="sw-sub">n’ouvre que l’API du modèle (/v1) sur le réseau local, verrouillée par la clé API de cette machine. Ni la mémoire, ni le chat.</span></span></label>
       <!-- Deux portes distinctes, deux réglages distincts. Les confondre est ce
            qui a fait chercher midi à quatorze heures le 17/11 : une route qui
            répond 403 pour la mauvaise raison ne se débusque pas toute seule. -->
@@ -254,7 +254,7 @@
     </div>
     <div class="slist">
       <div class="subhead"><span>Recevoir un cerveau</span></div>
-      <div class="rowbody"><p class="muted" style="margin:0">Pour que CETTE installation utilise le modèle d’un autre Ajean : Presets → <b>API Externe</b>, et y coller l’adresse du pont de l’autre machine avec la clé API de cette machine-là. L’adresse d’un pont allumé sur cette même machine est refusée — une instance ne se parle pas à elle-même.</p></div>
+      <div class="rowbody"><p class="muted" style="margin:0">Pour que CETTE installation utilise le modèle d’un autre Aidros : Presets → <b>API Externe</b>, et y coller l’adresse du pont de l’autre machine avec la clé API de cette machine-là. L’adresse d’un pont allumé sur cette même machine est refusée — une instance ne se parle pas à elle-même.</p></div>
     </div>
     <!-- Le canal, dans l’autre sens : ce n’est plus prêter ni emprunter un
          cerveau, c’est parler à une autre IA. Chaque voisin garde SON modèle, SA
@@ -262,7 +262,7 @@
          découvert. Cette partie n’apparaît que si /api/peers répond (build
          portable de Cresius). -->
     <div class="slist" id="peers-block" hidden>
-      <div class="subhead"><span>Parler à un autre Ajean</span></div>
+      <div class="subhead"><span>Parler à un autre Aidros</span></div>
       <div class="rowbody"><p class="muted" style="margin:0">Un voisin garde son propre modèle et sa propre mémoire : l’outil <code>peer</code> lui envoie des messages et garde le souvenir de l’échange. Rien ne s’exécute de l’autre côté, et rien ici à sa demande.</p></div>
       <div id="peers-list"></div>
       <div class="api-line"><input id="peer-name" class="api-val" placeholder="nom (ex. poste-salon)" style="max-width:150px">
@@ -285,7 +285,7 @@
         <span class="eng-name">llama.cpp <span id="eng-version"></span></span>
         <span class="eng-state" id="eng-state"></span>
       </div>
-      <div class="eng-sub" data-i18n="engine.bundled_desc">Livré avec AJEAN et installé automatiquement. Il change avec les mises à jour d'AJEAN.</div>
+      <div class="eng-sub" data-i18n="engine.bundled_desc">Livré avec Aidros et installé automatiquement. Il change avec les mises à jour d'Aidros.</div>
       <div class="eng-actions">
         <label class="eng-variant" id="eng-variant-wrap" hidden>
           <span data-i18n="engine.variant_label">accélération</span>
@@ -378,7 +378,7 @@
     <!-- Voix de Jean (voice.go, 25-voice-settings.js) : conversation à voix haute du
          mode Jean, via un serveur audio.cpp. Réglages rangés côté serveur. -->
     <div id="voice-block">
-      <div class="subhead"><span data-i18n="voice.title">Voix de Jean</span><span id="voice-badge" class="sbadge"></span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="voice.help" data-i18n-html>Conversation à voix haute en mode Jean : bouton micro sur sa scène. La transcription et la voix passent par un <b>serveur audio.cpp</b> (Qwen3-ASR et VoxCPM2). Les voix sont enregistrées dans AJEAN.</span></span></div>
+      <div class="subhead"><span data-i18n="voice.title">Voix de Jean</span><span id="voice-badge" class="sbadge"></span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="voice.help" data-i18n-html>Conversation à voix haute en mode Jean : bouton micro sur sa scène. La transcription et la voix passent par un <b>serveur audio.cpp</b> (Qwen3-ASR et VoxCPM2). Les voix sont enregistrées dans Aidros.</span></span></div>
       <div class="slist">
         <label class="switchrow"><span class="switch"><input type="checkbox" id="voice-toggle" onchange="voiceSave({on:this.checked})"><span class="slider"></span></span> <span data-i18n="voice.toggle">conversation vocale</span></label>
         <label class="switchrow"><span data-i18n="voice.server">serveur audio</span><input id="voice-url" class="sctl" type="text" spellcheck="false" autocomplete="off" placeholder="http://127.0.0.1:8095" onchange="voiceSave({url:this.value})"></label>
@@ -401,7 +401,7 @@
         <div class="switchrow agent-gated compact-frac-row"><span data-i18n="agent.compact_frac">compactage à</span><input type="range" id="compact-frac" min="50" max="100" step="5" value="75" oninput="showCompactFrac(this.value)" onchange="setCompactFrac()"><output id="compact-frac-out" class="cfrac-out">75 %</output><span class="cfrac-note" id="compact-frac-note"></span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="agent.compact_frac_help">Le contexte se compacte quand il atteint ce pourcentage de la fenêtre du modèle. 75 % par défaut. Plus haut = moins souvent, mais il reste moins de place pour le tour suivant : une marge de sécurité (5 % de la fenêtre, 8 192 jetons au minimum) est toujours gardée libre au-dessus du seuil. Le nombre affiché à droite est le seuil réel en jetons.</span></span></div>
         <div class="switchrow agent-gated compact-max-row"><span data-i18n="agent.compact_max">compacter au plus tard à</span><select id="compact-max" class="sctl" onchange="setCompactMax()"><option value="0" data-i18n="agent.compact_max_auto">75 % du contexte</option><option value="16384">16K</option><option value="24576">24K</option><option value="32768">32K</option><option value="49152">48K</option><option value="65536">64K</option><option value="98304">96K</option><option value="131072">128K</option></select><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="agent.compact_max_help">Par défaut, le contexte est compacté à 75 % de la fenêtre du modèle. Avec une très grande fenêtre, ce seuil n'est presque jamais atteint et les longues conversations deviennent lentes. Un plafond compacte plus tôt, quelle que soit la fenêtre.</span></span></div>
         <label class="switchrow"><span class="switch"><input type="checkbox" id="prewarm-toggle" onchange="togglePrewarm()"><span class="slider"></span></span> <span data-i18n="agent.prewarm_toggle">pré-chauffage du prompt</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="agent.prewarm_help">Activé par défaut. Quand une nouvelle conversation est ouverte, le moteur lit à l'avance les consignes et les outils. Le premier message obtient sa réponse en quelques dixièmes de seconde au lieu de plusieurs secondes. Le moteur travaille quelques secondes en arrière-plan à chaque nouvelle conversation.</span></span></label>
-        <label class="switchrow"><span class="switch"><input type="checkbox" id="push-toggle" onchange="togglePush()"><span class="slider"></span></span> <span data-i18n="agent.push_toggle">me prévenir quand la réponse est prête</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="agent.push_help" data-i18n-html>Le serveur t'envoie une <b>notification</b> à la fin de chaque réponse, même l'app fermée ou le téléphone verrouillé. Sur iPhone : <b>ajoute d'abord AJEAN à l'écran d'accueil</b> puis active depuis l'app installée. À régler sur chaque appareil.</span></span></label>
+        <label class="switchrow"><span class="switch"><input type="checkbox" id="push-toggle" onchange="togglePush()"><span class="slider"></span></span> <span data-i18n="agent.push_toggle">me prévenir quand la réponse est prête</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="agent.push_help" data-i18n-html>Le serveur t'envoie une <b>notification</b> à la fin de chaque réponse, même l'app fermée ou le téléphone verrouillé. Sur iPhone : <b>ajoute d'abord Aidros à l'écran d'accueil</b> puis active depuis l'app installée. À régler sur chaque appareil.</span></span></label>
         <!-- Chiffrement (off par défaut) : UN seul interrupteur. Chiffre la mémoire
              ET les conversations. Ton mot de passe ouvre le coffre, ton navigateur
              le retient (déverrouillage auto ensuite), le serveur ne peut jamais
@@ -413,7 +413,7 @@
              elle-même n'est pas concernée : elle reste dans le navigateur qui
              l'a ouverte (Edge sous Windows), seul le lien cliqué change de
              navigateur. -->
-        <label class="switchrow"><span data-i18n="settings.link_browser_label">liens externes dans</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="settings.link_browser_help" data-i18n-html>Les liens cliqués dans AJEAN s'ouvrent dans ce navigateur. La fenêtre AJEAN elle-même ne change pas : seuls les liens cliqués changent de navigateur. « Navigateur par défaut » suit le réglage de ta machine et couvre aussi les navigateurs absents de cette liste.</span></span>
+        <label class="switchrow"><span data-i18n="settings.link_browser_label">liens externes dans</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="settings.link_browser_help" data-i18n-html>Les liens cliqués dans Aidros s'ouvrent dans ce navigateur. La fenêtre Aidros elle-même ne change pas : seuls les liens cliqués changent de navigateur. « Navigateur par défaut » suit le réglage de ta machine et couvre aussi les navigateurs absents de cette liste.</span></span>
           <!-- class="sctl" n'est pas cosmétique : sans elle, un <select> prend la
                largeur de son option la plus longue et écrase le libellé en face
                (constaté : quatre lignes pour « ouvrir les liens externes dans »).
