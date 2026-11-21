@@ -1,4 +1,4 @@
-// dbreloc — utilitaire ponctuel : rend portable une base ajean.db copiée.
+// dbreloc — utilitaire ponctuel : rend portable une base bddtchat.db copiée.
 //
 // Dans la version parallèle (BuildFlavor embedding-test), parallelHome() est
 // <dossier de l'exe>\data, et les clés MOE_CONFIG / MOE_SOURCE / MOE_PYTHON /
@@ -6,7 +6,7 @@
 // fonctionne où qu'elle soit posée. Une base recopiée telle quelle garde les
 // chemins absolus de l'installation d'origine : ce programme les convertit.
 //
-// Usage : dbreloc <chemin ajean.db> [--write]
+// Usage : dbreloc <chemin de la base> [--write]
 // Sans --write : lecture seule, affiche le diagnostic.
 package main
 
@@ -27,14 +27,14 @@ var relocKeys = []string{
 }
 
 // racineData : pour un exe posé à la racine du dossier d'installation, la base
-// vit dans <dossier>\data\ajean.db -> la racine des données est son dossier parent.
+// vit dans <dossier>\data\bddtchat.db -> la racine des données est son dossier parent.
 func racineData(dbFile string) string {
 	return filepath.Dir(dbFile)
 }
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("usage: dbreloc <chemin ajean.db> [--write]")
+		fmt.Println("usage: dbreloc <chemin de la base> [--write]")
 		os.Exit(2)
 	}
 	dbFile, err := filepath.Abs(os.Args[1])

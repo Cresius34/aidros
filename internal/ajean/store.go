@@ -57,7 +57,38 @@ const (
 // contention entre process ; dbMu la sérialise à l'intérieur du process.
 var dbMu sync.Mutex
 
-func dbPath() string { return filepath.Join(AjeanHome(), "ajean.db") }
+// nomBase est le nom de la base sous $AJEAN_HOME. Elle s'appelle « bddtchat.db »
+// depuis l'ordre de l'humain du 21/11.
+const nomBase = "bddtchat.db"
+
+// nomBaseAvant est le nom d'avant. Le fichier n'est PAS renommé par le code :
+// l'ordre est explicite — « ne renomme pas le fichier, on le fera lors de la
+// bascule ». Le code nomme donc le nouveau, et le fichier garde l'ancien tant
+// que la bascule n'a pas eu lieu.
+const nomBaseAvant = "ajean.db"
+
+// dbPath résout le chemin de la base.
+//
+// Le nouveau nom gagne s'il existe ; sinon l'ancien, S'IL EXISTE ; sinon le
+// nouveau, qui sera créé à la première écriture. Cet ordre n'est pas une
+// préférence : bbolt OPEN UN FICHIER QUI N'EXISTE PAS en créant une base vide,
+// sans un bruit. Point sur « bddtchat.db » un jour où le fichier s'appelle
+// encore « ajean.db », c'est l'application qui redémarre sur une base vide —
+// 536 Mo de mémoire, de conversations, de clés et de réglages abandonnés, avec
+// zéro message. Le même piège que le dossier de repli, même forme, même
+// silence, réglé de la même façon (voir repli_dossier_aidros_test.go).
+//
+// Le cas « les deux existent » est tranché en faveur du nouveau : renommer
+// l'ancien en bddtchat.db EST le geste de bascule, et il doit suffire seul.
+func dbPath() string {
+	nouveau := filepath.Join(AjeanHome(), nomBase)
+	if !isFile(nouveau) {
+		if ancien := filepath.Join(AjeanHome(), nomBaseAvant); isFile(ancien) {
+			return ancien
+		}
+	}
+	return nouveau
+}
 
 // withDB ouvre la base, exécute fn, puis referme — toujours, même en erreur.
 func withDB(fn func(*bolt.DB) error) error {

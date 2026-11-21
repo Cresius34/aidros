@@ -266,7 +266,7 @@ func readEtcDefault() string {
 
 // Arborescence de $AJEAN_HOME. Elle tient en six dossiers, et rien d'autre :
 // tout le reste (config, préférences, conversation, clés, drapeaux) vit dans la
-// base ajean.db — voir store.go.
+// base bddtchat.db — voir store.go.
 func backendsDir() string { return filepath.Join(AjeanHome(), "backends") }
 func binDir() string      { return filepath.Join(AjeanHome(), "bin") }
 func presetsDir() string  { return filepath.Join(AjeanHome(), "presets") }

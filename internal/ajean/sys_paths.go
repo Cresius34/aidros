@@ -17,7 +17,7 @@ import (
 
 type ajeanPaths struct {
 	Home      string `json:"home"`      // AJEAN_HOME : racine des données
-	Database  string `json:"database"`  // ajean.db : config, préférences, conversation, clés
+	Database  string `json:"database"`  // bddtchat.db : config, préférences, conversation, clés
 	Exe       string `json:"exe"`       // binaire en cours d'exécution
 	Installed string `json:"installed"` // binaire installé (peut différer de Exe)
 	Workspace string `json:"workspace"` // dossier de travail du mode agent (jetable)

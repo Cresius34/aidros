@@ -593,7 +593,10 @@ foreach ($Root in $Dossiers) {
   # incoherente est pire que pas d'archive — elle ferait croire a un retour possible.
   # On ne la copie que si personne ne l'ecrit (mesure faite le 2026-10-28 dans
   # data\scripts\Pointer-retour.ps1, meme raisonnement).
-  $db = Join-Path $Root 'data\ajean.db'
+  # La base s'appelle bddtchat.db depuis le 21/11 ; ajean.db reste lu s'il existe
+  # (le fichier n'est renommé qu'à la bascule). Chercher l'un deux, pas l'un des deux.
+  $db = Join-Path $Root 'data\bddtchat.db'
+  if (-not (Test-Path -LiteralPath $db)) { $db = Join-Path $Root 'data\ajean.db' }
   $dbArch = Join-Path $Arch 'ajean.db.pre-canal-rev7'
   if ($SansRelance) {
     if (Test-Path -LiteralPath $db) {

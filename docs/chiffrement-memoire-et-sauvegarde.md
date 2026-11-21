@@ -99,7 +99,7 @@ Sous `$AJEAN_HOME/memory/` :
 
 Redondance du keyvault (point de défaillance unique) : **trois copies
 indépendantes** tenues synchronisées, chacune suffisante seule :
-`memory/.keyvault`, une copie dans `$AJEAN_HOME/`, une dans `ajean.db`.
+`memory/.keyvault`, une copie dans `$AJEAN_HOME/`, une dans `ajean.db` (devenu `bddtchat.db`).
 
 Réglage : clé `MEM_ENCRYPTED` dans la config (comme `MEM_MODE`).
 

@@ -13,7 +13,7 @@ import (
 // chat_export.go — sortir la conversation de la base.
 //
 // Jusqu'à la 0.7, l'historique vivait dans un `conversation.json` qu'on pouvait
-// ouvrir, lire et copier pour archive. La 0.8 l'a rangé dans ajean.db (bbolt) :
+// ouvrir, lire et copier pour archive. La 0.8 l'a rangé dans ajean.db, devenu bddtchat.db (bbolt) :
 // un fichier binaire, et qui porte de surcroît un verrou EXCLUSIF tant que le
 // service tourne — donc impossible ne serait-ce que de le copier sans arrêter
 // AJEAN. Le fil de discussion et les raisonnements sont toujours là, mais plus

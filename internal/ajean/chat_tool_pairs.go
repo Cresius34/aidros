@@ -10,7 +10,7 @@ package ajean
 // refuser tous les tours suivants (400 « An assistant message with 'tool_calls'
 // must be followed by tool messages responding to each 'tool_call_id' ») : la
 // conversation devenait définitivement inutilisable, « Vider le contexte » étant
-// le seul recours. Deux ids orphelins ont été relevés dans ajean.db, dont un en
+// le seul recours. Deux ids orphelins ont été relevés dans la base, dont un en
 // dernier message de la conversation active.
 //
 // La réparation est appliquée à l'envoi ET à la persistance : elle répare donc

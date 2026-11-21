@@ -12,7 +12,7 @@ import (
 // modification. Il n'y en a plus qu'une.
 
 // dataDirs est l'arborescence complète de $AJEAN_HOME. Rien d'autre n'y est
-// créé : tout le reste vit dans ajean.db.
+// créé : tout le reste vit dans bddtchat.db.
 func dataDirs() []string {
 	return []string{AjeanHome(), backendsDir(), binDir(), presetsDir(), memoryDir(), modelsDir(), workspaceDir(), scriptsDir()}
 }

@@ -64,7 +64,7 @@ func echangeRoute(p string) bool {
 // echangeNomAssaini : le nom vient du réseau, donc il est coupable jusqu'à preuve du contraire.
 // Refusé : vide, trop long, tout séparateur, tout ce qui peut sortir du dossier, tout caractère
 // de contrôle, et tout nom qui change d'identité une fois nettoyé. bbolt pose un verrou EXCLUSIF
-// sur ajean.db (store.go:46-53) : laisser « ..\..\ajean.db » passer, c'est donner à un voisin le
+// sur la base (store.go:46-53) : laisser « ..\..\bddtchat.db » passer, c'est donner à un voisin le
 // moyen de lire la base active par le réseau — exactement le geste qui fait crier « corrompu ».
 func echangeNomAssaini(nom string) (string, error) {
 	n := strings.TrimSpace(nom)

@@ -212,8 +212,11 @@ func TestJeanReflectReadFile(t *testing.T) {
 		`type "` + filepath.Join(ws, "poster.py") + `"`: true,
 		"cat poster.py":                  true,
 		"type poster.py & del poster.py": false,
-		`type "` + filepath.Join(AjeanHome(), "ajean.db") + `"`: false,
-		"python poster.py": false,
+		// Lire LA base depuis l'agent est refusé, quel que soit son nom : écrit
+		// en dur « ajean.db », le cas aurait cessé de porter sur la base le jour
+		// où elle a été renommée (21/11) — sans que le test le signale.
+		`type "` + dbPath() + `"`: false,
+		"python poster.py":        false,
 		`copy /Y "` + filepath.Join(ws, "poster.py") + `" "` + filepath.Join(jeanScriptsDir(), "poster.py") + `"`: true,
 		`copy "` + filepath.Join(jeanScriptsDir(), "a.py") + `" "` + filepath.Join(ws, "a.py") + `"`:              false,
 	} {
