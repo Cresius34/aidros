@@ -135,7 +135,7 @@ func Main() {
 	case "llamacpp":
 		// Avant la 0.20 : install / update / uninstall d'un llama.cpp au choix.
 		// Le moteur est désormais livré avec AJEAN ; on renvoie vers « engine ».
-		fmt.Fprintf(os.Stderr, "%s « ajean llamacpp » n'existe plus : le moteur llama.cpp est livré avec AJEAN et s'installe seul. Voir %s.\n\n",
+		fmt.Fprintf(os.Stderr, "%s « ajean llamacpp » n'existe plus : le moteur llama.cpp est livré avec Aidros et s'installe seul. Voir %s.\n\n",
 			yellow("[info]"), bold("ajean engine"))
 		mustExit(cmdEngine(nil))
 	case "update":
@@ -151,7 +151,7 @@ func Main() {
 	case "uninstall":
 		mustExit(cmdUninstall(args))
 	case "version", "-v", "--version":
-		fmt.Println("ajean", displayVersion())
+		fmt.Println("aidros", displayVersion())
 	case "help", "-h", "--help", "":
 		printHelp()
 	default:
@@ -162,11 +162,11 @@ func Main() {
 }
 
 func printHelp() {
-	fmt.Printf(`ajean %s — manager llama.cpp + UI web (single binary)
+	fmt.Printf(`aidros %s — manager llama.cpp + UI web (single binary)
 
-Usage: ajean <commande> [args]
+Usage: aidros <commande> [args]
 
-AJEAN tourne en deux services : ajean-engine (le modèle) et ajean-ui
+Aidros tourne en deux services : ajean-engine (le modèle) et ajean-ui
 (l'interface web, le tunnel d'accès distant et l'endpoint OpenAI).
 
 Moteur (ajean-engine) :
@@ -206,8 +206,8 @@ Accès distant (ajean.link) :
   link newid                    change l'identifiant de la machine (si l'ancien a fuité)
   link status | logout          état du jeton / l'oublier
 
-Moteur llama.cpp (livré avec AJEAN : une version précise, testée, installée
-automatiquement ; elle change avec les mises à jour d'AJEAN) :
+Moteur llama.cpp (livré avec Aidros : une version précise, testée, installée
+automatiquement ; elle change avec les mises à jour d'Aidros) :
   engine                        version livrée, variante installée (CUDA/ROCm/Vulkan/Metal/CPU)
   engine install                l'installer tout de suite (sinon : au premier démarrage)
   engine repair                 le retélécharger
@@ -222,7 +222,7 @@ Installation:
 Env:
   AJEAN_HOME   racine des données (défaut : /etc/aidros, %%ProgramData%%\Aidros sous Windows ;
                le nom « ajean » d'avant reste lu s'il existe déjà — ne pas perdre sa mémoire)
-  EDITOR       éditeur pour 'ajean edit' (défaut : nano, notepad sous Windows)
+  EDITOR       éditeur pour 'aidros edit' (défaut : nano, notepad sous Windows)
 `, Version)
 }
 

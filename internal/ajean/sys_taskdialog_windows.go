@@ -131,9 +131,9 @@ func taskDialog(text, title string, flags uintptr) (int, bool) {
 // cmdDialogTest (« ajean dialog-test », absent de l'aide) : affiche la question
 // de mise à jour telle que la pose l'installeur, pour vérifier son rendu.
 func cmdDialogTest(args []string) error {
-	r := messageBox("Mettre à jour AJEAN en version "+Version+" ?\n\n"+
-		"AJEAN est en cours d'exécution (version 0.18.17). Il sera fermé, mis à jour, puis relancé.\n\n"+
-		"Non garde la version actuelle.", "Mise à jour d'AJEAN", mbYesNo|mbIconQuestion)
+	r := messageBox("Mettre à jour Aidros en version "+Version+" ?\n\n"+
+		"Aidros est en cours d'exécution (version "+Version+"). Il sera fermé, mis à jour, puis relancé.\n\n"+
+		"Non garde la version actuelle.", "Mise à jour d'Aidros", mbYesNo|mbIconQuestion)
 	fmt.Println("bouton :", r)
 	return nil
 }
