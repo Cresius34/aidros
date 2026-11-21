@@ -38,20 +38,27 @@ import (
 // défaut de TestSystemPromptStaysLean, dans un autre champ.
 const longueurLibelleOs = 40
 
-// longueurLibelleAmont : la borne pour la ressource du point d'entrée normal
-// (cmd/ajean), qui vient de l'amont. Mesure du 21/11, trouvée par CE garde à son
-// premier essai : son FileDescription fait 73 caractères (« AJEAN — gestionnaire
-// mono-binaire de serveurs llama.cpp auto-hébergés »).
+// UNE SEULE BORNE depuis le 21/11 au soir. Il y en avait DEUX, et la seconde est
+// morte de sa propre justification — à raconter, parce que sa raison était bonne :
 //
-// DEUX bornes, et la raison est une question de propriété, pas de taille :
-// réécrire la phrase de l'amont ne rend l'affichage meilleur pour personne ici
-// (le binaire qui tourne sur nos machines est celui du build portable, mesuré :
-// ProductName « AJEAN v0.20.1.4 Cresius », celui de cmd/ajean-memory-test) et ça
-// nous éloigne de la doctrine « fidèle à l'officiel, nos modifications AUTOUR ».
-// Cette borne-là garde donc ce qui fait vraiment défaut — un PARAGRAPHE dans un
-// champ de nom — sans imposer ma plume sur le texte d'un autre. 120 : assez long
-// pour la phrase de l'amont, cent fois trop court pour un changelog.
-const longueurLibelleAmont = 120
+// Le 21/11, ce garde est tombé ROUGE à son premier essai sur cmd/ajean, dont le
+// FileDescription faisait 73 caractères (« AJEAN — gestionnaire mono-binaire de
+// serveurs llama.cpp auto-hébergés »). Ce rouge m'instruisait : le texte était
+// celui de L'AMONT. J'ai donc posé une borne séparée à 120, la raison étant une
+// question de PROPRIÉTÉ et non de taille — imposer ma plume sur la phrase d'un
+// autre ne rend l'affichage meilleur pour personne, et nous éloigne de la
+// doctrine « fidèle à l'officiel, nos modifications AUTOUR ». 120 : assez long
+// pour sa phrase, cent fois trop court pour un changelog.
+//
+// Le 21/11 au soir, l'humain a demandé explicitement le nom sur cmd/ajean
+// (« remplacé le nom ajean du cmd/ajean »). La retenue n'était mienne que faute
+// d'ordre ; un ordre de l'humain la lève. Les deux points d'entrée portent donc
+// « Aidros » (6 caractères mesurés) et la borne unique est longueurLibelleOs.
+//
+// ⚠ La borne n'est PAS baissable sans raison, et elle ne protège pas un nom :
+// ces champs grossissent vers le HAUT, ligne par ligne, chacun paraissant
+// anodin. Le texte d'amont retiré est recopié dans le message du commit qui le
+// retire — c'est sa place, git log est consultable.
 
 func TestLibellesTrayPortentUnNom(t *testing.T) {
 	titre, infobulle, ouvrir, quitter, avis := libellesTray()
@@ -127,13 +134,13 @@ func TestLibelleRaccourciPorteUnNom(t *testing.T) {
 // upstream/ajean-v0.18.17 : +7/−7 et +38/−0), donc les garder n'ajoute aucun
 // conflit de fusion.
 func TestRessourceWindowsPorteUnNom(t *testing.T) {
-	// La borne dépend du propriétaire du fichier : la nôtre est tenue au nom,
-	// celle de l'amont tient le paragraphe (voir longueurLibelleAmont).
+	// Une seule borne depuis le 22/11 : les deux points d'entrée portent le nom
+	// (voir longueurLibelleOs, et ci-dessus l'histoire de la seconde borne).
 	for _, c := range []struct {
 		chemin string
 		borne  int
 	}{
-		{"../../cmd/ajean/versioninfo.json", longueurLibelleAmont},
+		{"../../cmd/ajean/versioninfo.json", longueurLibelleOs},
 		{"../../cmd/ajean-memory-test/versioninfo.json", longueurLibelleOs},
 	} {
 		b, err := os.ReadFile(c.chemin)
