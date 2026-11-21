@@ -132,9 +132,9 @@ func TestPilotageListeEtMillésime(t *testing.T) {
 
 	// Décoder l'ENVELOPPE, pas le tableau nu : la leçon de preset_moe_ui_test.go:36.
 	var enveloppe struct {
-		OK       bool `json:"ok"`
-		Presets  []map[string]any
-		Moteur   string `json:"moteur_epingle"`
+		OK        bool `json:"ok"`
+		Presets   []map[string]any
+		Moteur    string `json:"moteur_epingle"`
 		Attention string `json:"attention"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &enveloppe); err != nil {
@@ -237,6 +237,7 @@ func TestPilotageMessageCiteUneCommandeQuiExiste(t *testing.T) {
 //   - 502 « llama-server injoignable » = la requête a été ROUTÉE vers le moteur
 //     (le pont l'a laissée passer) ;
 //   - 404 « surface OpenAI uniquement » = le pont l'a écartée avant le moteur.
+//
 // C'est 502 qui est attendu.
 func TestPontLaissePasserLesImages(t *testing.T) {
 	parallelTestHome(t)
@@ -250,7 +251,7 @@ func TestPontLaissePasserLesImages(t *testing.T) {
 		`{"prompt":"un renard sur une roche moussue","size":"512x512","n":1,"response_format":"b64_json"}`, nil))
 
 	if w.Code == http.StatusNotFound && strings.Contains(w.Body.String(), "surface OpenAI") {
-		t.Fatalf("le pont écarte /v1/images/generations avant le moteur : le chantier image\n" +
+		t.Fatalf("le pont écarte /v1/images/generations avant le moteur : le chantier image\n"+
 			"passe par le pont, il faudra l'ajouter à la liste. Corps : %s", w.Body.String())
 	}
 	if !strings.Contains(w.Body.String(), "injoignable") {

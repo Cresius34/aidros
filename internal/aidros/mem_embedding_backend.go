@@ -265,8 +265,8 @@ type embeddingProcess struct {
 	done    chan struct{}
 	err     error // published by closing done
 	client  *embeddingHTTPClient
-	ready   bool        // protected by embeddingServer.Mutex
-	lastUse time.Time   // dernière requête servie ; seul le veilleur la lit
+	ready   bool      // protected by embeddingServer.Mutex
+	lastUse time.Time // dernière requête servie ; seul le veilleur la lit
 }
 
 var embeddingServer struct {

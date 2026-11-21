@@ -224,7 +224,7 @@ func parallelBridgeHandler() http.Handler {
 		if ep := resolveChatEndpoint(); (ep.External) && !isAnthropicPath(r.URL.Path) {
 			if bridgePointsToItself(ep) {
 				sendJSON(w, http.StatusConflict, map[string]any{
-					"ok": false,
+					"ok":    false,
 					"error": fmt.Sprintf("le preset prêté (%s) pointe sur ce pont-ci : boucle sans fin. Deux Ajean sur le même PC doivent prêter un moteur à l'autre, pas se prêter eux-mêmes.", ep.URL),
 				})
 				return
@@ -451,7 +451,7 @@ func bridgeRemoteHandler(ep chatEndpoint) http.Handler {
 			return
 		default:
 			sendJSON(w, http.StatusNotFound, map[string]any{
-				"ok": false,
+				"ok":    false,
 				"error": "pont Ajean : le modèle prêté est une API distante, qui n'expose que /v1/models et /v1/chat/completions",
 			})
 			return
@@ -670,7 +670,7 @@ func checkParallelPortFree(port string) error {
 		// Le port réellement servi par le moteur peut différer du réglage (un
 		// preset importé impose PORT dans la config, et c'est lui que le proxy du
 		// pont va frapper). Les deux comptent comme pris.
-		parallelLocalEnginePort(): "le moteur de cette instance",
+		parallelLocalEnginePort():                  "le moteur de cette instance",
 		strconv.Itoa(readEmbeddingDefaults().Port): "l'encodeur de mémoire de cette instance",
 	}
 	if who, dup := used[port]; dup {
@@ -767,15 +767,15 @@ func parallelBridgeStatus() map[string]any {
 		serving = "API distante " + ep.URL
 	}
 	return map[string]any{
-		"ok":          true,
-		"requested":   parallelBridgeRequested(),
-		"env_forced":  parallelBridgeEnvForced(),
-		"enabled":     parallelBridgeEnabled(),
-		"running":     running,
-		"listening":   parallelBridgeListening(),
-		"port":        parallelBridgePort(),
-		"host":        parallelBridgeHost(),
-		"has_key":     readAPIKey() != "",
+		"ok":         true,
+		"requested":  parallelBridgeRequested(),
+		"env_forced": parallelBridgeEnvForced(),
+		"enabled":    parallelBridgeEnabled(),
+		"running":    running,
+		"listening":  parallelBridgeListening(),
+		"port":       parallelBridgePort(),
+		"host":       parallelBridgeHost(),
+		"has_key":    readAPIKey() != "",
 		// agent_on : le canal déclenche-t-il un tour d'agent ici (shell, disque),
 		// ou seulement des complétions du modèle prêté. Les deux sources comptent :
 		// l'interrupteur du pont ET le mode agent de la machine.
@@ -786,8 +786,8 @@ func parallelBridgeStatus() map[string]any {
 		// l'affiche à sa propre ligne : deux portes, deux réglages, et une route
 		// qui répond 403 pour la mauvaise raison ne se débusque pas toute seule.
 		"control_on": parallelBridgeControlOn(),
-		"model":       model,
-		"urls":        parallelBridgeLanURLs(),
+		"model":      model,
+		"urls":       parallelBridgeLanURLs(),
 		// engine_port : le port du RÉGLAGE d'instance ; engine_serving : le port
 		// que la config impose au moteur et que le pont proxifie. Les deux peuvent
 		// différer (preset importé) — les montrer évite de chercher midi à quatorze
@@ -815,8 +815,8 @@ func handleParallelBridge(w http.ResponseWriter, r *http.Request) {
 		return
 	case http.MethodPost:
 		var req struct {
-			Enabled *bool  `json:"enabled"`
-			Agent   *bool  `json:"agent"`
+			Enabled *bool `json:"enabled"`
+			Agent   *bool `json:"agent"`
 			// Control : autoriser un voisin à piloter CETTE machine — basculer son
 			// preset, allumer/éteindre son agent (les routes /v1/presets et /v1/mode).
 			// Même forme qu'Agent : un *bool, pour distinguer « pas demandé » de « faux ».
@@ -1140,4 +1140,3 @@ func waitEngineReady(max time.Duration) error {
 	}
 	return fmt.Errorf("moteur prêt nulle part sur 127.0.0.1:%s après %s", parallelLocalEnginePort(), max)
 }
-

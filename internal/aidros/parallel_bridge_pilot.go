@@ -182,10 +182,10 @@ func handlePeerPilot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		Name  string `json:"name"`
+		Name   string `json:"name"`
 		Action string `json:"action"` // presets | switch | agent
-		ID    string `json:"id"`      // pour switch : l'identifiant du preset
-		On    *bool  `json:"on"`      // pour agent : nil = pas demandé
+		ID     string `json:"id"`     // pour switch : l'identifiant du preset
+		On     *bool  `json:"on"`     // pour agent : nil = pas demandé
 	}
 	raw, _ := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 	if err := json.Unmarshal(raw, &in); err != nil {

@@ -59,14 +59,12 @@ func presetSysPrompt(id string) string {
 	return getStr(bkState, "sysprompt/"+id)
 }
 
-
 func setPresetSysPrompt(id, text string) error {
 	if id == "" {
 		return nil
 	}
 	return putStr(bkState, "sysprompt/"+id, strings.TrimSpace(text))
 }
-
 
 // deletePresetSysPrompt efface le prompt système qu'un preset portait avant la
 // 0.20 (clé sysprompt/<id>).
@@ -105,4 +103,3 @@ func handleSysPrompt(w http.ResponseWriter, r *http.Request) {
 		sendJSON(w, 405, map[string]any{"ok": false, "error": "méthode non autorisée"})
 	}
 }
-

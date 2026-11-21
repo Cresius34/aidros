@@ -149,6 +149,7 @@ func compactSafetyMargin(window int) int {
 }
 
 // compactThreshold : nombre de jetons à partir duquel on compacte.
+//
 //	min(frac × fenêtre, COMPACT_MAX), le tout écrêté à fenêtre − marge de sécurité.
 func compactThreshold() int {
 	th := int(float64(ctxWindow()) * compactFrac())

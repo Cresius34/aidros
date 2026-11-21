@@ -235,9 +235,9 @@ func handleControlModeGet(w http.ResponseWriter) {
 		"ok": true,
 		// Les deux niveaux de l'agent : l'autorisation du pont ET le mode agent de
 		// la machine. L'un sans l'autre ne déclenche rien (mesuré, parallel_bridge.go:825).
-		"agent":       parallelBridgeAgentOn(),
-		"agent_local": agentEnabled(),
-		"pilotage":    parallelBridgeControlOn(),
+		"agent":        parallelBridgeAgentOn(),
+		"agent_local":  agentEnabled(),
+		"pilotage":     parallelBridgeControlOn(),
 		"declenchable": parallelBridgeAgentOn() && agentEnabled(),
 	})
 }

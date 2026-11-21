@@ -550,5 +550,3 @@ func warnKVCuda(k, v string) {
 			"(converti en f16 à chaque pas, lent). Préfère q8_0, q4_0 ou f16.\n", k, v)
 	}
 }
-
-

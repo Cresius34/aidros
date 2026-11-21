@@ -16,7 +16,6 @@ import (
 	"strings"
 )
 
-
 // backendDir renvoie backends/<name>, en refusant tout nom qui s'échapperait du
 // dossier backends (../, chemin absolu…).
 func backendDir(name string) (string, error) {
@@ -37,7 +36,6 @@ func backendDir(name string) (string, error) {
 	return p, nil
 }
 
-
 // buildPlan capture les flags CMake adaptés à la machine courante.
 type buildPlan struct {
 	backend  string // "cuda" | "hip" | "metal" | "vulkan" | "cpu"
@@ -57,11 +55,9 @@ type buildPlan struct {
 	forced              bool     // backend imposé par --backend (pas de conseil « GPU non utilisé »)
 }
 
-
 func defaultRepoDir() string {
 	return filepath.Join(backendsDir(), "llama.cpp")
 }
-
 
 // ---------------------------------------------------------------------------
 // Localisation du dépôt
@@ -85,7 +81,6 @@ func llamacppRepoDir() string {
 	return defaultRepoDir()
 }
 
-
 // sanitizeBackendName réduit un nom à un identifiant de dossier sûr
 // ([a-z0-9._-]), pour qu'il ne puisse jamais s'échapper de backends/.
 func sanitizeBackendName(name string) string {
@@ -106,7 +101,6 @@ func sanitizeBackendName(name string) string {
 	return out
 }
 
-
 // findRepoRoot walks up from a binary path (…/build/bin/llama-server) looking
 // for the llama.cpp source root (a dir holding .git or CMakeLists.txt).
 func findRepoRoot(binPath string) string {
@@ -123,7 +117,6 @@ func findRepoRoot(binPath string) string {
 	}
 	return ""
 }
-
 
 // downloadWithProgress télécharge url vers dest en journalisant la progression
 // par tranches de ~25 Mo.
@@ -171,4 +164,3 @@ func downloadWithProgress(url, dest string, total int64, logf func(string)) erro
 		}
 	}
 }
-

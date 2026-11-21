@@ -449,5 +449,3 @@ func importParallelPresets(args []string) error {
 	fmt.Printf("Presets et fichiers copiés : %d ; presets déjà présents conservés : %d. Source lue uniquement.\n", copied, existing)
 	return nil
 }
-
-

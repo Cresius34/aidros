@@ -21,8 +21,8 @@ package aidros
 // passent par les mêmes arguments, mais rejouter un ajout déjà fait est refusé
 // par le moteur lui-même — ce n'est pas la dédup qui protège ici.
 var liveStateReadTools = map[string]bool{
-	"mem_read":      true,
-	"mem_search":    true,
+	"mem_read":   true,
+	"mem_search": true,
 	// mem_grep exécute mem_search : même lecture d'un état vivant, mêmes raisons.
 	"mem_grep":      true,
 	"recall":        true,

@@ -561,5 +561,3 @@ func ReadPreset(id string) (string, error) {
 	}
 	return string(b), nil
 }
-
-

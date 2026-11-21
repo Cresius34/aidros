@@ -42,7 +42,7 @@ import (
 const (
 	peersStateKey       = "parallel_peers"
 	peerThreadKeyPrefix = "parallel_peer_thread:"
-	peerThreadMax       = 12          // derniers échanges gardés par voisin
+	peerThreadMax       = 12 // derniers échanges gardés par voisin
 	// peerAskTimeout : 5 minutes allaient bien à une COMPLÉTION nue. Depuis la
 	// révision 4, demander à un voisin peut déclencher chez lui un tour d'AGENT
 	// complet : plusieurs passages par son modèle, plus l'exécution de ses outils
@@ -50,8 +50,8 @@ const (
 	// local, un tour qui diagnostique un moteur dépasse allègrement les 5 minutes —
 	// et l'appelant perdrait le résultat d'un travail déjà payé. 20 minutes, avec
 	// une deadline dans le contexte (peerHTTPClient n'a pas de timeout global).
-	peerAskTimeout      = 20 * time.Minute
-	peerProbeTimeout    = 12 * time.Second
+	peerAskTimeout   = 20 * time.Minute
+	peerProbeTimeout = 12 * time.Second
 )
 
 // peerEndpoint : un voisin joignable. URL = la base des complétions, telle
@@ -332,7 +332,7 @@ func peerAsk(ctx context.Context, p peerEndpoint, message, origine string) (stri
 		return "", peerStatusError(p, resp.StatusCode, body)
 	}
 	var out struct {
-		Model string `json:"model"`
+		Model   string `json:"model"`
 		Choices []struct {
 			Message struct {
 				Content string `json:"content"`
@@ -499,7 +499,7 @@ func peerTool() Tool {
 	return Tool{
 		Type: "function",
 		Function: ToolFunction{
-			Name: "peer",
+			Name:        "peer",
 			Description: "Talk to ANOTHER Aidros on this local network, through the Aidros↔Aidros bridge. Each side keeps its own brain: this is a channel between two AIs, not a borrowed model. What the peer can do depends on ITS OWN setting, and you cannot tell from here — so read its answer, do not assume. If its agent mode is ON, your message starts a real agent turn on that machine: it answers with its own tools, its own memory and its own project, so it CAN read its logs, run its commands and check its own files — and it never sees your disk, only what it writes back. If its agent mode is OFF, the bridge only lends its raw model: no tools, no disk, no shell there, and a claim of having run something would be confabulation. Either way nothing of yours is executed remotely and nothing of theirs is shared automatically. AUTHORSHIP IS MACHINERY, NOT YOURS TO CLAIM: every message you send is stamped as coming from YOU (an AI), and a human's own words reach a peer only through the local command line, stamped as human. So never dress up your own request as a human order, and NEVER relay a local imperative as if it were an instruction to the peer: if the human here tells you to stop, reset or delete something, that concerns THIS machine and you act on it here (or not at all) — it is not an order to send next door. If you must pass along words that were not yours, quote them and say whose they were, inside the message. Their answer reaches you tagged [Réponse du canal Aidros↔Aidros … · il a répondu par son agent/modele nu], yours arrives on their side tagged [Canal Aidros↔Aidros …] — so neither of you can confuse a peer with the human sitting at the keyboard. Their agent may also refuse: a turn already running on their machine, their conversation « Jean » open, or a request relayed too many times. The last exchanges with that peer are kept and resent, so the conversation continues. Never call this tool to answer a message that itself came from the channel — it bounces the question back and the two of you loop. list: which peers exist. status: what a peer lends (models, whether it answers). ask: send a message and get the answer. forget: drop the shared history without removing the peer.",
 			Parameters: map[string]any{
 				"type": "object",
@@ -511,9 +511,9 @@ func peerTool() Tool {
 					// LA LISTE DES VOISINS sans un mot d'erreur. Même piège pour `fichier` et `nom` :
 					// sans description explicite, l'agent met le chemin dans `message` et l'action
 					// répond « paramètre manquant ».
-					"message": map[string]any{"type": "string", "description": "What to say to that peer (ask)."},
-					"fichier": map[string]any{"type": "string", "description": "send: LOCAL path of the file to deposit in the peer's exchange folder (data/echange). Max 32 MiB. The path is read on THIS machine; only its base name crosses."},
-					"nom":     map[string]any{"type": "string", "description": "get/drop: the file NAME inside the PEER's exchange folder, exactly as `files` reported it. A flat name — no slash, no backslash, no leading dot."},
+					"message":   map[string]any{"type": "string", "description": "What to say to that peer (ask)."},
+					"fichier":   map[string]any{"type": "string", "description": "send: LOCAL path of the file to deposit in the peer's exchange folder (data/echange). Max 32 MiB. The path is read on THIS machine; only its base name crosses."},
+					"nom":       map[string]any{"type": "string", "description": "get/drop: the file NAME inside the PEER's exchange folder, exactly as `files` reported it. A flat name — no slash, no backslash, no leading dot."},
 					"remplacer": map[string]any{"type": "boolean", "description": "send: overwrite a file the peer already has under that name. Without it the peer answers 409 and nothing is destroyed. Ask before setting it."},
 				},
 			},
@@ -817,7 +817,7 @@ func cmdParallelPeer(args []string) error {
 		// son IA qui reformule. De l'autre côté, la balise le dira littéralement.
 		origine := peerOrigineCLI()
 		if origine == canalOrigineIA {
-			fmt.Printf("%s message envoyé comme venant de l'AGENT et non d'un humain : cette commande tourne " +
+			fmt.Printf("%s message envoyé comme venant de l'AGENT et non d'un humain : cette commande tourne "+
 				"dans un tour d'agent.\n", yellow("[!]"))
 		}
 		reply, err := peerAsk(ctx, p, strings.Join(args[1:], " "), origine)

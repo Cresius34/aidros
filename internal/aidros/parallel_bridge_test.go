@@ -236,7 +236,7 @@ func TestParallelBridgeEndToEndTwoInstances(t *testing.T) {
 			json.NewEncoder(w).Encode(map[string]any{
 				"model": "cerveau-de-B",
 				"choices": []map[string]any{{
-					"message":      map[string]string{"role": "assistant", "content": "Bonjour depuis B"},
+					"message":       map[string]string{"role": "assistant", "content": "Bonjour depuis B"},
 					"finish_reason": "stop",
 				}},
 				"usage": map[string]int{"prompt_tokens": 4, "completion_tokens": 6},
@@ -523,4 +523,3 @@ func TestParallelConnectRefusesOwnBridge(t *testing.T) {
 		t.Fatalf("preset non enregistré : %+v", ReadConfig())
 	}
 }
-

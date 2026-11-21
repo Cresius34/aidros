@@ -458,8 +458,8 @@ func TestEnvoiOpenAIRendLaFormeAttendueParLoutilPeer(t *testing.T) {
 	w := httptest.NewRecorder()
 	envoiOpenAI(w, "voici le journal", 4210)
 	var out struct {
-		Object string `json:"object"`
-		Model  string `json:"model"`
+		Object  string `json:"object"`
+		Model   string `json:"model"`
 		Choices []struct {
 			Message struct {
 				Role    string `json:"role"`
@@ -624,6 +624,7 @@ func TestRefusDuVoisinRecuParLEseau(t *testing.T) {
 		t.Fatalf("le refus s'est glissé dans le souvenir rejoué : %s", brut)
 	}
 }
+
 // mais runShell passe AJEAN_AGENT_TURN à tout ce qu'il lance : une commande tapée
 // pendant un tour d'agent vient de l'agent. Laisser l'agent se déclarer humain, c'est
 // lui donner l'autorité qu'on a justement réservée aux humains.
@@ -637,6 +638,7 @@ func TestOrigineCLIRefuseePendantUnTourAgent(t *testing.T) {
 		t.Fatalf("pendant un tour d'agent, l'origine reste celle de l'agent : %q", got)
 	}
 }
+
 // rien. Le couper est ce qui rend la coordination réelle — sinon le voisin arrêtait
 // son côté pendant que le nôtre continuait à consumer le moteur pour personne.
 //
@@ -693,6 +695,7 @@ func TestJetonDuCanalEstDistinctEtRendu(t *testing.T) {
 		t.Fatal("le jeton d'un tour antérieur ne doit pas couper le tour courant")
 	}
 }
+
 // L'outil peer coupé pendant un tour du canal : deux IA autonomes qui se relancent
 // la même question tourneraient sans fin.
 func TestOutilPeerCoupePendantUnTourDuCanal(t *testing.T) {
@@ -706,5 +709,3 @@ func TestOutilPeerCoupePendantUnTourDuCanal(t *testing.T) {
 		t.Fatalf("la coupure doit dire pourquoi (boucle) : %s", out)
 	}
 }
-
-

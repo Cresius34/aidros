@@ -51,7 +51,6 @@ import (
 	"time"
 )
 
-
 // canalFromHeader : la machine qui APPELLE, déclarée par peerAsk. L'appelé ne
 // connaît pas le réseau de son voisin ; c'est ce nom qui entre dans la balise.
 const canalFromHeader = "X-Aidros-Canal-From"

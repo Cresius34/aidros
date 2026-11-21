@@ -153,10 +153,10 @@ func handleEchangeListe(w http.ResponseWriter) {
 		}
 		total += taille
 		out = append(out, map[string]any{
-			"nom":          e.Name(),
+			"nom":           e.Name(),
 			"taille_octets": taille,
-			"sha256":       empreinte,
-			"ecrit_le":     info.ModTime().Format(time.RFC3339),
+			"sha256":        empreinte,
+			"ecrit_le":      info.ModTime().Format(time.RFC3339),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -165,12 +165,12 @@ func handleEchangeListe(w http.ResponseWriter) {
 		return a < b
 	})
 	sendJSON(w, http.StatusOK, map[string]any{
-		"ok":             true,
-		"dossier":        "echange",
-		"entrees":        len(out),
-		"total_octets":   total,
-		"limite_octets":  int64(echangeLimiteOctets),
-		"fichiers":       out,
+		"ok":            true,
+		"dossier":       "echange",
+		"entrees":       len(out),
+		"total_octets":  total,
+		"limite_octets": int64(echangeLimiteOctets),
+		"fichiers":      out,
 	})
 }
 
@@ -340,10 +340,10 @@ func handleEchange(w http.ResponseWriter, r *http.Request) {
 // qui n'existe pas laisse la liste vide et le test passe sans rien vérifier).
 func echangeDecodageListe(corps []byte) ([]map[string]any, int64, error) {
 	var rep struct {
-		OK           bool             `json:"ok"`
-		Error        string           `json:"error"`
-		TotalOctets  int64            `json:"total_octets"`
-		Fichiers     []map[string]any `json:"fichiers"`
+		OK          bool             `json:"ok"`
+		Error       string           `json:"error"`
+		TotalOctets int64            `json:"total_octets"`
+		Fichiers    []map[string]any `json:"fichiers"`
 	}
 	if err := json.Unmarshal(corps, &rep); err != nil {
 		return nil, 0, err

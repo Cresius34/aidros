@@ -52,11 +52,11 @@ const strataCatalogueTimeout = 20 * time.Second
 
 // strataCatalogue : le catalogue vivant, tel que le moteur le rend.
 type strataCatalogue struct {
-	Source       string   `json:"source"`
-	Summary      string   `json:"summary"`
-	Contexts     []int    `json:"contexts"`
-	ContextNote  string   `json:"context_note"`
-	ThisPC       struct {
+	Source      string `json:"source"`
+	Summary     string `json:"summary"`
+	Contexts    []int  `json:"contexts"`
+	ContextNote string `json:"context_note"`
+	ThisPC      struct {
 		RAMGB      float64 `json:"ram_gb"`
 		EngineVend string  `json:"engine_vendor"`
 		GPUs       []struct {
@@ -68,12 +68,12 @@ type strataCatalogue struct {
 		} `json:"gpus"`
 	} `json:"this_pc"`
 	Families []struct {
-		Family       string            `json:"family"`
-		Title        string            `json:"title"`
-		About        string            `json:"about"`
-		Experimental bool              `json:"experimental"`
-		Images       bool              `json:"images"`
-		Sizes        []strataSizeInfo  `json:"sizes"`
+		Family       string           `json:"family"`
+		Title        string           `json:"title"`
+		About        string           `json:"about"`
+		Experimental bool             `json:"experimental"`
+		Images       bool             `json:"images"`
+		Sizes        []strataSizeInfo `json:"sizes"`
 	} `json:"families"`
 	Recommendation *struct {
 		Family       string   `json:"family"`
@@ -90,11 +90,11 @@ type strataCatalogue struct {
 
 // strataCatalogueCache : une reponse par arbre de moteur, le temps du TTL.
 var (
-	strataCatMu     sync.Mutex
-	strataCatAt     time.Time
-	strataCatKey    string
-	strataCatValue  *strataCatalogue
-	strataCatErr    error
+	strataCatMu    sync.Mutex
+	strataCatAt    time.Time
+	strataCatKey   string
+	strataCatValue *strataCatalogue
+	strataCatErr   error
 )
 
 // strataCatalogueGet : le catalogue du moteur pose, ou une erreur si le serveur
@@ -180,7 +180,7 @@ func strataAskModels(src string) (*strataCatalogue, error) {
 
 	var out *strataCatalogue
 	var rpcErr string
-	var brutReçu string   // la ligne attendue, au cas ou notre decodage ne la comprend pas
+	var brutReçu string // la ligne attendue, au cas ou notre decodage ne la comprend pas
 	var decodage string
 	for sc.Scan() {
 		line := bytes.TrimSpace(sc.Bytes())
@@ -188,7 +188,7 @@ func strataAskModels(src string) (*strataCatalogue, error) {
 			continue
 		}
 		var msg struct {
-			ID     int    `json:"id"`
+			ID     int `json:"id"`
 			Result struct {
 				Content []struct {
 					Type string `json:"type"`

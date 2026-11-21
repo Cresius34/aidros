@@ -225,11 +225,11 @@ func newWebMux() *http.ServeMux {
 	api("/api/models/download/status", handleModelDownloadStatus)
 	api("/api/models/download/cancel", handleModelDownloadCancel)
 	api("/api/models/download/pause", handleModelDownloadPause)
-	api("/api/backends/devices", handleBackendDevices)                   // GPU vus par CE moteur (noms/ordre propres au backend)
-	api("/api/moe", handleMoe)                                           // moteur MoE : machine, catalogue figé, recommandation, modèles installés
-	api("/api/moe/install", handleMoeInstall)                            // job : paquet fixe + installeur du moteur + preset
-	api("/api/moe/settings", handleMoeSettings)                          // réglages d'un modèle MoE installé (relance s'il est actif)
-	api("/api/moe/verify", handleMoeProbe)                               // test explicite réponse + appel d’outil du prototype
+	api("/api/backends/devices", handleBackendDevices)     // GPU vus par CE moteur (noms/ordre propres au backend)
+	api("/api/moe", handleMoe)                             // moteur MoE : machine, catalogue figé, recommandation, modèles installés
+	api("/api/moe/install", handleMoeInstall)              // job : paquet fixe + installeur du moteur + preset
+	api("/api/moe/settings", handleMoeSettings)            // réglages d'un modèle MoE installé (relance s'il est actif)
+	api("/api/moe/verify", handleMoeProbe)                 // test explicite réponse + appel d’outil du prototype
 	api("/api/hf/search", handleHFSearch)                  // recherche de dépôts GGUF sur Hugging Face
 	api("/api/hf/files", handleHFFiles)                    // fichiers .gguf d'un dépôt (quantifications, tailles)
 	api("/api/engine", handleEngine)                       // moteur llama.cpp livré avec AJEAN : version épinglée, variante installée
@@ -581,7 +581,3 @@ func sendJSON(w http.ResponseWriter, code int, v any) {
 
 // handlePing is a lightweight authenticated endpoint a client hits to verify
 // connectivity AND that its key is valid (200 = bonne clé, 401 = mauvaise clé).
-
-
-
-

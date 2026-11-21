@@ -285,4 +285,3 @@ func saveParallelSharedPreset(cfg map[string]string) error {
 	}
 	return putStr(bkState, "active_preset", id)
 }
-

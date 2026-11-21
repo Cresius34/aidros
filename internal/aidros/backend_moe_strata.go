@@ -26,6 +26,7 @@ import (
 // lands in engine/BUILD.json, and strataControlVersion is the control package shipped
 // beside it. The preflight check below compares BUILD.json against strataVersion only.
 const strataSourceVersion = "0.2.8"
+
 // Moteur Qwen : 0.1.48 → 0.1.54 dans 0.2.8 (fenêtres HIP de 16 rangées), puis
 // 0.1.59 dans 0.2.13 (chunked GDN scan gfx12 pour les prompts de 30 000 tokens
 // et plus). Monter cette constante est la PAIRE de rendre au paquet moteur son

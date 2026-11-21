@@ -145,7 +145,7 @@ func TestMCPToolWeightIsReported(t *testing.T) {
 		return
 	}
 	if len(mb) > 4*promptCharBudget {
-		t.Logf("attention : MCP du poste seul dépasse le budget du préambule produit ;"+
+		t.Logf("attention : MCP du poste seul dépasse le budget du préambule produit ;" +
 			" désactiver des serveurs/outil MCP pour rendre le contexte utile")
 	}
 }
@@ -176,4 +176,3 @@ func TestSystemPromptEmptyWithoutTools(t *testing.T) {
 		t.Fatalf("préambule non vide sans outils : %q", sp)
 	}
 }
-

@@ -118,7 +118,7 @@ func jsonStr(s string) string {
 var scriptedOverflow = map[string]any{
 	"error": map[string]any{
 		"message": "llama.cpp does not handle n_ctx <= n_seq (request (99999 tokens) exceeds the available context size)",
-		"type":  "exceed_context_size_error",
+		"type":    "exceed_context_size_error",
 	},
 }
 

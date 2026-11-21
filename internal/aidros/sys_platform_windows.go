@@ -3,12 +3,12 @@
 package aidros
 
 import (
-	"runtime"
-	"fmt"
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -570,6 +570,3 @@ func killTree(pid int) {
 	}
 	_ = hideCmd(exec.Command("taskkill", "/PID", strconv.Itoa(pid), "/T", "/F")).Run()
 }
-
-
-

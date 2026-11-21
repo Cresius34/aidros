@@ -816,5 +816,3 @@ func handleJeanEmbed(w http.ResponseWriter, r *http.Request) {
 	}
 	sendJSON(w, 200, map[string]any{"ok": true, "status": jeanEmbedState()})
 }
-
-

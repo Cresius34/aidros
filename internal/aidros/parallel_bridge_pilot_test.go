@@ -197,8 +197,8 @@ func TestRelaisPilotageVoisin(t *testing.T) {
 		t.Fatalf("action presets : %d\n%s", w.Code, w.Body.String())
 	}
 	var liste struct {
-		OK             bool `json:"ok"`
-		Presets        []struct {
+		OK      bool `json:"ok"`
+		Presets []struct {
 			ID     string `json:"id"`
 			Moteur string `json:"moteur"`
 		} `json:"presets"`
