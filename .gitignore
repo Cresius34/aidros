@@ -30,7 +30,7 @@ Thumbs.db
 # Les deux se reconstruisent :
 #   - moteur MoE + poids de génération : installés par le moteur sur
 #     demande dans Ajean (data\moe\installer-r6.ps1, manifest
-#     internal/ajean/moe_windows_manifest.json, téléchargements
+#     internal/aidros/moe_windows_manifest.json, téléchargements
 #     vérifiés par SHA-256) ;
 #   - runtime d'embeddings : tools\embedding-test (Construire-Portable,
 #     Installer-Modele, Copier-Presets) ;

@@ -1,4 +1,4 @@
-// Point d'entrée du binaire ajean. Tout le code vit dans internal/ajean ; ce
+// Point d'entrée du binaire ajean. Tout le code vit dans internal/aidros ; ce
 // dossier ne porte que le main() et les ressources Windows (.syso, icône,
 // versioninfo) qui doivent résider dans le dossier du package main.
 //
@@ -12,6 +12,6 @@
 //go:generate goversioninfo -64 -arm -icon=icon.ico -o resource_windows_arm64.syso versioninfo.json
 package main
 
-import "github.com/nathaninline/ajean/internal/ajean"
+import "github.com/nathaninline/ajean/internal/aidros"
 
-func main() { ajean.Main() }
+func main() { aidros.Main() }

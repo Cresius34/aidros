@@ -1,0 +1,1607 @@
+// web_api.go — handlers REST /api/* (statut, config, presets, modèles,
+// mémoire, agent, clés, bench…) du serveur web local.
+package aidros
+
+import (
+	"encoding/json"
+	"fmt"
+	"net"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+// procBoot marque l'instant de démarrage de CE process (celui qui sert l'UI et
+// détient le coffre mémoire déchiffré en RAM). Exposé dans /api/status : quand le
+// navigateur voit cette valeur changer, c'est que le serveur a redémarré et que
+// le coffre s'est reverrouillé — il relance alors le déverrouillage automatique
+// sans qu'on ait à rafraîchir la page. Voir loadStatus côté UI.
+var procBoot = time.Now().UnixMilli()
+
+func handlePing(w http.ResponseWriter, r *http.Request) {
+	sendJSON(w, 200, map[string]any{"ok": true, "service": "ajean", "version": displayVersion()})
+}
+
+// handleStatus reports service state cross-platform via serviceIsActive
+// (systemd sous Linux, supervision par PID-file sous Windows — voir sys_service_*.go).
+func handleStatus(w http.ResponseWriter, r *http.Request) {
+	active := serviceIsActive()
+	state := "inactive"
+	if active {
+		state = "active"
+	}
+	health := false
+	if active {
+		health = healthCheck()
+		// Moteur prêt : on pré-chauffe le préfixe (système + outils) pour que le
+		// premier message d'une conversation ne paie plus son préfill. Détaché :
+		// la construction du préfixe peut sonder MCP/Crawl4AI, elle n'a rien à
+		// faire dans le temps de réponse de /api/status.
+		go LLMPrewarm(health)
+	}
+	// Preset externe : pas de service llama-server local, mais le chat est prêt
+	// (il tape vers l'API distante). On l'annonce « actif/prêt » pour que l'UI
+	// débloque la saisie au lieu d'afficher un moteur éteint indéfiniment.
+	external := externalActive()
+	cloudErr := ""
+	if external {
+		active = true
+		state = "active"
+		health = true
+
+		// Moteur tiers lancé par ajean (EXTERNAL_SERVICE) : « prêt » seulement
+		// quand son API répond, sinon l'UI annonçait prêt pendant les 1-2 min de
+		// chargement du modèle.
+		if cfg := ReadConfig(); externalServiceOf(cfg) != "" {
+			health, cloudErr = externalServiceReady(cfg)
+		}
+	}
+	ctx := ctxWindow() // contexte réellement appliqué par le moteur
+	// Si le modèle n'est pas prêt, on regarde POURQUOI : une tentative de
+	// chargement qui a échoué (souvent un modèle incompatible avec le moteur)
+	// doit être signalée clairement plutôt que de laisser un « chargement… »
+	// perpétuel / un crash-loop muet.
+	loadErr := cloudErr
+	if !health && !external {
+		loadErr = modelLoadError()
+	}
+	// Le millésime du preset ACTIF, en avertissement visible depuis que la garde du
+	// préflight ne refuse plus (ordre de l'humain du 21/11 : « prévoir avertissement
+	// + millésime sur presets en vert si endpoint = moteur installé sinon rouge »).
+	// Baisser une garde sans la rendre lisible aurait été pire qu'un refus : un
+	// refus nommait le problème, un silence l'enterre. La voisine a passé des
+	// dizaines de tours sur « Strata est HS » alors que son preset pointait un
+	// millésime que son exe ne pouvait pas voir, et l'interface ne dit le millésime
+	// NULLE PART (elle affiche le # NAME du fichier, pas son contenu).
+	// Coût : deux petits JSON lus par tour de sondage, même ordre de grandeur que
+	// modelLoadError() juste au-dessus, qui relit la fin du journal du service.
+	engineWarn := ""
+	if id := activePresetID(); id != "" {
+		if content, err := ReadPreset(id); err == nil {
+			if cfg := parseEnv(content); isStrataMoe(cfg) {
+				mv, ok, avis := strataMillésimePreset(cfg)
+				if !ok && avis != "" {
+					engineWarn = fmt.Sprintf("preset MoE « %s » : %s", activePresetName(), avis)
+					if mv != "" {
+						engineWarn += fmt.Sprintf(" — l'application épinglée %s", strataVersion)
+					}
+				}
+			}
+		}
+	}
+	warn := appWarning()
+	if engineWarn != "" {
+		if warn != "" {
+			warn += " · " + engineWarn
+		} else {
+			warn = engineWarn
+		}
+	}
+	sendJSON(w, 200, map[string]any{
+		"state":      state,
+		"active":     active,
+		"health":     health,
+		"port":       LLMPort(),
+		"ctx":        ctx,
+		"version":    displayVersion(),
+		"warn":       warn,                             // ex. App Translocation macOS, millésime MoE divergent — vide si tout va bien
+		"load_error": loadErr,                          // modèle qui ne charge pas (incompat moteur…) — vide sinon
+		"boot":       procBoot,                         // empreinte de démarrage du process (détecte un redémarrage côté UI)
+		"preset":     activePresetID(),                 // id du preset actif : un autre appareil a pu basculer, l'UI se resynchronise sans reload (voir loadStatus)
+		"external":   external,                         // preset actif = API OpenAI-compatible distante (pas de moteur local)
+		"service":    serviceCmdOf(ReadConfig()) != "", // preset actif = Â« Service systÃ¨me Â» (commande lancÃ©e par AJEAN)
+		"ui":         uiBuildID(),                      // empreinte de l interface servie : si elle change, la page ouverte est pÃ©rimÃ©e et se recharge
+		// Anciens drapeaux --mlock/--no-mmap présents alors que le moteur attend
+		// --load-mode (llama.cpp récent) : l'UI propose un bouton de mise à jour.
+		// Le serveur démarre quand même (traduits au lancement) — c'est un nettoyage.
+		"migrate_load_flags": loadFlagsNeedMigration(),
+	})
+}
+
+// modelLoadError inspecte la fin du journal du service et renvoie un message
+// clair quand la DERNIÈRE tentative de chargement du modèle s'est soldée par un
+// échec. Le cas le plus courant : un GGUF dont le format de quantification n'est
+// pas reconnu par le moteur (BIN) sélectionné — typiquement un modèle ternaire
+// qui exige un fork de llama.cpp. Renvoie "" quand le dernier chargement a
+// réussi ou qu'aucune tentative n'est visible (évite les faux positifs sur un
+// service simplement arrêté).
+func modelLoadError() string {
+	log := serviceLogTail(200)
+	if log == "" {
+		return ""
+	}
+	lines := strings.Split(log, "\n")
+	// On ne considère que ce qui suit la DERNIÈRE tentative de chargement.
+	start := 0
+	for i, l := range lines {
+		if strings.Contains(l, "loading model") || strings.Contains(l, "load_model") {
+			start = i
+		}
+	}
+	loaded, reason := false, ""
+	for _, l := range lines[start:] {
+		low := strings.ToLower(l)
+		switch {
+		case strings.Contains(low, "model loaded"), strings.Contains(low, "server is listening"):
+			loaded = true
+		case strings.Contains(l, "invalid argument: --mlock"),
+			strings.Contains(l, "invalid argument: --no-mmap"),
+			strings.Contains(l, "invalid argument: --mmap"):
+			reason = "loadmode-flags"
+		case strings.Contains(l, "has offset") && strings.Contains(l, "expected"):
+			reason = "format de quantification non reconnu par ce moteur"
+		case strings.Contains(low, "unknown model architecture"),
+			strings.Contains(low, "unknown ftype"),
+			strings.Contains(low, "unknown type"),
+			strings.Contains(low, "unsupported"):
+			if reason == "" {
+				reason = "type/architecture de modèle inconnu de ce moteur"
+			}
+		case strings.Contains(low, "error loading model"),
+			strings.Contains(low, "failed to load model"),
+			strings.Contains(low, "failed to read tensor data"):
+			if reason == "" {
+				reason = "échec du chargement du modèle"
+			}
+		}
+	}
+	if loaded {
+		return ""
+	}
+	// La ligne d'erreur du moteur lui-même (mémoire insuffisante, argument
+	// inconnu, bibliothèque manquante, moteur impossible à installer…) : on la
+	// montre telle quelle plutôt qu'un « chargement… » sans fin.
+	detail := engineErrorFromLog(strings.Join(lines[start:], "\n"))
+	if reason == "" {
+		if detail == "" {
+			return ""
+		}
+		return "Le moteur s'est arrêté : " + detail
+	}
+	// Message PRÉCIS selon la cause : n'affirmer l'incompatibilité que quand le
+	// journal la montre vraiment (quant/architecture). Un échec générique de
+	// chargement peut avoir bien d'autres causes (mémoire, fichier, tenseur) — on
+	// renvoie alors vers le journal plutôt que d'accuser à tort le moteur.
+	switch reason {
+	case "loadmode-flags":
+		return "La nouvelle version de llama.cpp a remplacé --mlock / --no-mmap par --load-mode. " +
+			"D'anciens flags ont été détectés dans ta configuration — c'est pourquoi le moteur ne démarre pas. " +
+			"Clique sur « Mettre à jour les flags » pour corriger."
+	case "format de quantification non reconnu par ce moteur",
+		"type/architecture de modèle inconnu de ce moteur":
+		return "Modèle incompatible avec le moteur llama.cpp " + enginePin() + " livré avec AJEAN : " + reason +
+			". Un modèle qui exige un fork de llama.cpp n'est pas pris en charge."
+	default:
+		if detail != "" {
+			return "Le modèle n'a pas pu être chargé : " + detail
+		}
+		return "Le modèle n'a pas pu être chargé (" + reason +
+			"). Ouvre le journal du moteur pour le détail."
+	}
+}
+
+// handleServiceLog (GET /api/service/log) : dernières lignes du journal du
+// service, pour que l'UI puisse montrer POURQUOI le modèle ne se charge pas
+// (fichier .gguf illisible, VRAM insuffisante, bibliothèque manquante…) au lieu
+// d'un « chargement… » perpétuel sans explication.
+func handleServiceLog(w http.ResponseWriter, r *http.Request) {
+	n := 80
+	if v := r.URL.Query().Get("n"); v != "" {
+		if k, err := strconv.Atoi(v); err == nil && k > 0 && k <= 500 {
+			n = k
+		}
+	}
+	log := serviceLogTail(n)
+	// "error" : les lignes d'erreur du moteur relevées dans ce journal, pour que
+	// l'UI affiche la cause sans obliger à lire les 80 lignes (voir engine_status.go).
+	sendJSON(w, 200, map[string]any{"log": log, "error": engineErrorFromLog(log)})
+}
+
+// vramGPUs échantillonne les GPU (VRAM utilisée/totale, util, température). Extrait
+// de handleVram pour être réutilisé tel quel par /api/telemetry : nvidia-smi
+// d'abord, repli amd-smi, puis rocm-smi, puis --list-devices Vulkan.
+func vramGPUs() []map[string]any {
+	vramMu.Lock()
+	defer vramMu.Unlock()
+	if vramCache != nil && time.Since(vramAt) < 2500*time.Millisecond {
+		return vramCache
+	}
+	vramCache = sampleVramGPUs()
+	vramAt = time.Now()
+	return vramCache
+}
+
+// Cache court PARTAGÉ du relevé GPU : chaque onglet ouvert (PC, téléphone…) sonde
+// toutes les 3 s, et un relevé peut coûter cher (sous Windows non-NVIDIA : un
+// llama-server --list-devices + un PowerShell). Sans ça, N appareils = N relevés,
+// et un relevé plus long que 3 s empilait les requêtes. Le mutex fait aussi
+// attendre les appels concurrents au lieu de lancer des relevés en parallèle.
+var (
+	vramMu    sync.Mutex
+	vramCache []map[string]any
+	vramAt    time.Time
+)
+
+func sampleVramGPUs() []map[string]any {
+	if gpuTelemetryOff() {
+		return []map[string]any{}
+	}
+	// Mac Apple Silicon : mémoire unifiée lue via ioreg (voir sys_gpu_apple.go).
+	// Avant les replis ci-dessous, qui sur Metal donnaient une barre à zéro à vie
+	// et relançaient un llama-server toutes les 3 s.
+	if apple := appleGPUs(); len(apple) > 0 {
+		return apple
+	}
+	out, err := hideCmd(exec.Command("nvidia-smi",
+		"--query-gpu=name,memory.used,memory.total,utilization.gpu,temperature.gpu",
+		"--format=csv,noheader,nounits")).Output()
+	gpus := []map[string]any{}
+	if err == nil {
+		for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+			parts := strings.Split(line, ",")
+			if len(parts) != 5 {
+				continue
+			}
+			for i := range parts {
+				parts[i] = strings.TrimSpace(parts[i])
+			}
+			used, _ := strconv.Atoi(parts[1])
+			total, _ := strconv.Atoi(parts[2])
+			util, _ := strconv.Atoi(parts[3])
+			temp, _ := strconv.Atoi(parts[4])
+			gpus = append(gpus, map[string]any{
+				"name": parts[0], "used": used, "total": total, "util": util, "temp": temp,
+			})
+		}
+	}
+	// Aucune carte NVIDIA (nvidia-smi absent ou muet) → on tente amd-smi, pour que
+	// les GPU AMD apparaissent aussi dans l'UI (issue #32). Mélanger les deux
+	// n'aurait pas de sens sur les rares machines mixtes : nvidia-smi prime, on ne
+	// bascule sur AMD que s'il n'a rien donné.
+	if len(gpus) == 0 {
+		if amd := amdVramGPUs(); len(amd) > 0 {
+			gpus = amd
+		}
+	}
+	// Toujours rien ? Beaucoup d'installations ROCm n'ont que `rocm-smi` (pas
+	// `amd-smi`) : dernier repli pour que la carte AMD apparaisse quand même dans
+	// l'UI au lieu d'un « (pas de GPU) » trompeur (issue #49).
+	if len(gpus) == 0 {
+		if amd := rocmVramGPUs(); len(amd) > 0 {
+			gpus = amd
+		}
+	}
+	// Toujours rien ? Sous Windows, amd-smi/rocm-smi ne sont jamais lancés
+	// (UAC en rafale, issue #259) : dernier repli via --list-devices du moteur
+	// (Vulkan), qui voit ces cartes sans outil externe. Voir vulkanVramGPUs.
+	if len(gpus) == 0 {
+		if vk := vulkanVramGPUs(); len(vk) > 0 {
+			gpus = vk
+		}
+	}
+	return gpus
+}
+
+func handleVram(w http.ResponseWriter, r *http.Request) {
+	sendJSON(w, 200, vramGPUs())
+}
+
+// handleTelemetry regroupe les jauges matérielles (VRAM + RAM) en UN seul appel,
+// pour que l'UI ne sonde plus deux endpoints séparés à intervalle rapproché.
+// Forme et unités identiques à /api/vram et /api/ram (conservés pour les serveurs
+// anciens et le repli côté UI) : {vram: [...], ram: {used, total}}.
+func handleTelemetry(w http.ResponseWriter, r *http.Request) {
+	used, total := ramUsageMB()
+	gpus := vramGPUs()
+	sendJSON(w, 200, map[string]any{
+		"vram": gpus,
+		"ram":  map[string]any{"used": used, "total": total},
+	})
+}
+
+// handleRam renvoie la RAM système {used, total} en Mo (mêmes unités que
+// /api/vram → l'UI divise par 1024 pour des Gio). La mesure est spécifique à
+// l'OS (ramUsageMB : /proc/meminfo sous Linux, sysctl+vm_stat sur macOS,
+// GlobalMemoryStatusEx sous Windows). total=0 → l'UI masque le bloc.
+func handleRam(w http.ResponseWriter, r *http.Request) {
+	used, total := ramUsageMB()
+	sendJSON(w, 200, map[string]any{"used": used, "total": total})
+}
+
+func handleConfigEnv(w http.ResponseWriter, r *http.Request) {
+	sendJSON(w, 200, ReadConfig())
+}
+
+// handleReasoning (POST {effort}) change l'effort de réflexion de la config
+// ACTIVE à chaud : REASONING_EFFORT est relu par applySampling à chaque tour, il
+// prend donc effet dès le prochain message, sans redémarrage du moteur. C'est le
+// raccourci du composeur (à côté du bouton « postes distants ») pour ajuster le
+// niveau sans rouvrir l'éditeur de preset.
+//
+// La valeur n'a d'effet réel que si le moteur tourne avec --jinja ; on ne montre
+// le raccourci côté UI que lorsque le preset a déjà défini un effort (donc --jinja
+// posé), et on n'ajoute rien ici — écrire --jinja imposerait un redémarrage, tout
+// l'intérêt du raccourci étant justement de l'éviter.
+//
+// Effort accepté : "" (défaut du modèle), off (preset API ou Service), low,
+// medium, high, xhigh. Une valeur
+// inconnue est refusée pour ne pas glisser n'importe quoi dans chat_template_kwargs.
+func handleReasoning(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Effort string `json:"effort"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	eff := strings.TrimSpace(req.Effort)
+	switch eff {
+	case "", "off", "low", "medium", "high", "xhigh":
+	default:
+		sendJSON(w, 400, map[string]any{"ok": false, "error": "effort inconnu"})
+		return
+	}
+	if err := SetConfigKey("REASONING_EFFORT", eff); err != nil {
+		sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "effort": eff})
+}
+
+// handleModels lists *.gguf files (size in bytes) for the preset editor's model
+// picker, dans AJEAN_HOME ET dans les dossiers supplémentaires déclarés (disque
+// externe…). "value" est ce qu'il faut écrire dans MODEL= : un simple nom de
+// fichier pour AJEAN_HOME (compatibilité avec l'existant), le chemin complet
+// pour un dossier externe.
+func handleModels(w http.ResponseWriter, r *http.Request) {
+	out := []map[string]any{}
+	seen := map[string]bool{}
+	home := AjeanHome()
+	for _, dir := range modelDirs() {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		isHome := normDir(dir) == normDir(home)
+		for _, e := range entries {
+			if e.IsDir() || !strings.HasSuffix(strings.ToLower(e.Name()), ".gguf") {
+				continue
+			}
+			// Modèle découpé : seule la première tranche est un modèle lançable, les
+			// suivantes sont ouvertes par llama-server tout seul. Les lister toutes
+			// donnait trois entrées pour un modèle, dont deux qui échouent au démarrage.
+			if isFollowerShard(e.Name()) {
+				continue
+			}
+			full := filepath.Join(dir, e.Name())
+			if seen[normDir(full)] {
+				continue
+			}
+			seen[normDir(full)] = true
+			info, _ := e.Info()
+			size := int64(0)
+			if info != nil {
+				size = info.Size()
+			}
+			value := full
+			if isHome {
+				value = e.Name()
+			}
+			m := map[string]any{
+				"name": e.Name(), "size": size, "value": value,
+				"path": full, "dir": dir, "home": isHome,
+			}
+			// Taille annoncée = la famille entière, et on signale les tranches
+			// manquantes : un modèle incomplet démarre puis meurt sur un tenseur
+			// introuvable, autant le voir avant de le sélectionner.
+			if _, total, ok := shardInfo(e.Name()); ok {
+				m["shards"] = total
+				m["size"] = shardFamilySize(dir, e.Name())
+				if missing := shardFamilyMissing(dir, e.Name()); len(missing) > 0 {
+					m["missing"] = missing
+				}
+			}
+			out = append(out, m)
+		}
+	}
+	sendJSON(w, 200, out)
+}
+
+func handlePresets(w http.ResponseWriter, r *http.Request) {
+	list, err := ListPresets()
+	if err != nil {
+		sendJSON(w, 500, map[string]any{"error": err.Error()})
+		return
+	}
+	store := loadBenchStore()
+	out := []map[string]any{}
+	for _, p := range list {
+		item := map[string]any{"id": p.ID, "name": p.Name, "active": p.Active}
+		if content, err := ReadPreset(p.ID); err == nil {
+			// Preset externe : on l'étiquette pour que l'UI l'affiche avec l'icône
+			// wifi et le nom du modèle distant, au lieu des tags quant/ctx/moteur.
+			if cfg := parseEnv(content); isExternalConfig(cfg) {
+				item["external"] = true
+				if m := strings.TrimSpace(cfg[extKeyModel]); m != "" {
+					item["model"] = m
+				}
+				if strings.TrimSpace(cfg[extKeyVision]) == "1" {
+					item["vision"] = true
+				}
+				if serviceCmdOf(cfg) != "" {
+					item["service"] = true // « Service système » : une commande locale
+				}
+			} else if cfg := parseEnv(content); isMoeConfig(cfg) {
+				// moteur MoE : reglages dans sa propre fenêtre, pas l'editeur llama.cpp
+				item["moe"] = true
+				if cfg["MOE_VISION"] != "0" {
+					item["vision"] = true
+				}
+				// LE MILLÉSIME, en vert ou en rouge (ordre de l'humain du 21/11).
+				// Ce champ est la réponse au piège du 17/11 : l'interface affiche le
+				// # NAME du fichier preset, pas son contenu, et le millésime ne se lit
+				// que dans MOE_CONFIG / MOE_PYTHON / MOE_SOURCE. Deux presets GYRO-S
+				// chez la voisine, un seul pointait le bon ; elle a renommé le mauvais,
+				// et quatre tours y sont passés.
+				if isStrataMoe(cfg) {
+					// ⚠ LE GARDE ÉTAIT `mv != ""` SEUL, et il jetait l'avis (mesuré
+					// le 21/11 sur l'installation réelle, invisible à mes filets qui
+					// jouaient vert, rouge et llama.cpp — jamais moteur illisible).
+					// strataMillésimeDuMoteur rend un AVIS NON VIDE avec un millésime
+					// VIDE quand la config du moteur est introuvable : le preset ne
+					// rendait donc AUCUNE clé. Ni vert, ni rouge, ni la cause. Exacte
+					// reproduction du piège que cette greffe vient fermer : un refus
+					// qui ne nomme pas sa cause (17/11, quatre tours chez la voisine).
+					// D'où : rendre dès qu'UN des deux parle, et ne pas rendre un
+					// millésime vide qui s'afficherait « moteur » tout court.
+					if mv, ok, avis := strataMillésimePreset(cfg); mv != "" || avis != "" {
+						if mv != "" {
+							item["moteur"] = mv
+						}
+						item["moteur_ok"] = ok
+						if avis != "" {
+							item["moteur_avis"] = avis
+						}
+					}
+				}
+			} else if name := removedEngine(parseEnv(content)); name != "" {
+				// Preset d'un moteur retiré en 0.20 : l'UI le montre grisé, avec
+				// la raison, au lieu de le laisser échouer au lancement.
+				item["removed_engine"] = name
+			}
+			ext := isExternalConfig(parseEnv(content))
+			if q := detectQuant(content); q != "" && !ext && item["engine"] == nil {
+				item["quant"] = q
+			}
+			if c := presetCtx(content); c != "" && !ext {
+				item["ctx"] = c
+			}
+			if r := presetReasoning(content); reasoningActive(r) && !ext {
+				item["reasoning"] = strings.ToLower(r)
+			}
+			// Vision : le preset charge un projecteur multimodal (MMPROJ) → il sait
+			// recevoir des images. L'UI affiche un œil pour le repérer sans ouvrir
+			// les options (issue #35).
+			if strings.TrimSpace(parseEnv(content)["MMPROJ"]) != "" && !ext {
+				item["vision"] = true
+			}
+		}
+		if sb, ok := store[p.ID]; ok && benchMatchesPreset(sb, parseEnv(presetContentOrEmpty(p.ID))) {
+			item["bench"] = map[string]any{
+				"prefill": sb.Result.PromptPerSecond,
+				"decode":  sb.Result.PredictedPerSec,
+				"at":      sb.At,
+			}
+		}
+		out = append(out, item)
+	}
+	sendJSON(w, 200, out)
+}
+
+// handlePresetsOrder enregistre l'ordre d'affichage des presets (drag & drop de
+// l'UI). On stocke la liste d'IDs telle quelle ; ListPresets s'en sert ensuite.
+func handlePresetsOrder(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		IDs []string `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	if err := savePresetOrder(req.IDs); err != nil {
+		sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true})
+}
+
+func handlePreset(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.URL.Query().Get("id"))
+	if id == "" {
+		sendJSON(w, 200, map[string]any{"id": "", "name": "", "content": formatEnv(newPresetSeed())})
+		return
+	}
+	content, err := ReadPreset(id)
+	if err != nil {
+		sendJSON(w, 404, map[string]any{"error": "not found"})
+		return
+	}
+	if parallelBuild() {
+		content = withDisplayName(formatEnv(resolveParallelConfig(parseEnv(content))), presetDisplayName(content, id))
+	}
+	sendJSON(w, 200, map[string]any{"id": id, "name": presetDisplayName(content, id), "content": content, "sysprompt": presetSysPrompt(id)})
+	sendJSON(w, 200, map[string]any{"id": id, "name": presetDisplayName(content, id), "content": content})
+}
+
+// presetSaveReq is the preset editor payload. `id` identifies an existing
+// preset to update ("" creates a new one); `name` is the display name.
+type presetSaveReq struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Content     string `json:"content"`
+	DeleteModel bool   `json:"deleteModel"`
+}
+
+// saveReq is the skill editor payload (skills keep name-as-identity + rename).
+type saveReq struct {
+	Name    string `json:"name"`
+	Old     string `json:"old"`
+	Content string `json:"content"`
+	// Project : projet ciblé (vide = actif). Permet d'éditer/supprimer une page
+	// mémoire d'un autre projet depuis la vue « Voir la mémoire ».
+	Project string `json:"project"`
+}
+
+func handlePresetSave(w http.ResponseWriter, r *http.Request) {
+	var req presetSaveReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	// Preset actif modifié : la config vivante tourne encore l'ancienne version.
+	// On le signale pour que l'UI propose de l'appliquer (#176).
+	wasActive := false
+	if req.ID != "" {
+		if list, err := ListPresets(); err == nil {
+			for _, p := range list {
+				if p.ID == req.ID && p.Active {
+					wasActive = true
+				}
+			}
+		}
+	}
+	newID, err := SavePreset(req.ID, req.Name, req.Content)
+	if err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	reload := false
+	if wasActive {
+		if list, err := ListPresets(); err == nil {
+			for _, p := range list {
+				if p.ID == newID && !p.Active {
+					reload = true
+				}
+			}
+		}
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "id": newID, "name": req.Name, "reload": reload})
+}
+
+func handlePresetDelete(w http.ResponseWriter, r *http.Request) {
+	var req presetSaveReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	// Capture the referenced model before the preset file disappears, so we can
+	// optionally delete the .gguf alongside it.
+	model := ""
+	if req.DeleteModel {
+		if content, err := ReadPreset(req.ID); err == nil {
+			model = modelFromPresetContent(content)
+		}
+	}
+	if err := DeletePreset(req.ID); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	deletePresetSysPrompt(req.ID) // nettoie le prompt système associé
+	modelDeleted, modelErr := "", ""
+	if req.DeleteModel && model != "" {
+		// Le moteur vient peut-être d'être arrêté (preset actif) : Windows garde le
+		// fichier verrouillé un instant après la fin du processus, on réessaie.
+		var err error
+		for i := 0; i < 8; i++ {
+			if err = deleteModelFile(model); err == nil {
+				break
+			}
+			time.Sleep(400 * time.Millisecond)
+		}
+		if err != nil {
+			modelErr = err.Error()
+		} else {
+			modelDeleted = model
+		}
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "modelDeleted": modelDeleted, "modelError": modelErr})
+}
+
+// handleAgent renvoie l'état du mode agent ET la liste des pages mémoire (que
+// l'IA gère via les outils mem_*) — un seul aller-retour pour l'UI. La clé
+// "skills" est conservée en miroir de "pages" pour l'ancien portail ajean.link.
+func handleAgent(w http.ResponseWriter, r *http.Request) {
+	// ?project=<slug> : consulter la mémoire d'un AUTRE projet que l'actif, sans y
+	// basculer (bouton « Voir la mémoire » du menu ⋯ d'un projet). Vide/inconnu =
+	// projet actif. Seuls les champs mémoire (pages + mode) sont scopés ; le reste
+	// (agent/compact) est machine-global.
+	var out []map[string]any
+	var mode string
+	memScope(r.URL.Query().Get("project"), func() {
+		for _, p := range MemList() {
+			out = append(out, map[string]any{"name": p.Name, "desc": p.Title})
+		}
+		mode = string(memMode())
+	})
+	if out == nil {
+		out = []map[string]any{}
+	}
+	sendJSON(w, 200, map[string]any{"enabled": agentEnabled(), "compact": compactEnabled(), "compact_max": compactMaxTokens(),
+		// le pourcentage réglé, la fenêtre du modèle et le seuil qui en sort :
+		// l'interface affiche ces trois nombres ensemble, sinon le réglage est opaque.
+		"compact_frac": compactFracPercent(), "ctx_window": ctxWindow(), "compact_threshold": compactThreshold(),
+		"prewarm": prewarmEnabled(), "mem_mode": mode, "computer": computerUseEnabled(), "pages": out, "skills": out})
+}
+
+// memScope exécute fn dans le contexte mémoire d'un projet donné (pour voir/éditer
+// la mémoire d'un AUTRE projet que l'actif sans basculer dessus). slug vide ou
+// inconnu = projet actif (aucun override).
+func memScope(slug string, fn func()) {
+	slug = strings.TrimSpace(slug)
+	if slug == "" || !projectExists(slug) {
+		fn()
+		return
+	}
+	withProject(slug, fn)
+}
+
+// handleMemoryMode lit/écrit le mode mémoire (off / ondemand / always / search).
+//
+//	GET  → {mode} du projet actif
+//	POST {mode} → persiste le mode mémoire DU PROJET ACTIF (off/ondemand/always/search)
+func handleMemoryMode(w http.ResponseWriter, r *http.Request) {
+	// project (query en GET, corps en POST) : cibler un AUTRE projet que l'actif
+	// (vue « Voir la mémoire »). Vide/inconnu = projet actif.
+	proj := strings.TrimSpace(r.URL.Query().Get("project"))
+	if r.Method == http.MethodPost {
+		var req struct {
+			Mode    string `json:"mode"`
+			Project string `json:"project"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		if req.Project != "" {
+			proj = strings.TrimSpace(req.Project)
+		}
+		// normalizeMemMode valide et ramène toute entrée inconnue à "always".
+		m := normalizeMemMode(req.Mode)
+		var err error
+		memScope(proj, func() { err = setMemMode(m) })
+		if err != nil {
+			sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+			return
+		}
+	}
+	mode := ""
+	memScope(proj, func() { mode = string(memMode()) })
+	sendJSON(w, 200, map[string]any{"ok": true, "mode": mode})
+}
+
+// handleCompactToggle active/désactive le compactage automatique du contexte
+// (config.env COMPACT). On=compacte (défaut), off=jamais. « max » (facultatif)
+// règle le plafond du seuil en jetons (COMPACT_MAX, 0 = aucun) ; « frac »
+// (facultatif) règle le pourcentage de la fenêtre où l'on compacte
+// (COMPACT_FRAC, 0 = le défaut de 75 %) ; absents, ils ne sont pas touchés.
+func handleCompactToggle(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		On   bool `json:"on"`
+		Max  *int `json:"max"`
+		Frac *int `json:"frac"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	if req.Max != nil {
+		if *req.Max < 0 || *req.Max > 1<<20 {
+			sendJSON(w, 400, map[string]any{"ok": false, "error": "plafond hors limites"})
+			return
+		}
+		v := ""
+		if *req.Max > 0 {
+			v = strconv.Itoa(*req.Max)
+		}
+		if err := SetConfigKey("COMPACT_MAX", v); err != nil {
+			sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+			return
+		}
+	}
+	if req.Frac != nil {
+		if *req.Frac != 0 && (*req.Frac < compactFracMin || *req.Frac > compactFracMax) {
+			sendJSON(w, 400, map[string]any{"ok": false, "error": "pourcentage hors limites (50 à 100)"})
+			return
+		}
+		v := ""
+		if *req.Frac > 0 {
+			v = strconv.Itoa(*req.Frac)
+		}
+		if err := SetConfigKey("COMPACT_FRAC", v); err != nil {
+			sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+			return
+		}
+	}
+	val := ""
+	if !req.On {
+		val = "off"
+	}
+	if err := SetConfigKey("COMPACT", val); err != nil {
+		sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "compact": compactEnabled(), "compact_max": compactMaxTokens(),
+		"compact_frac": compactFracPercent(), "ctx_window": ctxWindow(), "compact_threshold": compactThreshold()})
+}
+
+// handlePrewarmToggle : interrupteur « pré-chauffage du prompt » (Paramètres).
+func handlePrewarmToggle(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		On bool `json:"on"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	if err := setPrewarmEnabled(req.On); err != nil {
+		sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "prewarm": prewarmEnabled()})
+}
+
+func handleAgentToggle(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		On bool `json:"on"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	if err := setAgentEnabled(req.On); err != nil {
+		sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "enabled": agentEnabled()})
+}
+
+// handleComputer pilote le computer use (pilotage d'un navigateur de l'hôte).
+//
+//	GET  → {enabled, browser, browser_ok, vision}
+//	POST {on} → active/désactive (et ferme le navigateur quand on coupe).
+func handleComputer(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		var req struct {
+			On bool `json:"on"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		if err := setComputerUseEnabled(req.On); err != nil {
+			sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+			return
+		}
+		if !req.On {
+			cdpShutdown()
+		}
+	}
+	bin := chromePath()
+	sendJSON(w, 200, map[string]any{
+		"ok":         true,
+		"enabled":    computerUseEnabled(),
+		"browser":    bin,
+		"browser_ok": bin != "",
+		"vision":     visionEnabled(),
+	})
+}
+
+// handleAPIKey expose et pilote la clé d'accès à l'endpoint compatible OpenAI
+// (llama-server /v1). GET renvoie l'état ; POST {action:"generate"|"set"|"clear",
+// key?} l'écrit puis redémarre le service (llama-server lit --api-key au lancement).
+func handleAPIKey(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		var req struct {
+			Action string `json:"action"`
+			Key    string `json:"key"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+			return
+		}
+		var key string
+		switch req.Action {
+		case "generate":
+			key = genAPIKey()
+		case "set":
+			key = strings.TrimSpace(req.Key)
+		case "clear":
+			key = ""
+		default:
+			sendJSON(w, 400, map[string]any{"ok": false, "error": "action inconnue"})
+			return
+		}
+		if err := writeAPIKey(key); err != nil {
+			sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+			return
+		}
+		// La clé n'est appliquée qu'au (re)démarrage de llama-server.
+		if serviceIsActive() {
+			_ = serviceAction("restart")
+		}
+	}
+	k := readAPIKey()
+	sendJSON(w, 200, map[string]any{
+		"ok":     true,
+		"set":    k != "",
+		"key":    k,
+		"masked": maskAPIKey(k),
+		"port":   LLMPort(),
+		"host":   localIP(),
+		// Accès OpenAI PUBLIC via ajean.link (passthrough SNI, VPS aveugle) : si
+		// activé, l'URL publique est https://<machine>.oai.ajean.link/v1.
+		"oai_public": oaiPublicEnabled(),
+		"machine":    machineID(),
+	})
+}
+
+// handleOAIPublic pilote le drapeau d'accès OpenAI public (exposition via
+// ajean.link). GET renvoie l'état ; POST {enabled} l'active/coupe en direct
+// (aucun redémarrage : le démux du tunnel relit le drapeau à chaque connexion).
+func handleOAIPublic(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		var req struct {
+			Enabled *bool `json:"enabled"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+			return
+		}
+		if req.Enabled != nil {
+			if err := setOAIPublic(*req.Enabled); err != nil {
+				sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+				return
+			}
+		}
+	}
+	sendJSON(w, 200, map[string]any{
+		"ok":      true,
+		"enabled": oaiPublicEnabled(),
+		"machine": machineID(),
+	})
+}
+
+// localIP best-effort renvoie l'IPv4 LAN primaire de la machine (l'IP source du
+// trafic sortant), ou "localhost" à défaut. Sert à annoncer l'endpoint OpenAI
+// avec une adresse correcte sur le réseau local MÊME quand l'UI est atteinte via
+// le tunnel ajean.link (où location.hostname serait le domaine du relais, faux).
+func localIP() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return "localhost"
+	}
+	defer conn.Close()
+	if a, ok := conn.LocalAddr().(*net.UDPAddr); ok && a.IP != nil {
+		return a.IP.String()
+	}
+	return "localhost"
+}
+
+// handleInternet pilote l'accès web de l'IA (moteur intégré).
+//
+//	GET  → {enabled}
+//	POST {enabled} → l'interrupteur.
+func handleInternet(w http.ResponseWriter, r *http.Request) {
+	// Toujours actif depuis la 0.20 : un POST (ancienne interface) est sans effet.
+	sendJSON(w, 200, map[string]any{"ok": true, "enabled": internetEnabled()})
+}
+
+// ─── Serveurs MCP ────────────────────────────────────────────────────────────
+//
+// Gestion des serveurs MCP depuis l'UI. Même modèle de protection que le reste
+// de /api/* : la clé web est le seul garde. Un serveur MCP stdio exécute du code
+// arbitraire sur l'hôte, au même titre que l'outil `bash` du mode agent — donc
+// réservé de fait au propriétaire de la machine qui détient la clé.
+
+// mcpSaveReq est le payload d'ajout/édition d'un serveur MCP.
+type mcpSaveReq struct {
+	Name    string            `json:"name"`
+	Command string            `json:"command"`
+	Args    []string          `json:"args"`
+	Env     map[string]string `json:"env"`
+	URL     string            `json:"url"`
+	Headers map[string]string `json:"headers"`
+	Enabled *bool             `json:"enabled"`
+}
+
+// handleMCP renvoie l'état de tous les serveurs MCP configurés (connexion tentée
+// pour ceux activés → l'UI voit l'état réel + les outils découverts).
+func handleMCP(w http.ResponseWriter, r *http.Request) {
+	list, err := MCPStatus()
+	if err != nil {
+		sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "servers": list})
+}
+
+// handleMCPSave ajoute ou remplace un serveur MCP.
+func handleMCPSave(w http.ResponseWriter, r *http.Request) {
+	var req mcpSaveReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	enabled := true
+	if req.Enabled != nil {
+		enabled = *req.Enabled
+	}
+	cfg := MCPServerConfig{
+		Command: strings.TrimSpace(req.Command),
+		Args:    req.Args,
+		Env:     req.Env,
+		URL:     strings.TrimSpace(req.URL),
+		Headers: req.Headers,
+		Enabled: enabled,
+	}
+	if err := SetMCPServer(req.Name, cfg); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	// Renvoie l'état à jour (avec tentative de connexion) pour un retour immédiat.
+	list, _ := MCPStatus()
+	sendJSON(w, 200, map[string]any{"ok": true, "servers": list})
+}
+
+// handleMCPDelete retire un serveur MCP.
+func handleMCPDelete(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	if err := DeleteMCPServer(req.Name); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true})
+}
+
+// handleMCPToggle active/désactive un serveur MCP.
+func handleMCPToggle(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name string `json:"name"`
+		On   bool   `json:"on"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	if err := SetMCPServerEnabled(req.Name, req.On); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	list, _ := MCPStatus()
+	sendJSON(w, 200, map[string]any{"ok": true, "servers": list})
+}
+
+// handleMCPTool masque/démasque un outil précis d'un serveur.
+func handleMCPTool(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name string `json:"name"`
+		Tool string `json:"tool"`
+		On   bool   `json:"on"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	if err := SetMCPToolEnabled(req.Name, req.Tool, req.On); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	list, _ := MCPStatus()
+	sendJSON(w, 200, map[string]any{"ok": true, "servers": list})
+}
+
+// handleMCPTest force une reconnexion d'un serveur et renvoie son état (bouton
+// « tester/rafraîchir » de l'UI).
+func handleMCPTest(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	mcpInvalidate(req.Name)
+	list, err := MCPStatus()
+	if err != nil {
+		sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "servers": list})
+}
+
+// handleMCPTimeoutsGET renvoie les délais MCP configurés (secondes).
+func handleMCPTimeouts(w http.ResponseWriter, r *http.Request) {
+	t := LoadMCPTimeouts()
+	sendJSON(w, 200, map[string]any{
+		"ok":      true,
+		"connect": t.Connect,
+		"call":    t.Call,
+	})
+}
+
+// handleMCPTimeoutsSave enregistre les délais MCP (secondes) et invalide les
+// sessions pour que le nouveau délai s'applique au prochain appel.
+func handleMCPTimeoutsSave(w http.ResponseWriter, r *http.Request) {
+	var req MCPTimeouts
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	// Bornes raisonnables : 1 s à 3600 s (1 h).
+	if req.Connect < 1 || req.Connect > 3600 {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": "connect : 1 à 3600 s"})
+		return
+	}
+	if req.Call < 1 || req.Call > 3600 {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": "call : 1 à 3600 s"})
+		return
+	}
+	if err := SaveMCPTimeouts(req); err != nil {
+		sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	// Invalide toutes les sessions : le délai de connexion change.
+	servers, _ := LoadMCPConfig()
+	for name := range servers {
+		mcpInvalidate(name)
+	}
+	sendJSON(w, 200, map[string]any{
+		"ok":      true,
+		"connect": req.Connect,
+		"call":    req.Call,
+	})
+}
+
+// handleMem / handleMemSave / handleMemDelete : éditeur web des pages mémoire
+// (memory/<nom>.md). Payload partagé saveReq (name/old/content) ; "name" = nom
+// de fichier de la page.
+func handleMem(w http.ResponseWriter, r *http.Request) {
+	name := strings.TrimSpace(r.URL.Query().Get("name"))
+	if name == "" {
+		sendJSON(w, 200, map[string]any{"name": "", "content": "# nouvelle page\n\nNote ici ce que ajean doit retenir entre les sessions.\n"})
+		return
+	}
+	var c string
+	memScope(r.URL.Query().Get("project"), func() { c = MemContent(name) })
+	if c == "" {
+		sendJSON(w, 404, map[string]any{"error": "not found"})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"name": name, "content": c})
+}
+
+func handleMemSave(w http.ResponseWriter, r *http.Request) {
+	var req saveReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	var err error
+	memScope(req.Project, func() { err = MemSave(req.Name, req.Old, req.Content) })
+	if err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "name": req.Name})
+}
+
+func handleMemDelete(w http.ResponseWriter, r *http.Request) {
+	var req saveReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	var err error
+	memScope(req.Project, func() { err = MemDelete(req.Name) })
+	if err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true})
+}
+
+// --- Chiffrement de la mémoire -----------------------------------------------
+
+// handleMemHealth renvoie l'état de santé (chiffré ? verrouillé ? pages lisibles ?
+// copies du keyvault, snapshots…). Sans secret, sûr à appeler à tout moment.
+func handleMemHealth(w http.ResponseWriter, r *http.Request) {
+	sendJSON(w, 200, memHealth())
+}
+
+// handleMemEncrypt active le chiffrement. Le corps porte le mot de passe mémoire.
+// La réponse contient la CLÉ DE RÉCUPÉRATION, à afficher UNE fois : elle n'est
+// jamais reconsultable ensuite.
+func handleMemEncrypt(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Password string `json:"password"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	rec, err := EnableMemEncryption(req.Password)
+	if err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "recovery": rec, "health": memHealth()})
+}
+
+// handleMemDecrypt remet la mémoire en clair (exige d'être déverrouillé).
+func handleMemDecrypt(w http.ResponseWriter, r *http.Request) {
+	if err := DisableMemEncryption(); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "health": memHealth()})
+}
+
+// handleMemUnlock déverrouille la mémoire : accepte le mot de passe OU la clé de
+// récupération (on tente les deux formes). Charge la DEK en RAM.
+func handleMemUnlock(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Secret string `json:"secret"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	if strings.TrimSpace(req.Secret) == "" {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": "secret vide"})
+		return
+	}
+	v, err := loadVault()
+	if err != nil || v == nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": "aucun keyvault (mémoire non chiffrée ?)"})
+		return
+	}
+	dek, kind, err := v.unlockWith(req.Secret)
+	if err != nil {
+		// La clé de récupération se saisit avec tirets/espaces : on retente normalisée.
+		if d2, k2, e2 := v.unlockWith(normalizeRecovery(req.Secret)); e2 == nil {
+			dek, kind, err = d2, k2, e2
+		}
+	}
+	if err != nil {
+		sendJSON(w, 401, map[string]any{"ok": false, "error": "secret incorrect"})
+		return
+	}
+	setMemDEK(dek)
+	resumeMemMigration()           // si une migration attendait le déverrouillage
+	reloadEncryptedStores()        // recharge la conversation chiffrée en RAM
+	startSlimArchives()            // allègement des anciennes conversations (attendait la clé)
+	startHistSearchBackfill()      // index plein-texte des archives (attendait la clé), #98
+	go jeanConsolidateArmAtStart() // une consolidation empêchée par le verrou (#159)
+	// Migration douce : chiffre les conversations restées en clair (ex. mémoire
+	// activée avant que le chiffrement des conversations existe). Idempotent :
+	// n'encode que ce qui ne l'est pas encore.
+	if memEncActive() && memUnlocked() {
+		_ = reencryptChatStores()
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "kind": kind, "health": memHealth()})
+}
+
+// handleMemAddKey ajoute un nouveau wrap au coffre DÉJÀ OUVERT (DEK en RAM), sans
+// re-chiffrer. Sert à la migration douce : quand on déverrouille avec l'ancien
+// mot de passe, le client ajoute la clé d'API comme wrap pour que le
+// déverrouillage automatique marche ensuite. Zéro-connaissance préservé : le
+// serveur ne stocke pas ce secret, il ne fait que l'enfermer dans le coffre.
+func handleMemAddKey(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Secret string `json:"secret"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	if strings.TrimSpace(req.Secret) == "" {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": "secret vide"})
+		return
+	}
+	dek, err := currentDEK()
+	if err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": "mémoire verrouillée"})
+		return
+	}
+	v, _ := loadVault()
+	if v == nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": "aucun coffre"})
+		return
+	}
+	if _, _, e := v.unlockWith(req.Secret); e == nil {
+		sendJSON(w, 200, map[string]any{"ok": true}) // déjà un wrap pour ce secret
+		return
+	}
+	if err := v.addSecretWrap(dek, wrapPassword, "clé d'api", req.Secret); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	if err := saveVault(v); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true})
+}
+
+// handleMemLock purge la DEK de la RAM (reverrouille sans redémarrer).
+func handleMemLock(w http.ResponseWriter, r *http.Request) {
+	clearMemDEK()
+	sendJSON(w, 200, map[string]any{"ok": true, "health": memHealth()})
+}
+
+// --- Sauvegarde ajean.link ----------------------------------------------------
+
+// handleBackupStatus renvoie l'état de la sauvegarde : liaison configurée ?
+// auto activé ? dernière sauvegarde ? versions distantes (best-effort).
+func handleBackupStatus(w http.ResponseWriter, r *http.Request) {
+	res := map[string]any{
+		"linked": backupLinked(),
+		"auto":   backupAutoEnabled(),
+		"last":   backupLast(),
+	}
+	if backupLinked() {
+		if versions, err := relayBackupList(); err == nil {
+			res["versions"] = versions
+		} else {
+			res["error"] = err.Error()
+		}
+	}
+	sendJSON(w, 200, res)
+}
+
+// handleBackupNow lance une sauvegarde immédiate. Aucun mot de passe : le paquet
+// est chiffré avec la clé de la mémoire (déjà ouverte).
+func handleBackupNow(w http.ResponseWriter, r *http.Request) {
+	id, err := RunBackupNow()
+	if err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "id": id})
+}
+
+// handleBackupRestore restaure une sauvegarde. Corps : {id, machine, secret}.
+func handleBackupRestore(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ID      string `json:"id"`
+		Machine string `json:"machine"`
+		Secret  string `json:"secret"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	if err := RestoreBackup(req.ID, req.Machine, req.Secret); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true})
+}
+
+// handleBackupAuto active/désactive la sauvegarde automatique. Corps : {on}.
+func handleBackupAuto(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		On bool `json:"on"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	val := ""
+	if req.On {
+		val = "1"
+	}
+	if err := SetConfigKey("BACKUP_AUTO", val); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "auto": backupAutoEnabled()})
+}
+
+// handleMemSnapshots : GET liste les snapshots, POST {id} en restaure un.
+func handleMemSnapshots(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		var req struct {
+			ID string `json:"id"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		if err := restoreSnapshot(req.ID); err != nil {
+			sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+			return
+		}
+		sendJSON(w, 200, map[string]any{"ok": true})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "snapshots": listSnapshots()})
+}
+
+// handleLoadFlagsMigrate (POST /api/loadflags/migrate) : réécrit les anciens
+// drapeaux de chargement mémoire (--mlock / --no-mmap) en --load-mode dans la
+// config active ET le preset d'origine, puis redémarre le moteur. Déclenché par
+// le bouton « Mettre à jour les flags » de l'UI quand la nouvelle version de
+// llama.cpp a changé ces options.
+func handleLoadFlagsMigrate(w http.ResponseWriter, r *http.Request) {
+	extra, err := migrateLoadFlags()
+	if err != nil {
+		sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	fmt.Printf("%s flags de chargement migrés vers --load-mode : %s\n", green("[ok]"), extra)
+	go func() {
+		if err := serviceAction("restart"); err != nil {
+			fmt.Printf("%s redémarrage après migration des flags: %v\n", red("[ERREUR]"), err)
+		}
+	}()
+	sendJSON(w, 200, map[string]any{"ok": true, "extra_args": extra})
+}
+
+func handleSwitch(w http.ResponseWriter, r *http.Request) {
+	// id = identité stable du preset (nom de fichier). Le numéro seul est
+	// dangereux : si la liste a changé depuis l'affichage (réordonnée, preset
+	// ajouté ou supprimé depuis un autre appareil), la même position désigne un
+	// AUTRE preset, et on chargeait le mauvais (déjà vu : un preset GPU cloud
+	// facturé à la place du local). n reste accepté pour les anciens clients.
+	var req struct {
+		N  int    `json:"n"`
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	list, err := ListPresets()
+	if err != nil {
+		sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	var target Preset
+	if id := strings.TrimSpace(req.ID); id != "" {
+		found := false
+		for _, p := range list {
+			if p.ID == id {
+				target, found = p, true
+				break
+			}
+		}
+		if !found {
+			sendJSON(w, 404, map[string]any{"ok": false, "error": "preset introuvable (supprimé ou renommé ?)"})
+			return
+		}
+	} else {
+		if req.N < 1 || req.N > len(list) {
+			sendJSON(w, 400, map[string]any{"ok": false, "error": "index hors limites"})
+			return
+		}
+		target = list[req.N-1]
+	}
+	nom, err := switchToPresetByPath(target.Path)
+	if err != nil {
+		sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "preset": nom})
+}
+
+// switchToPresetByID applique le preset désigné par son identifiant et lance le
+// redémarrage en arrière-plan. C'est le corps de handleSwitch, extrait pour que
+// le pont puisse basculer un preset SANS repasser par l'interface — et sans
+// dupliquer la logique, qui a ses pièges (preset externe = on ARRÊTE le moteur
+// au lieu de le relancer, preset position = dangereux).
+//
+// L'erreur rendue est celle qu'un appelant distant doit entendre : « introuvable
+// » si l'id n'est pas dans la liste, jamais un chemin reconstitué à l'aveugle.
+func switchToPresetByID(id string) (string, error) {
+	list, err := ListPresets()
+	if err != nil {
+		return "", err
+	}
+	for _, p := range list {
+		if p.ID == id {
+			return switchToPresetByPath(p.Path)
+		}
+	}
+	return "", fmt.Errorf("preset introuvable (supprimé ou renommé ?)")
+}
+
+// switchToPresetByPath écrit config.env TOUT DE SUITE (c'est lui qui décide du
+// preset actif), puis rend la main — le redémarrage du service part en
+// arrière-plan. Passer par SwitchToPreset bloquait la réponse pendant tout
+// l'arrêt de llama-server plus les 2 s de vérification de checkStarted : côté
+// UI, le clic paraissait mou et la sélection ne bougeait qu'au bout de plusieurs
+// secondes, pour rien.
+func switchToPresetByPath(targetPath string) (string, error) {
+	if err := applyPresetFile(targetPath); err != nil {
+		return "", err
+	}
+	fmt.Printf("%s config.env <- %s\n", green("[ok]"), filepath.Base(targetPath))
+	// Preset externe : aucun moteur local à (re)démarrer — il n'a pas de MODEL et
+	// crash-looperait. On ARRÊTE plutôt le llama-server encore en vie pour libérer
+	// la VRAM, puisque le chat part désormais vers l'API distante.
+	// Preset API : aucun processus local, on arrête le moteur. (Un preset Service
+	// système passe par le redémarrage normal : le service moteur lance sa commande.)
+	if usesRemoteEndpoint(ReadConfig()) {
+		go func() {
+			if serviceIsActive() {
+				if err := serviceAction("stop"); err != nil {
+					fmt.Printf("%s arrêt du moteur après bascule externe: %v\n", red("[ERREUR]"), err)
+				}
+			}
+			// Moteur tiers du preset (EXTERNAL_SERVICE) : démarré APRÈS l'arrêt
+			// du moteur local, qui libère les GPU.
+			if err := syncExternalService(ReadConfig()); err != nil {
+				fmt.Printf("%s service externe: %v\n", red("[ERREUR]"), err)
+			}
+		}()
+		return presetDisplayNameOf(targetPath), nil
+	}
+	fmt.Println(dim("[info] redémarrage du service..."))
+	go func() {
+		// Arrête d'abord un éventuel moteur tiers du preset précédent.
+		if err := syncExternalService(ReadConfig()); err != nil {
+			fmt.Printf("%s service externe: %v\n", red("[ERREUR]"), err)
+		}
+		if err := serviceAction("restart"); err != nil {
+			fmt.Printf("%s redémarrage après bascule: %v\n", red("[ERREUR]"), err)
+		}
+	}()
+	return presetDisplayNameOf(targetPath), nil
+}
+
+// presetDisplayNameOf : le nom à rendre à l'appelant. handleSwitch rendait
+// target.Name, venu de la liste ; ici on n'a que le chemin, et # NAME= est la
+// seule source fiable (c'est aussi ce que l'UI affiche, d'où le piège du 17/11
+// où le nom affiché ne disait pas le millésime). En cas de lecture impossible,
+// le nom du fichier vaut mieux que rien : il est au moins vérifiable sur disque.
+func presetDisplayNameOf(path string) string {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	}
+	return presetDisplayName(string(b), strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)))
+}
+
+// svcHandler returns an HTTP handler that triggers a start/stop/restart through
+// the cross-platform serviceAction (systemd sous Linux, supervision PID-file
+// sous Windows — voir sys_service_*.go). C'est ce qui permet à un client distant
+// de relancer AJEAN.
+func svcHandler(action string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := serviceAction(action)
+		msg := "ok"
+		if err != nil {
+			msg = err.Error()
+		}
+		sendJSON(w, 200, map[string]any{"ok": err == nil, "out": msg})
+	}
+}
+
+// handleChat is the SSE proxy with tool-calling. The HTTP handler writes raw
+// data: lines matching what the embedded JS expects (delta.content,
+// delta.reasoning_content, delta.tool_used).
+// handleBench runs `runBench` synchronously. Long enough (~30-60s) that we
+// rely on the client side to show a spinner / disable the button.
+func handleBench(w http.ResponseWriter, r *http.Request) {
+	nPrompt, nPredict := 2000, 300
+	if v := r.URL.Query().Get("prompt"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
+			nPrompt = parsed
+		}
+	}
+	if v := r.URL.Query().Get("n"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
+			nPredict = parsed
+		}
+	}
+	res, err := runBench(nPrompt, nPredict)
+	if err != nil {
+		sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "result": res})
+}
+
+// handleBenchProgress : avancement du test en cours (prefill, tokens générés).
+func handleBenchProgress(w http.ResponseWriter, r *http.Request) {
+	sendJSON(w, 200, benchProgressGet())
+}
+
+// handleBenchLast returns the most recent persisted benchmark, or {ok:false}
+// when none has been run yet.
+func handleBenchLast(w http.ResponseWriter, r *http.Request) {
+	sb := loadLastBench()
+	if sb == nil {
+		sendJSON(w, 200, map[string]any{"ok": false})
+		return
+	}
+	sendJSON(w, 200, map[string]any{"ok": true, "result": sb.Result, "model": sb.Model, "at": sb.At})
+}
+
+// chatReq est le corps d'une requête de chat (commun au chat clair et au chat E2E).
+//
+// `messages` et `ctx_used`, que les clients envoyaient du temps où l'historique
+// vivait dans le navigateur, ont été RETIRÉS : depuis que la conversation est
+// possédée par le serveur (chat_conversation.go), plus personne ne les lisait.
+// Les garder laissait croire qu'un client pouvait encore imposer son historique
+// ou son décompte de contexte. Un client qui les envoie encore n'est pas gêné :
+// le décodeur JSON ignore les champs qu'il ne connaît pas.
+type chatReq struct {
+	Temperature float64 `json:"temperature"`
+	// Surcharges par requête, portées par les agents ajean.link qui ont leurs
+	// propres interrupteurs. nil = on prend la configuration de la machine.
+	// ⚠️ Elles ne peuvent que RESTREINDRE, jamais rallumer (voir capsFromBody).
+	// Tools/Skills : rétro-compat des anciens clients relais.
+	Agent  *bool `json:"agent"`
+	Tools  *bool `json:"tools"`
+	Skills *bool `json:"skills"`
+	// Surcharge par requête de l'accès internet (outils web).
+	Internet *bool `json:"internet"`
+	// Surcharge par requête du computer use (outils cu_*).
+	Computer *bool `json:"computer"`
+	// Fast = mode rapide : le tour tourne comme « ajean chat » (prompt court,
+	// bash/write/edit seulement, ni mémoire, ni projet, ni web). Voir capsFromBody.
+	Fast bool `json:"fast"`
+	// Raw = mode « Modèle de base » : modèle nu, sans agent, outils, mémoire ni
+	// prompt système (comme un llama-server direct). Voir capsFromBody.
+	Raw bool `json:"raw"`
+	// Mode = mode de chat demandé (fast / project / base). La conversation garde
+	// celui de son premier message (voir Conversation.lockMode).
+	Mode string `json:"mode"`
+	// TZ = fuseau IANA du navigateur (« Europe/Paris »), retenu pour dater ce que
+	// le modèle planifie ou note. Voir rememberUserTZ.
+	TZ string `json:"tz"`
+	// Message = texte du tour à lancer (/api/chat/send) ; From = dernier Seq déjà
+	// vu par le client (le flux d'abonnement rejoue Log[From:] puis suit le direct).
+	Message string `json:"message"`
+	// Tail (flux d'abonnement) : nombre de derniers ÉCHANGES à rejouer au
+	// chargement ; 0 = tout. nil = ancien client, qui ne sait pas afficher le
+	// bouton « messages précédents » : il reçoit toujours tout (voir historyCut).
+	Tail *int `json:"tail"`
+	From int  `json:"from"`
+	// ConvID = id de la conversation actuellement AFFICHÉE par le client (reçu au
+	// dernier caught_up/reset du flux). Renvoyé à chaque (re)abonnement pour que le
+	// serveur détecte qu'un AUTRE appareil a changé de conversation/projet entre-temps
+	// et ordonne un reset avant de rejouer — sinon deux fils fusionnaient à l'écran.
+	ConvID string `json:"conv_id"`
+	// Files = chemins relatifs des fichiers déposés juste avant par
+	// /api/chat/upload ("uploads/rapport.pdf"). Ils sont annoncés au modèle en
+	// tête du message (voir attachNote) ; le contenu, lui, reste sur le disque et
+	// n'entre dans le contexte que si le modèle décide de le lire.
+	Files []string `json:"files"`
+}
+
+// presetContentOrEmpty : contenu d'un preset, "" s'il est illisible.
+func presetContentOrEmpty(id string) string {
+	c, _ := ReadPreset(id)
+	return c
+}

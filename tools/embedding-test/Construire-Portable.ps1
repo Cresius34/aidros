@@ -8,7 +8,7 @@ New-Item -ItemType Directory -Path $targetDirectory -Force | Out-Null
 $savedGoOS = $env:GOOS; $savedGoArch = $env:GOARCH; $savedCgo = $env:CGO_ENABLED
 Push-Location $repoRoot
 try {
-    & go generate ./internal/ajean
+    & go generate ./internal/aidros
     if ($LASTEXITCODE -ne 0) { throw 'Assemblage de l interface echoue.' }
     $env:GOOS = 'windows'; $env:GOARCH = 'amd64'; $env:CGO_ENABLED = '0'
     & go build -trimpath -ldflags '-s -w' -o (Join-Path $targetDirectory 'ajean-memoire-test.exe') ./cmd/ajean-memory-test

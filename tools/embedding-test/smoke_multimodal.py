@@ -18,7 +18,7 @@ def main():
     ap.add_argument('--report',type=Path,required=True)
     args=ap.parse_args()
     torch.set_num_threads(4)
-    script=Path(__file__).resolve().parents[2]/'internal/ajean/embedding_server.py'
+    script=Path(__file__).resolve().parents[2]/'internal/aidros/embedding_server.py'
     spec=importlib.util.spec_from_file_location('embedding_server',script)
     worker=importlib.util.module_from_spec(spec);spec.loader.exec_module(worker)
     report={'environment':'Linux x86_64 CPU / float32','model_revision':'914f7f89142e33e77833254d9c9b90c3cef7303b'}

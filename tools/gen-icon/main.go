@@ -1,5 +1,5 @@
 // gen-icon écrit cmd/ajean/icon.ico à partir de l'icône de marque dessinée dans
-// internal/ajean (sys_brand_icon.go), pour que l'icône du .exe soit toujours la
+// internal/aidros (sys_brand_icon.go), pour que l'icône du .exe soit toujours la
 // même que le favicon de l'UI et que celle de la zone de notification.
 //
 // Lancé par `go generate ./cmd/ajean`, AVANT goversioninfo qui embarque le .ico
@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/nathaninline/ajean/internal/ajean"
+	"github.com/nathaninline/ajean/internal/aidros"
 )
 
 func main() {
@@ -24,13 +24,13 @@ func main() {
 	// 20, 24 et 40 px : la barre des tâches à 125 %, 150 % et 250 % d'échelle.
 	// Sans elles Windows réduit ou agrandit une taille voisine, et l'icône est
 	// floue à côté de celles des autres applications.
-	write(out, ajean.BrandICO(16, 20, 24, 32, 40, 48, 64, 96, 128, 256))
+	write(out, aidros.BrandICO(16, 20, 24, 32, 40, 48, 64, 96, 128, 256))
 
 	// PNG 1024 pour le bundle macOS : la CI en tire le .icns via sips/iconutil.
 	// Elle partait auparavant du .ico, ce qui suppose que sips sache lire un ICO —
 	// et l'échec y est masqué par « || true », donc une app Mac sans icône passait
 	// inaperçue. Un PNG ne laisse aucune place au doute.
-	write(strings.TrimSuffix(out, ".ico")+".png", ajean.BrandIconPNG(1024))
+	write(strings.TrimSuffix(out, ".ico")+".png", aidros.BrandIconPNG(1024))
 }
 
 func write(path string, data []byte) {

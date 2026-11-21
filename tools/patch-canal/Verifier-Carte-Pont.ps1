@@ -1,4 +1,4 @@
-﻿# Repond a une question precise : « pourquoi la carte « Pont Ajean ↔ Ajean »
+# Repond a une question precise : « pourquoi la carte « Pont Ajean ↔ Ajean »
 # n'apparait-elle pas ? » Ecrit le 2026-10-28, a partir d'une capture d'ecran.
 #
 # CE QUE LA CAPTURE MONTRE : la version annoncee est 0.18.16.1, la carte est
@@ -19,7 +19,7 @@
 #      18090 (parallel_config.go : parallelUIPortDef = "18090") et son HTML sert
 #      bien <details id="bridge-details">.
 #
-# La regle d'affichage, lue dans internal/ajean/ui/src/js/13b-bridge.js :
+# La regle d'affichage, lue dans internal/aidros/ui/src/js/13b-bridge.js :
 # la carte <details id="bridge-details" hidden> ne se montre QUE si /api/bridge
 # repond ok:true. 404 = le service interroge n'a pas cette API (moteur, ou
 # binaire anterieur au pont) ; 403 = version portable sans la surface.

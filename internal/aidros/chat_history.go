@@ -1,0 +1,560 @@
+package aidros
+
+// chat_history.go — historique des conversations.
+//
+// AJEAN n'a qu'UNE conversation active (voir chat_conversation.go). « clear chat »
+// la vidait pour de bon. Ici, au lieu de la jeter, on l'ARCHIVE : chaque « clear
+// chat » range la conversation courante dans l'historique (bucket bkChatHist, une
+// entrée JSON par conversation), d'où on peut la RECHARGER plus tard ou la
+// SUPPRIMER définitivement (issue #33).
+//
+// Recharger une archive la remet comme conversation active. Si une conversation
+// est déjà en cours à ce moment-là, elle est elle-même archivée d'abord (un clear
+// chat implicite) : on ne perd jamais rien. L'archive rechargée est retirée de
+// l'historique — elle EST redevenue la conversation active, la garder en double
+// ferait réapparaître un doublon au prochain clear.
+
+import (
+	"fmt"
+	"sort"
+	"strings"
+	"time"
+)
+
+// convArchive = une conversation archivée. Contient de quoi la restaurer à
+// l'identique (Messages = vue modèle, Log = vue UI rejouable) + des métadonnées
+// d'affichage pour la liste de l'historique.
+type convArchive struct {
+	ID           string     `json:"id"`
+	Project      string     `json:"project,omitempty"` // slug du projet propriétaire (vide = historique → Générale)
+	Title        string     `json:"title"`
+	Fav          bool       `json:"fav,omitempty"` // épinglée en favori (remonte en tête)
+	SavedAt      int64      `json:"saved_at"`      // ms
+	Turns        int        `json:"turns"`
+	Messages     []Message  `json:"messages"`
+	Log          []LogEvent `json:"log"`
+	Seq          int        `json:"seq"`
+	CtxUsed      int        `json:"ctx_used"`
+	CompactCount int        `json:"compact_count,omitempty"` // nb de compactages (issue #47)
+	Mode         string     `json:"mode,omitempty"`          // mode de chat (voir Conversation.Mode)
+}
+
+// convArchiveMeta = la partie légère (sans Messages/Log) pour lister sans charger
+// le fil entier de chaque conversation.
+type convArchiveMeta struct {
+	ID      string `json:"id"`
+	Project string `json:"project,omitempty"` // slug du projet propriétaire (vide = Générale)
+	Title   string `json:"title"`
+	Fav     bool   `json:"fav"`
+	Mode    string `json:"mode,omitempty"` // mode de chat de la conversation
+	SavedAt int64  `json:"saved_at"`
+	Turns   int    `json:"turns"`
+}
+
+// archiveTitle dérive un titre lisible du premier message utilisateur du fil,
+// tronqué. Faute de message utilisateur (ne devrait pas arriver), un libellé
+// générique.
+func archiveTitle(log []LogEvent) string {
+	for _, ev := range log {
+		if u, ok := ev.Delta["user"].(string); ok {
+			t := strings.TrimSpace(u)
+			t = strings.ReplaceAll(t, "\n", " ")
+			if t == "" {
+				continue
+			}
+			const max = 80
+			if len([]rune(t)) > max {
+				t = string([]rune(t)[:max]) + "…"
+			}
+			return t
+		}
+	}
+	return "Conversation"
+}
+
+// countUserTurns compte les tours (bulles utilisateur) d'un journal.
+func countUserTurns(log []LogEvent) int {
+	n := 0
+	for _, ev := range log {
+		if _, ok := ev.Delta["user"]; ok {
+			n++
+		}
+	}
+	return n
+}
+
+// --- persistance --------------------------------------------------------------
+
+func saveArchive(a *convArchive) error {
+	refImagesInMessages(a.Messages) // images par référence (chat_images.go)
+	refVideosInMessages(a.Messages) // vidéos par référence (chat_video.go)
+	// Chiffré si le chiffrement est actif ET déverrouillé (le fil ET son titre
+	// d'index contiennent des infos). Verrouillé : putStoreJSON refuse d'écrire du
+	// clair (errStoreLocked) — on ne dégrade jamais un blob chiffré.
+	if err := putStoreJSON(bkChatHist, a.ID, a); err != nil {
+		return err
+	}
+	// Index léger tenu à jour en parallèle : lister ne relit alors que ces petites
+	// métadonnées, pas le fil complet de chaque session.
+	if err := putStoreJSON(bkChatMeta, a.ID, convArchiveMeta{ID: a.ID, Project: a.Project, Title: a.Title, Fav: a.Fav, SavedAt: a.SavedAt, Turns: a.Turns, Mode: a.Mode}); err != nil {
+		return err
+	}
+	// Index plein-texte (#98). Erreur avalée : l'archive est sauvée, le
+	// rattrapage reprendra l'entrée manquante.
+	_ = indexArchive(a)
+	return nil
+}
+
+func loadArchive(id string) (*convArchive, bool) {
+	var a convArchive
+	if !getStoreJSON(bkChatHist, id, &a) || a.ID == "" {
+		return nil, false
+	}
+	return &a, true
+}
+
+func deleteArchive(id string) error {
+	unindexArchive(id)       // l'index plein-texte part d'abord (chat_search.go)
+	deleteToolResultsFor(id) // ses résultats « voir plus » partent avec elle
+	_ = putBytes(bkChatMeta, id, nil)
+	return putBytes(bkChatHist, id, nil)
+}
+
+// renameArchive donne un nom personnalisé à une conversation archivée. Un nom
+// vide re-dérive le titre automatique du premier message.
+func renameArchive(id, title string) error {
+	a, ok := loadArchive(id)
+	if !ok {
+		return fmt.Errorf("conversation introuvable")
+	}
+	custom := strings.TrimSpace(title)
+	if len([]rune(custom)) > 120 {
+		custom = string([]rune(custom)[:120])
+	}
+	if custom == "" {
+		a.Title = archiveTitle(a.Log)
+	} else {
+		a.Title = custom
+	}
+	return saveArchive(a)
+}
+
+// deleteNonFavIn supprime les sessions de la liste donnée (celle que l'historique
+// affiche) SAUF les favoris ET la session active `activeID`. Renvoie le nombre
+// supprimé.
+func deleteNonFavIn(list []convArchiveMeta, activeID string) int {
+	n := 0
+	for _, m := range list {
+		if m.Fav || m.ID == activeID {
+			continue
+		}
+		if deleteArchive(m.ID) == nil {
+			n++
+		}
+	}
+	return n
+}
+
+// setArchiveFav épingle/dépingle une conversation archivée en favori.
+func setArchiveFav(id string, fav bool) error {
+	a, ok := loadArchive(id)
+	if !ok {
+		return fmt.Errorf("conversation introuvable")
+	}
+	a.Fav = fav
+	return saveArchive(a)
+}
+
+// listArchives renvoie les sessions du PROJET ACTIF, la plus récente d'abord.
+func listArchives() []convArchiveMeta { return listArchivesForProject(activeProjectSlug()) }
+
+// listAllArchives renvoie TOUTES les sessions archivées (tous projets confondus),
+// la plus récente d'abord. Sert au filtrage par projet et à la migration.
+func listAllArchives() []convArchiveMeta {
+	// La conversation de Jean n'est PAS une conversation de projet : elle a son
+	// propre accès (mode Jean). Exclue ici, elle n'apparaît dans aucun historique
+	// et n'est jamais emportée par « Tout supprimer » ni par la suppression d'un projet.
+	// Les valeurs d'index peuvent être chiffrées : on les décode via getStoreJSON.
+	// Mémoire verrouillée = index illisible = liste vide (les sessions réapparaissent
+	// au déverrouillage), jamais une erreur.
+	metaKeys := allKV(bkChatMeta)
+	out := make([]convArchiveMeta, 0, len(metaKeys))
+	seen := map[string]bool{}
+	for id := range metaKeys {
+		var m convArchiveMeta
+		if getStoreJSON(bkChatMeta, id, &m) && m.ID != "" && m.ID != jeanConvID {
+			out = append(out, m)
+			seen[m.ID] = true
+		}
+	}
+	// Sessions d'avant l'index (migration) : blob complet présent sans entrée
+	// d'index. On le reconstruit une fois (respecte le chiffrement via load/save).
+	// allKeys et non allKV : ce bucket porte le CONTENU de toutes les conversations
+	// (252 Mo pour 537 sessions sur une machine de test). Le copier en entier à
+	// chaque ouverture de la liste coûtait ~130 ms et 250 Mo d'allocations, pour
+	// n'en garder que les clés.
+	for _, id := range allKeys(bkChatHist) {
+		if seen[id] || id == jeanConvID {
+			continue
+		}
+		if a, ok := loadArchive(id); ok && a.ID != "" {
+			m := convArchiveMeta{ID: a.ID, Project: a.Project, Title: a.Title, Fav: a.Fav, SavedAt: a.SavedAt, Turns: a.Turns, Mode: a.Mode}
+			_ = putStoreJSON(bkChatMeta, a.ID, m)
+			out = append(out, m)
+		}
+	}
+	// Favoris épinglés en tête, puis les plus récentes d'abord.
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Fav != out[j].Fav {
+			return out[i].Fav
+		}
+		return out[i].SavedAt > out[j].SavedAt
+	})
+	return out
+}
+
+// archiveProject renvoie le projet d'une session : son slug, ou Générale par défaut
+// (sessions d'avant les projets, sans champ Project).
+func archiveProject(m convArchiveMeta) string {
+	if p := strings.TrimSpace(m.Project); p != "" {
+		return p
+	}
+	return defaultProjectSlug
+}
+
+// listArchivesForProject renvoie les sessions d'un projet donné.
+func listArchivesForProject(slug string) []convArchiveMeta {
+	all := listAllArchives()
+	out := make([]convArchiveMeta, 0, len(all))
+	for _, m := range all {
+		if archiveProject(m) == slug {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+// moveArchiveToProject range une conversation archivée dans un autre projet (issue
+// #55). Change juste son champ Project (le fil, les pages mémoire qu'il cite ne
+// bougent pas : mémoire et conversations sont deux axes indépendants — déplacer une
+// note se fait à part via moveMemPage). Refuse de déplacer la conversation ACTIVE :
+// elle est ouverte, son projet doit rester cohérent avec le projet actif ; l'ouvrir
+// ailleurs se fait en basculant de projet, pas en la déplaçant sous les pieds.
+func moveArchiveToProject(id, toSlug string) error {
+	if !projectExists(toSlug) {
+		return fmt.Errorf("projet cible introuvable")
+	}
+	if conv.currentID() == id {
+		return fmt.Errorf("conversation en cours : ouvre-en une autre avant de la déplacer")
+	}
+	a, ok := loadArchive(id)
+	if !ok {
+		return fmt.Errorf("conversation introuvable")
+	}
+	if a.Mode == "base" {
+		return fmt.Errorf("une conversation « Modèle de base » ne se range pas dans un projet")
+	}
+	// Conversation rapide (#111) : la déplacer la CONVERTIT en conversation de
+	// projet. Elle quitte la liste Rapide et reprendra en mode Projet.
+	if a.Mode == "fast" {
+		a.Mode = "project"
+	} else if a.Project == toSlug {
+		return nil // déjà là : rien à faire
+	}
+	a.Project = toSlug
+	return saveArchive(a)
+}
+
+// tagOrphanArchives affecte un projet aux sessions historiques qui n'en ont pas
+// (migration douce : elles rejoignent le projet par défaut). Idempotent.
+func tagOrphanArchives(slug string) {
+	for _, m := range listAllArchives() {
+		if strings.TrimSpace(m.Project) != "" {
+			continue
+		}
+		if a, ok := loadArchive(m.ID); ok {
+			a.Project = slug
+			_ = saveArchive(a)
+		}
+	}
+}
+
+// --- opérations sur la conversation active ------------------------------------
+
+// snapshotForSession prend une copie de la conversation courante sous SON id de
+// session, ou nil si elle est vide (rien à enregistrer). Prend le verrou.
+func (c *Conversation) snapshotForSession() *convArchive {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.Log) == 0 && len(c.Messages) == 0 {
+		return nil
+	}
+	proj := c.Project
+	if proj == "" {
+		proj = activeProjectSlug()
+	}
+	if c.ID == jeanConvID {
+		proj = jeanTaskSlug // hors projets
+	}
+	// SavedAt = horodatage de la DERNIÈRE ACTIVITÉ RÉELLE, pas du snapshot. Le
+	// dernier événement du journal porte le TS du dernier delta reçu : s'en servir
+	// évite qu'un simple upsertSession (déclenché par persist() au chargement d'une
+	// session, cf. OpenSession) ne repousse la date de la conversation à maintenant
+	// (issue #54 : rouvrir une vieille conversation en lecture ne doit pas la dater
+	// d'aujourd'hui). Un nouveau tour ajoute des événements datés → la date avance
+	// bien. Repli sur maintenant si le journal est vide (ne devrait pas arriver ici,
+	// snapshotForSession renvoyant nil sur log ET messages vides).
+	savedAt := time.Now().UnixMilli()
+	if n := len(c.Log); n > 0 && c.Log[n-1].TS > 0 {
+		savedAt = c.Log[n-1].TS
+	}
+	a := &convArchive{
+		ID:           c.ID, // id STABLE de la session (pas un nouvel id à chaque fois)
+		Project:      proj,
+		SavedAt:      savedAt,
+		Messages:     append([]Message(nil), c.Messages...),
+		Log:          append([]LogEvent(nil), c.Log...),
+		Seq:          c.Seq,
+		CtxUsed:      c.CtxUsed,
+		CompactCount: c.CompactCount,
+		Mode:         c.Mode,
+	}
+	a.Turns = countUserTurns(c.Log)
+	// Nom personnalisé si défini, sinon titre dérivé du premier message.
+	if strings.TrimSpace(c.ActiveTitle) != "" {
+		a.Title = c.ActiveTitle
+	} else {
+		a.Title = archiveTitle(c.Log)
+	}
+	a.Fav = c.ActiveFav
+	return a
+}
+
+// upsertSession reflète la conversation active dans la liste des sessions (sous
+// son id stable). No-op si elle est vide (pas de session fantôme).
+func (c *Conversation) upsertSession() {
+	if a := c.snapshotForSession(); a != nil {
+		_ = saveArchive(a)
+	}
+}
+
+// upsertSessionMeta ne met à jour que la FICHE de la session active dans l'index
+// (ce que la liste affiche), sans réécrire son contenu. Le contenu à jour vit dans
+// bkChat ; son archive complète est écrite en quittant la session. Tout ce qui lit
+// l'archive de la session ACTIVE doit donc passer par la conversation vivante ou
+// appeler upsertSession d'abord (voir syncActiveArchive).
+func (c *Conversation) upsertSessionMeta() {
+	c.mu.Lock()
+	if len(c.Log) == 0 && len(c.Messages) == 0 {
+		c.mu.Unlock()
+		return
+	}
+	m := convArchiveMeta{ID: c.ID, Project: c.Project, Fav: c.ActiveFav, Mode: c.Mode, Turns: countUserTurns(c.Log)}
+	if m.Project == "" {
+		m.Project = activeProjectSlug()
+	}
+	if c.ID == jeanConvID {
+		m.Project = jeanTaskSlug
+	}
+	m.SavedAt = time.Now().UnixMilli()
+	if n := len(c.Log); n > 0 && c.Log[n-1].TS > 0 {
+		m.SavedAt = c.Log[n-1].TS
+	}
+	if strings.TrimSpace(c.ActiveTitle) != "" {
+		m.Title = c.ActiveTitle
+	} else {
+		m.Title = archiveTitle(c.Log)
+	}
+	c.mu.Unlock()
+	_ = putStoreJSON(bkChatMeta, m.ID, m)
+}
+
+// syncActiveArchive écrit l'archive complète de la session active si `id` la
+// désigne : à appeler avant toute opération qui LIT puis réécrit une archive
+// (renommer, favori), pour qu'elle ne parte pas d'une copie périmée.
+func syncActiveArchive(id string) {
+	if id != "" && conv.currentID() == id {
+		conv.upsertSession()
+	}
+}
+
+// NewSession sauvegarde la conversation courante dans SA session puis démarre une
+// session vierge (nouvel id) — c'est le « clear chat » / « nouvelle session ».
+func (c *Conversation) NewSession() string {
+	c.upsertSession()
+	c.Reset()
+	return c.ID
+}
+
+// SwitchProject bascule la conversation active vers un autre projet. La session en
+// cours est d'abord archivée DANS SON projet (rien ne se perd), puis on persiste le
+// nouveau projet actif et on démarre une session vierge qui lui appartient. Le fil
+// affiché repart donc à zéro (décision produit : bascule = nouvelle session).
+func (c *Conversation) SwitchProject(slug string) error {
+	if !projectExists(slug) {
+		return fmt.Errorf("projet introuvable")
+	}
+	// Jean est hors projets : changer de projet (pour parcourir l'historique d'un
+	// autre) ne doit pas le quitter. Seul le projet actif change ; la prochaine
+	// conversation de projet s'y ouvrira.
+	if c.currentID() == jeanConvID {
+		return setActiveProject(slug)
+	}
+	if c.currentID() != "" {
+		c.upsertSession() // sauve la conversation courante dans son projet d'origine
+	}
+	if err := setActiveProject(slug); err != nil {
+		return err
+	}
+	c.Stop()
+	c.mu.Lock()
+	c.Project = slug
+	c.mu.Unlock()
+	c.Reset() // session vierge (Reset préserve c.Project)
+	return nil
+}
+
+// OpenSession charge la session `id` comme conversation active. La conversation
+// courante est d'abord sauvegardée dans SA propre session (elle RESTE dans la
+// liste, aucun doublon). La session ouverte n'est PAS retirée : elle devient
+// l'active, toujours listée et marquée « en cours ».
+func (c *Conversation) OpenSession(id string) error {
+	if id != "" && c.currentID() == id {
+		return nil // déjà la conversation active : son contenu vivant fait foi
+	}
+	a, ok := loadArchive(id)
+	if !ok {
+		return fmt.Errorf("session introuvable")
+	}
+	// 1. Sauver la conversation en cours dans sa session (rien ne se perd).
+	c.upsertSession()
+	// 2. Charger la session demandée dans l'active.
+	c.Stop()
+	c.mu.Lock()
+	c.ID = a.ID
+	// Projet de la session (vide = Générale) : la conversation ouverte porte
+	// toujours le projet auquel elle appartient (historique général).
+	c.Project = archiveProject(convArchiveMeta{Project: a.Project})
+	if quickMode(a.Mode) {
+		c.Project = activeProjectSlug() // rapide / base : pas de projet à elle
+	}
+	if a.ID == jeanConvID {
+		// Jean est hors projets : on garde le projet actif, sinon la conversation
+		// suivante (Reset préserve c.Project) hériterait du pseudo-projet de Jean.
+		c.Project = activeProjectSlug()
+	}
+	c.Messages = append([]Message(nil), a.Messages...)
+	c.Log = append([]LogEvent(nil), a.Log...)
+	c.Seq = a.Seq
+	c.CtxUsed = a.CtxUsed
+	c.CompactCount = a.CompactCount
+	c.ActiveTitle = a.Title
+	c.ActiveFav = a.Fav
+	c.Mode = a.Mode
+	c.epoch++              // invalide les abonnés → ils nettoient et rejouent le fil
+	c.pendingReplay = true // un fil complet suit : rejeu REPLIÉ (comme au chargement de page)
+	c.Generating = false
+	c.cancel = nil
+	c.cond.Broadcast()
+	c.mu.Unlock()
+	c.persist()
+	return nil
+}
+
+// currentID renvoie l'id de la session active (sous verrou).
+func (c *Conversation) currentID() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.ID
+}
+
+// setActiveTitleIfMatch met à jour le nom de la conversation active si c'est la
+// session `id` qui vient d'être renommée (title vide = dérivation auto reprend).
+func (c *Conversation) setActiveTitleIfMatch(id, title string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.ID == id {
+		c.ActiveTitle = strings.TrimSpace(title)
+	}
+}
+
+// setActiveFavIfMatch met à jour le favori de la conversation active si c'est la
+// session `id` qui vient d'être (dé)favorisée.
+func (c *Conversation) setActiveFavIfMatch(id string, fav bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.ID == id {
+		c.ActiveFav = fav
+	}
+}
+
+// DeleteSession supprime définitivement la session `id`. Si c'est la session
+// active, on repart aussitôt sur une session vierge (pas de fil orphelin qui
+// pointerait vers une session effacée).
+func (c *Conversation) DeleteSession(id string) error {
+	if err := deleteArchive(id); err != nil {
+		return err
+	}
+	deletePages(id)
+	if c.currentID() == id {
+		c.Reset()
+	}
+	return nil
+}
+
+// lockMode renvoie le mode de la conversation active. S'il n'est pas encore fixé
+// (conversation neuve, ou d'avant la 0.17.1), il prend `want` : le premier message
+// décide, les suivants suivent. fresh = le mode vient d'être fixé par cet appel.
+func (c *Conversation) lockMode(want string) (mode string, fresh bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.Mode == "" {
+		c.Mode, fresh = want, true
+	}
+	return c.Mode, fresh
+}
+
+// unlockMode annule un lockMode dont le message a été refusé, si rien ne l'a
+// changé entre-temps.
+func (c *Conversation) unlockMode(mode string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.Mode == mode && countUserTurns(c.Log) == 0 {
+		c.Mode = ""
+	}
+}
+
+// quickMode : conversation sans projet (Rapide ou Modèle de base). Ces modes
+// ignorent la mémoire et le contexte de projet ; leurs conversations forment donc
+// leur propre historique au lieu de s'éparpiller dans le projet actif du moment.
+func quickMode(mode string) bool { return mode == "fast" || mode == "base" }
+
+// historyList : les conversations que montre l'historique latéral. scope "fast" ou
+// "base" = les conversations de CE mode (tous projets : elles n'en ont pas) ; "quick"
+// = les deux ; sinon celles du projet actif, hors conversations rapides. Les
+// anciennes conversations sans mode restent au projet.
+func historyList(scope string) []convArchiveMeta {
+	var src []convArchiveMeta
+	if scope == "fast" || scope == "base" {
+		src = listAllArchives()
+		out := src[:0:0]
+		for _, m := range src {
+			if m.Mode == scope {
+				out = append(out, m)
+			}
+		}
+		return out
+	}
+	if scope == "quick" {
+		src = listAllArchives()
+	} else {
+		src = listArchives()
+	}
+	out := src[:0:0]
+	for _, m := range src {
+		if quickMode(m.Mode) == (scope == "quick") {
+			out = append(out, m)
+		}
+	}
+	return out
+}

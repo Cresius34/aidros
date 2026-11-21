@@ -9,7 +9,7 @@ from urllib.request import Request,urlopen
 from urllib.error import HTTPError
 from http.server import ThreadingHTTPServer
 
-path=Path(__file__).resolve().parents[2]/'internal/ajean/embedding_server.py'
+path=Path(__file__).resolve().parents[2]/'internal/aidros/embedding_server.py'
 spec=importlib.util.spec_from_file_location('embedding_server',path)
 worker=importlib.util.module_from_spec(spec);spec.loader.exec_module(worker)
 

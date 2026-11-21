@@ -1,0 +1,710 @@
+package aidros
+
+// parallel_bridge_agent_test.go — ce que le canal rend quand il parle à l'AGENT.
+//
+// Le tour complet (modèle + outils) ne peut pas se jouer ici : il faut un moteur
+// prêt. Ce fichier teste donc les briques qui décident du comportement, et qui sont
+// précisément là où le contrat a changé : qui déclenche un tour d'agent, ce que
+// waitCanalTurn considère comme « fini », et quelle réponse est rendue.
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+)
+
+// Le garde-fou de sécurité : un tour d'agent met le shell et le disque de la
+// machine à la portée de qui possède la clé du pont. Il faut DONC deux
+// autorisations indépendantes, toutes deux éteintes par défaut.
+func TestCanalNeDeclencheUnTourAgentQueSurDoubleAutorisation(t *testing.T) {
+	parallelTestHome(t)
+
+	requete := func(chemin, canal string) *http.Request {
+		r := httptest.NewRequest(http.MethodPost, chemin, strings.NewReader(`{"messages":[{"role":"user","content":"x"}]}`))
+		if canal != "" {
+			r.Header.Set(canalHeader, canal)
+		}
+		return r
+	}
+	valide := requete("/v1/chat/completions", "1")
+
+	// Rien n'est allumé : le pont n'a pas le droit d'exécuter quoi que ce soit.
+	if canalDemande(valide) {
+		t.Fatal("par défaut le canal ne déclenche aucun tour d'agent")
+	}
+	if parallelBridgeAgentOn() {
+		t.Fatal("l'autorisation du pont doit naître éteinte")
+	}
+	// Le mode agent est ACTIF d office depuis l amont 0.20.1 (store_test.go le
+	// verrouille). Ce test parle de la DOUBLE autorisation, pas du defaut : on
+	// pose donc l « agent éteint » explicitement, ce qui le rend independant
+	// du defaut amont. L invariante testee ne bouge pas : il faut les deux.
+	if err := setAgentEnabled(false); err != nil {
+		t.Fatal(err)
+	}
+	if agentEnabled() {
+		t.Fatal("le mode agent doit pouvoir être éteint : le pont ne doit rien éxècuter sans lui")
+	}
+
+	// Une seule des deux autorisations ne suffit pas.
+	if err := setParallelBridgeAgentOn(true); err != nil {
+		t.Fatal(err)
+	}
+	if canalDemande(valide) {
+		t.Fatal("autorisation du pont seule ne doit rien exécuter : le mode agent de la machine compte aussi")
+	}
+	if err := setParallelBridgeAgentOn(false); err != nil {
+		t.Fatal(err)
+	}
+	if err := putStr(bkState, "agent", "1"); err != nil {
+		t.Fatal(err)
+	}
+	if canalDemande(valide) {
+		t.Fatal("mode agent seul ne doit rien exécuter pour un voisin : l'autorisation du pont compte aussi")
+	}
+
+	// Les deux : le tour d'agent est attendu.
+	if err := setParallelBridgeAgentOn(true); err != nil {
+		t.Fatal(err)
+	}
+	if !canalDemande(valide) {
+		t.Fatal("double autorisation : un tour d'agent est attendu")
+	}
+
+	// Un logiciel tiers qui branche son logiciel sur le pont n'est pas un Ajean :
+	// il garde le modèle prêté, sans rien exécuter ici.
+	if canalDemande(requete("/v1/chat/completions", "")) {
+		t.Fatal("sans l'en-tête du canal, la requête d'un client tiers ne déclenche rien")
+	}
+	// Ni un autre chemin, ni une méthode en lecture.
+	if canalDemande(requete("/v1/models", "1")) {
+		t.Fatal("/v1/models ne déclenche pas de tour")
+	}
+	rModelee := httptest.NewRequest(http.MethodGet, "/v1/chat/completions", nil)
+	rModelee.Header.Set(canalHeader, "1")
+	if canalDemande(rModelee) {
+		t.Fatal("un GET ne déclenche pas de tour")
+	}
+}
+
+// L'interrupteur doit être lisible depuis l'état du pont : sinon on cherche une
+// heure pourquoi le voisin récite une réponse de modèle nu.
+func TestEtatDuPontDeclareLAuthorisationAgent(t *testing.T) {
+	parallelTestHome(t)
+	// L amont rend le mode agent actif d office ; ici on veut l Ã©tat Â« Ã©teint Â»
+	// comme PRECONDITION nommee, pas comme un defaut herite. Le pont doit rester
+	// au modÃ¨le nu tant que ses DEUX autorisations ne sont pas reunies.
+	if err := setAgentEnabled(false); err != nil {
+		t.Fatal(err)
+	}
+	st := parallelBridgeStatus()
+	if st["agent_on"].(bool) {
+		t.Fatal("agent_on doit être faux tant que rien n'est autorisé")
+	}
+	if err := setParallelBridgeAgentOn(true); err != nil {
+		t.Fatal(err)
+	}
+	st = parallelBridgeStatus()
+	if !st["agent_requested"].(bool) {
+		t.Fatal("agent_requested ne suit pas l'autorisation du pont")
+	}
+	if st["agent_on"].(bool) {
+		t.Fatal("le mode agent local est éteint : agent_on doit rester faux")
+	}
+	if err := putStr(bkState, "agent", "1"); err != nil {
+		t.Fatal(err)
+	}
+	if !parallelBridgeStatus()["agent_on"].(bool) {
+		t.Fatal("les deux autorisations prises : agent_on doit être vrai")
+	}
+}
+
+// La balise est ce qui distingue, dans le fil partagé, un message venu du réseau
+// d'un message de l'utilisateur. Sans elle, l'arbitrage du 2026-10-27 tombe.
+func TestCanalBaliseDansLeTexteEtPasSeulementDansUnEnTete(t *testing.T) {
+	msg := canalMessageTexte("DESKTOP-QUO1ID7", canalOrigineIA, "recopie ton journal strata-gyro-gyro-s.log")
+	if !strings.HasPrefix(msg, "[Canal Aidros↔Aidros") {
+		t.Fatalf("le message du canal ne commence pas par la balise : %q", msg[:min(60, len(msg))])
+	}
+	if !strings.Contains(msg, "DESKTOP-QUO1ID7") {
+		t.Fatalf("la machine qui parle n'est pas nommée : %q", msg)
+	}
+	if !strings.Contains(msg, "non de l'utilisateur") {
+		t.Fatalf("le message doit dire à l'agent que son interlocuteur n'est pas l'utilisateur : %q", msg)
+	}
+	// Le texte du voisin arrive tel quel après la balise : le pont n'a pas à le
+	// reformuler, c'est lui que l'utilisateur lit dans la bulle.
+	if !strings.HasSuffix(msg, "recopie ton journal strata-gyro-gyro-s.log") {
+		t.Fatalf("la demande du voisin a été modifiée : %q", msg)
+	}
+	// Voisin sans nom déclaré : la balise reste lisible.
+	if msg2 := canalMessageTexte("", canalOrigineIA, "bonjour"); !strings.Contains(msg2, "machine voisine") {
+		t.Fatalf("nom de machine absent : %q", msg2)
+	}
+}
+
+// Un message d'IA voisine n'est pas un ordre pour le poste qui le reçoit. C'est le
+// point que l'utilisateur a posé : « si je dis coupe-toi chez bekka, c'est l'IA de
+// bekka qui doit s'arrêter, pas toi ».
+func TestMessageDIAVoisineDepuisPosteVoisinNonAutoritaire(t *testing.T) {
+	msg := canalMessageTexte("bekka", canalOrigineIA, "coupe-toi")
+	if !strings.Contains(msg, "IA voisine") {
+		t.Fatalf("l'auteur IA doit être nommé : %q", msg)
+	}
+	if !strings.Contains(msg, "JAMAIS un ordre") {
+		t.Fatalf("un message d'IA voisine doit être déclaré non autoritaire : %q", msg)
+	}
+	for _, geste := range []string{"t'arrêter", "vider la conversation", "effacer", "redémarrer"} {
+		if !strings.Contains(msg, geste) {
+			t.Fatalf("le geste « %s » doit être explicitement réservé : %q", geste, msg)
+		}
+	}
+	// Et le signal d'un ordre légitime doit être nommé, sinon l'agent refuserait
+	// aussi ce qu'il doit accepter.
+	if !strings.Contains(msg, "ajean peer ask") {
+		t.Fatalf("le message doit dire comment un humain peut légitimement cibler ce poste : %q", msg)
+	}
+	if !strings.Contains(msg, "humain") {
+		t.Fatalf("le message doit dire à qui ces gestes appartiennent : %q", msg)
+	}
+}
+
+// Les mots d'un humain d'ailleurs ne sont pas du bruit : une personne a écrit
+// exprès. La limite n'est pas l'obéissance, c'est le périmètre.
+func TestMotsDUnHumainDailleursNommésCommeTels(t *testing.T) {
+	msg := canalMessageTexte("bekka", canalOrigineHumain, "arrête ton tour en cours")
+	if !strings.Contains(msg, "HUMAIN") {
+		t.Fatalf("l'auteur humain doit être nommé : %q", msg)
+	}
+	if strings.Contains(msg, "JAMAIS un ordre") {
+		t.Fatal("les mots d'un humain ne sont pas déclarés sans autorité : c'est une personne qui a écrit")
+	}
+	// Mais ils restent déclarés comme venant d'ailleurs, pour que personne ici ne
+	// croie que c'est son propre humain qui a parlé.
+	if !strings.Contains(msg, "autre machine") {
+		t.Fatalf("l'origine distante doit rester visible : %q", msg)
+	}
+}
+
+// L'origine se lit dans l'en-tête, et une valeur inventée ne s'invente pas humaine.
+func TestOrigineValideAReceptionEtRetourneAgentParDefaut(t *testing.T) {
+	r := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	if got := canalOrigine(r); got != canalOrigineIA {
+		t.Fatalf("sans en-tête, origine attendue « %s », obtenu %q", canalOrigineIA, got)
+	}
+	r.Header.Set(canalOriginHeader, "humain")
+	if got := canalOrigine(r); got != canalOrigineHumain {
+		t.Fatalf("origine humaine non lue : %q", got)
+	}
+	r.Header.Set(canalOriginHeader, "dieu")
+	if got := canalOrigine(r); got != canalOrigineIA {
+		t.Fatalf("une origine inconnue ne doit jamais rendre un message plus faisant-authorité : %q", got)
+	}
+}
+
+// Ce que l'appelant lit doit être balisé aussi : depuis que le pont rend un tour
+// d'agent, la réponse du voisin ressemble trait pour trait à la mienne.
+func TestReponseDuVoisinBaliseChezLAppelant(t *testing.T) {
+	parallelTestHome(t)
+	var recu http.Header
+	bridge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		recu = r.Header.Clone()
+		json.NewEncoder(w).Encode(map[string]any{
+			// model:"ajean-agent" est ce qu'annonce envoiOpenAI : c'est ainsi que
+			// l'appelant sait, sans protocole de plus, si le voisin a répondu par son
+			// agent (outils, disque) ou par son modèle nu.
+			"model":   "ajean-agent",
+			"choices": []map[string]any{{"message": map[string]string{"content": "voici mes journaux"}, "finish_reason": "stop"}},
+		})
+	}))
+	defer bridge.Close()
+
+	p, err := peerAddDeclared("bekka", bridge.URL+"/v1", "sk-cle", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reply, err := peerAsk(peerTestCtx(t), p, "lit ton journal du moteur", canalOrigineIA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(reply, "[Réponse du canal Aidros↔Aidros · voisin « bekka » · il a répondu par son agent] ") {
+		t.Fatalf("réponse de l'appelant non balisée comme attendu : %q", reply)
+	}
+	if !strings.HasSuffix(reply, "voici mes journaux") {
+		t.Fatalf("texte du voisin abîmé : %q", reply)
+	}
+	// Le souvenir repart au voisin à chaque tour : il doit rester nu.
+	if brut := getStr(bkState, peerThreadKey(p)); strings.Contains(brut, "Réponse du canal") {
+		t.Fatalf("la balise s'est glissée dans le souvenir rejoué : %s", brut)
+	}
+
+	// Les en-têtes partent réellement sur le réseau, et avec les bonnes valeurs.
+	// Sans cette vérification, tout le dispositif d'auteur pourrait ne jamais
+	// quitter la machine et le voisin recevrait du texte nu.
+	if recu.Get(canalHeader) == "" {
+		t.Fatal("l'en-tête du canal n'est pas envoyé : le voisin ne saura pas qu'un Ajean parle")
+	}
+	if recu.Get(canalFromHeader) == "" {
+		t.Fatal("la machine qui appelle n'est pas déclarée")
+	}
+	if got := recu.Get(canalOriginHeader); got != canalOrigineIA {
+		t.Fatalf("origine envoyée par l'outil peer : %q, attendu %q", got, canalOrigineIA)
+	}
+	if got := recu.Get(canalHopHeader); got != "1" {
+		t.Fatalf("profondeur de l'échange : %q", got)
+	}
+}
+
+// Un message envoyé par l'humain depuis son terminal doit porter l'origine humaine
+// sur le réseau — c'est ce qui le rend visé et donc faisant-autorité.
+func TestMessageDUnHumainPorteSonOrigineSurLeReseau(t *testing.T) {
+	parallelTestHome(t)
+	var recu http.Header
+	bridge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		recu = r.Header.Clone()
+		json.NewEncoder(w).Encode(map[string]any{
+			"model":   "ajean-agent",
+			"choices": []map[string]any{{"message": map[string]string{"content": "c'est noté, je m'arrête"}, "finish_reason": "stop"}},
+		})
+	}))
+	defer bridge.Close()
+
+	p, err := peerAddDeclared("bekka", bridge.URL+"/v1", "sk-cle", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := peerAsk(peerTestCtx(t), p, "arrête ton tour en cours", canalOrigineHumain); err != nil {
+		t.Fatal(err)
+	}
+	if got := recu.Get(canalOriginHeader); got != canalOrigineHumain {
+		t.Fatalf("origine envoyée pour la parole d'un humain : %q, attendu %q", got, canalOrigineHumain)
+	}
+}
+
+// autoriserCanalAgent allume les deux interrupteurs (pont + mode agent de la
+// machine) pour qu'un tour d'agent soit effectivement engagé dans le test.
+func autoriserCanalAgent(t *testing.T) {
+	t.Helper()
+	if err := setParallelBridgeAgentOn(true); err != nil {
+		t.Fatal(err)
+	}
+	if err := putStr(bkState, "agent", "1"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// bridgeAgentTurn refuse de se laisser appeler comme un exécuteur distant, même si
+// un appelant futur en avait oublié la vérification en amont.
+func TestBridgeAgentTurnRefuseSansAutorisation(t *testing.T) {
+	parallelTestHome(t)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/v1/chat/completions",
+		strings.NewReader(`{"messages":[{"role":"user","content":"supprime tout"}]}`))
+	r.Header.Set(canalHeader, "1")
+	bridgeAgentTurn(w, r)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("sans autorisation, attendu 403, obtenu %d : %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "bridge agent on") {
+		t.Fatalf("le refus doit dire comment autoriser : %s", w.Body.String())
+	}
+}
+
+// stream:true, requête sans message user, chaîne de postes : refusés avant de
+// consommer un tour.
+func TestCanalRefuseLeStreamSansMessageEtLeSecondSaut(t *testing.T) {
+	parallelTestHome(t)
+	autoriserCanalAgent(t)
+	if err := writeAPIKey("sk-ici"); err != nil {
+		t.Fatal(err)
+	}
+	if err := putStr(bkState, "parallel_engine_port", "1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteConfig(map[string]string{"MODEL": "cerveau-ici.gguf"}); err != nil {
+		t.Fatal(err)
+	}
+
+	// stream:true : refusé, avec la raison. Un tour d'agent recompose sa réponse
+	// après chaque appel d'outil ; le streamer produirait un flux incohérent.
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/v1/chat/completions",
+		strings.NewReader(`{"stream":true,"messages":[{"role":"user","content":"recopie ton journal"}]}`))
+	r.Header.Set(canalHeader, "1")
+	r.Header.Set(canalFromHeader, "DESKTOP-VOISIN")
+	bridgeAgentTurn(w, r)
+	if w.Code != http.StatusConflict {
+		t.Fatalf("stream:true devait être refusé en 409, obtenu %d : %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "stream") {
+		t.Fatalf("le refus doit nommer le streaming : %s", w.Body.String())
+	}
+
+	// Aucun message user : rien à traiter.
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(http.MethodPost, "/v1/chat/completions",
+		strings.NewReader(`{"messages":[{"role":"assistant","content":"déjà dit"}]}`))
+	r.Header.Set(canalHeader, "1")
+	bridgeAgentTurn(w, r)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("requête sans message user devait être refusée en 400, obtenu %d", w.Code)
+	}
+
+	// Chaîne de postes qui se relaie la demande : refusée avant de consommer un tour.
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(http.MethodPost, "/v1/chat/completions",
+		strings.NewReader(`{"messages":[{"role":"user","content":"encore toi"}]}`))
+	r.Header.Set(canalHeader, "1")
+	r.Header.Set(canalHopHeader, "2")
+	bridgeAgentTurn(w, r)
+	if w.Code != http.StatusLoopDetected {
+		t.Fatalf("le 2e saut devait être refusé en 421, obtenu %d : %s", w.Code, w.Body.String())
+	}
+}
+
+// waitCanalTurn : turn_done est la seule sortie « fini ». Une delta « error » ne
+// l'est PAS — le tour continue après un appel d'outil raté.
+func TestWaitCanalTurnAttendTurnDoneEtGardeLErreur(t *testing.T) {
+	c := newTestConv()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		c.appendDelta(c.epoch, map[string]any{"user": "recopie ton journal"})
+		c.appendDelta(c.epoch, map[string]any{"error": "outil bash : timeout"})
+		c.appendDelta(c.epoch, map[string]any{"content": "voici le journal"})
+		c.appendDelta(c.epoch, map[string]any{"turn_done": true, "elapsed_ms": 1200})
+	}()
+
+	derniereErreur, err := c.waitCanalTurn(ctx, c.epoch, 0)
+	if err != nil {
+		t.Fatalf("le tour s'est terminé proprement : %v", err)
+	}
+	if derniereErreur == "" {
+		t.Fatal("l'erreur d'outil doit être retenue pour expliquer une réponse vide, rien n'a été gardé")
+	}
+	if !strings.Contains(derniereErreur, "timeout") {
+		t.Fatalf("erreur retenée inattendue : %q", derniereErreur)
+	}
+}
+
+// Un abonné à un epoch périmé (l'utilisateur a fait « clear chat » pendant le tour
+// du voisin) sort au lieu d'attendre une fin qui n'arrivera jamais sur ce fil.
+func TestWaitCanalTurnSortSurEpochPerime(t *testing.T) {
+	c := newTestConv()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		// Reset en cours de tour : epoch bumpé, aucun turn_done sur le nouveau fil.
+		c.mu.Lock()
+		c.epoch++
+		c.cond.Broadcast()
+		c.mu.Unlock()
+	}()
+	if _, err := c.waitCanalTurn(ctx, c.epoch-1, 0); err == nil {
+		t.Fatal("un epoch périmé doit interrompre l'attente")
+	}
+}
+
+// La réponse rendue au voisin est l'unique message assistant final du tour. Les
+// messages assistant porteurs d'un tool_call (contenu vide) ne comptent pas, et on
+// ne remonte JAMAIS avant la borne du tour.
+func TestDerniereReponseApresNeDepassePasLaBorneDuTour(t *testing.T) {
+	c := newTestConv()
+	c.Messages = []Message{
+		{Role: "user", Content: "tour d'avant"},
+		{Role: "assistant", Content: "réponse d'un tour ANTERIEUR"},
+	}
+	n := len(c.Messages)
+	if got := c.derniereReponseApres(n); got != "" {
+		t.Fatalf("un tour qui n'a rien produit ne doit pas emprunter la réponse d'avant, obtenu %q", got)
+	}
+
+	c.Messages = append(c.Messages,
+		Message{Role: "assistant", ToolCalls: []ToolCall{{ID: "1", Function: ToolCallFunc{Name: "bash"}}}},
+		Message{Role: "user", Content: "résultat de l'outil"},
+		Message{Role: "assistant", Content: "voilà le journal demandé"},
+	)
+	if got := c.derniereReponseApres(n); got != "voilà le journal demandé" {
+		t.Fatalf("la réponse finale attendue était le dernier message texte, obtenu %q", got)
+	}
+}
+
+// Le contenu d'un message est `any` des deux côtés (requête comme historique) :
+// chaîne d'ordinaire, blocs quand une image est de la partie.
+func TestCanalTexteContentAccepteChaineEtBlocs(t *testing.T) {
+	if got := canalTexteContent("bonjour"); got != "bonjour" {
+		t.Fatalf("chaîne : %q", got)
+	}
+	blocs := []any{
+		map[string]any{"type": "text", "text": "regarde "},
+		map[string]any{"type": "image_url", "image_url": map[string]any{"url": "data:image/png;base64,…"}},
+		map[string]any{"type": "text", "text": "cette image"},
+	}
+	if got := canalTexteContent(blocs); got != "regarde cette image" {
+		t.Fatalf("blocs : %q", got)
+	}
+	if got := canalTexteContent(nil); got != "" {
+		t.Fatalf("nil devait donner vide, obtenu %q", got)
+	}
+}
+
+// La réponse arrive au format d'une complétion : l'outil peer de l'appelant n'a
+// rien à adapter, il lit choices[0].message.content comme avant.
+func TestEnvoiOpenAIRendLaFormeAttendueParLoutilPeer(t *testing.T) {
+	w := httptest.NewRecorder()
+	envoiOpenAI(w, "voici le journal", 4210)
+	var out struct {
+		Object string `json:"object"`
+		Model  string `json:"model"`
+		Choices []struct {
+			Message struct {
+				Role    string `json:"role"`
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+		Usage struct {
+			PromptTokens     int `json:"prompt_tokens"`
+			CompletionTokens int `json:"completion_tokens"`
+			TotalTokens      int `json:"total_tokens"`
+		} `json:"usage"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+		t.Fatalf("réponse illisible : %v (%s)", err, w.Body.String())
+	}
+	if out.Object != "chat.completion" || len(out.Choices) != 1 {
+		t.Fatalf("forme inattendue : %s", w.Body.String())
+	}
+	if out.Choices[0].Message.Content != "voici le journal" {
+		t.Fatalf("contenu rendu : %q", out.Choices[0].Message.Content)
+	}
+	// Le modèle annoncé n'est pas un gguf : c'est un agent, et l'appelant doit
+	// pouvoir le lire (le vérificateur du patch s'appuie sur ce delta de contexte).
+	if out.Model != modelAgentCanal {
+		t.Fatalf("modèle annoncé : %q", out.Model)
+	}
+	if out.Usage.PromptTokens != 4210 || out.Usage.CompletionTokens != len("voici le journal") {
+		t.Fatalf("usage incohérent : %+v", out.Usage)
+	}
+}
+
+// Le pont qui prête doit DIRE pourquoi il n'a pas pris le tour d'agent. Mesuré sur
+// le poste voisin le 2026-10-27 : il rendait son modèle nu en silence, et
+// l'appelant ne pouvait pas distinguer « c'est voulu » de « il manque un
+// interrupteur chez elle ». Deux jours de recherche pour un `bridge agent on`.
+func TestPontAnnonceSonRefusDeTourAgent(t *testing.T) {
+	home := parallelTestHome(t)
+	_ = home
+	if err := writeAPIKey("sk-refus-test"); err != nil {
+		t.Fatal(err)
+	}
+	// Les deux interrupteurs éteints (le comportement par défaut, et l'état réel du
+	// poste voisin) : le refus doit nommer les DEUX.
+	_ = setParallelBridgeAgentOn(false)
+	_ = putStr(bkState, "agent", "0")
+	if got := canalAgentRefus(); got != "bridge_agent=off;agent_mode=off" {
+		t.Fatalf("les deux éteints : %q", got)
+	}
+
+	h := parallelBridgeHandler()
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "http://192.168.1.9/v1/chat/completions",
+		strings.NewReader(`{"model":"x","messages":[{"role":"user","content":"bonjour"}]}`))
+	req.RemoteAddr = "192.168.1.42:51515"
+	req.Header.Set("Authorization", "Bearer sk-refus-test")
+	req.Header.Set(canalHeader, "1")
+	h.ServeHTTP(w, req)
+
+	if got := w.Header().Get(canalAgentRefusHeader); got != "bridge_agent=off;agent_mode=off" {
+		t.Fatalf("le pont n'annonce pas son refus : en-tête %q (code %d)", got, w.Code)
+	}
+
+	// Un seul éteint : le refus ne doit pas accuser l'autre.
+	_ = setParallelBridgeAgentOn(true)
+	_ = putStr(bkState, "agent", "0")
+	if got := canalAgentRefus(); got != "agent_mode=off" {
+		t.Fatalf("mode agent seul éteint : %q", got)
+	}
+	_ = setParallelBridgeAgentOn(false)
+	_ = putStr(bkState, "agent", "1")
+	if got := canalAgentRefus(); got != "bridge_agent=off" {
+		t.Fatalf("autorisation du canal seule éteinte : %q", got)
+	}
+	// Les deux allumés : plus de refus (c'est canalDemande qui prend le tour).
+	_ = setParallelBridgeAgentOn(true)
+	if got := canalAgentRefus(); got != "" {
+		t.Fatalf("tout est allumé, le pont ne doit rien déclarer : %q", got)
+	}
+}
+
+// Un client tiers branché sur le pont (pas un Ajean) ne reçoit pas notre refus : il
+// n'a rien demandé, et lui parler de nos interrupteurs internes serait une fuite.
+func TestRefusDuPontReserveAuCanal(t *testing.T) {
+	parallelTestHome(t)
+	if err := writeAPIKey("sk-refus-test2"); err != nil {
+		t.Fatal(err)
+	}
+	_ = setParallelBridgeAgentOn(false)
+	_ = putStr(bkState, "agent", "0")
+
+	h := parallelBridgeHandler()
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "http://192.168.1.9/v1/chat/completions",
+		strings.NewReader(`{"model":"x","messages":[{"role":"user","content":"bonjour"}]}`))
+	req.RemoteAddr = "192.168.1.42:51515"
+	req.Header.Set("Authorization", "Bearer sk-refus-test2")
+	// Pas de X-Aidros-Canal : un logiciel tiers ordinaire.
+	h.ServeHTTP(w, req)
+
+	if got := w.Header().Get(canalAgentRefusHeader); got != "" {
+		t.Fatalf("un client tiers ne doit pas recevoir notre refus interne : %q", got)
+	}
+}
+
+// La traduction chez l'appelant : c'est là qu'elle sert, et c'est le seul endroit
+// où la reformuler.
+func TestRefusDuVoisinTraduitEnGeste(t *testing.T) {
+	if got := peerRefusCanal(""); got != "" {
+		t.Fatalf("pas d'en-tête, pas de commentaire : %q", got)
+	}
+	got := peerRefusCanal("bridge_agent=off;agent_mode=off")
+	for _, attendu := range []string{"ajean bridge agent on", "mode agent", "ne peut ni lire ses propres journaux"} {
+		if !strings.Contains(got, attendu) {
+			t.Fatalf("le geste « %s » manque : %q", attendu, got)
+		}
+	}
+	// Un seul interrupteur en cause : on ne lui fait pas chercher l'autre.
+	unSeul := peerRefusCanal("agent_mode=off")
+	if strings.Contains(unSeul, "bridge agent on") {
+		t.Fatalf("il ne faut pas conseiller l'interrupteur qui est déjà allumé : %q", unSeul)
+	}
+	if !strings.Contains(unSeul, "mode agent") {
+		t.Fatalf("geste manquant : %q", unSeul)
+	}
+	// Valeur inattendue : on la rend, on ne conclut pas à sa place.
+	inconnu := peerRefusCanal("mystere=oui")
+	if !strings.Contains(inconnu, "mystere=oui") {
+		t.Fatalf("une valeur inconnue doit être montrée telle quelle : %q", inconnu)
+	}
+}
+
+// L'en-tête de refus traverse-t-il réellement le réseau ? Sans ce test, tout le
+// dispositif peut rester local et l'appelant ne verra jamais rien.
+func TestRefusDuVoisinRecuParLEseau(t *testing.T) {
+	parallelTestHome(t)
+	bridge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set(canalAgentRefusHeader, "bridge_agent=off")
+		json.NewEncoder(w).Encode(map[string]any{
+			"model":   "C:\\moteur\\cerveau-nu.gguf",
+			"choices": []map[string]any{{"message": map[string]string{"content": "je ne vois pas tes journaux"}, "finish_reason": "stop"}},
+		})
+	}))
+	defer bridge.Close()
+
+	p, err := peerAddDeclared("voisine", bridge.URL+"/v1", "sk-cle", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reply, err := peerAsk(peerTestCtx(t), p, "lis ton journal du moteur", canalOrigineIA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(reply, "modèle nu") {
+		t.Fatalf("la façon dont le voisin a répondu doit être dite : %q", reply)
+	}
+	if !strings.Contains(reply, "ajean bridge agent on") {
+		t.Fatalf("le refus reçu doit être traduit en geste à faire chez le voisin : %q", reply)
+	}
+	// Le souvenir, lui, reste nu : ni la balise ni le refus ne doivent s'y empiler
+	// et repartir au voisin à chaque tour.
+	if brut := getStr(bkState, peerThreadKey(p)); strings.Contains(brut, "bridge agent on") {
+		t.Fatalf("le refus s'est glissé dans le souvenir rejoué : %s", brut)
+	}
+}
+// mais runShell passe AJEAN_AGENT_TURN à tout ce qu'il lance : une commande tapée
+// pendant un tour d'agent vient de l'agent. Laisser l'agent se déclarer humain, c'est
+// lui donner l'autorité qu'on a justement réservée aux humains.
+func TestOrigineCLIRefuseePendantUnTourAgent(t *testing.T) {
+	t.Setenv("AJEAN_AGENT_TURN", "")
+	if got := peerOrigineCLI(); got != canalOrigineHumain {
+		t.Fatalf("un humain dans son terminal doit être reconnu humain, obtenu %q", got)
+	}
+	t.Setenv("AJEAN_AGENT_TURN", "1")
+	if got := peerOrigineCLI(); got != canalOrigineIA {
+		t.Fatalf("pendant un tour d'agent, l'origine reste celle de l'agent : %q", got)
+	}
+}
+// rien. Le couper est ce qui rend la coordination réelle — sinon le voisin arrêtait
+// son côté pendant que le nôtre continuait à consumer le moteur pour personne.
+//
+// Le jeton est la pièce qui rend ça sûr : le gate de génération est exclusif, donc
+// « un tour tourne » ne dit pas lequel. Sans jeton correspondant, on ne touche à rien.
+func TestTourDuCanalCoupeQuandLAppelantRaccroche(t *testing.T) {
+	c := newTestConv()
+	c.Generating = true
+	annule := false
+	c.cancel = func() { annule = true }
+
+	// Jeton 0 = tour qui n'a pas été déclenché par le canal : jamais coupé.
+	if c.stopCanalTurnIfMine(0) {
+		t.Fatal("un tour qui n'est pas du canal ne doit pas être coupé")
+	}
+	// Jeton qui ne correspond pas : tour d'un autre (ou tour de l'humain local).
+	c.canalTurnToken = 7
+	if c.stopCanalTurnIfMine(9) {
+		t.Fatal("un jeton qui ne correspond pas ne doit rien annuler")
+	}
+	if annule {
+		t.Fatal("une annulation a eu lieu sans jeton correspondant")
+	}
+
+	c.canalTurnToken = 9
+	if !c.stopCanalTurnIfMine(9) {
+		t.Fatal("le tour du canal devait être coupé")
+	}
+	if !annule {
+		t.Fatal("le contexte du tour n'a pas été annulé")
+	}
+
+	// Tour déjà terminé : rien à annuler, et surtout pas un cancel périmé.
+	c2 := newTestConv()
+	c2.canalTurnToken = 3
+	if c2.stopCanalTurnIfMine(3) {
+		t.Fatal("aucun tour en cours : rien à couper")
+	}
+}
+
+// Un tour du canal doit être identifiable par un jeton distinct, et ce jeton doit
+// être rendu à la fin : sinon un tour suivant hériterait d'un jeton et pourrait être
+// coupé à tort.
+func TestJetonDuCanalEstDistinctEtRendu(t *testing.T) {
+	a, b := canalJeton.Add(1), canalJeton.Add(1)
+	if a == b {
+		t.Fatal("deux tours du canal ont le même jeton")
+	}
+	c := newTestConv()
+	c.canalTurnToken = int(b)
+	c.Generating = true
+	c.cancel = func() {}
+	if c.stopCanalTurnIfMine(int(a)) {
+		t.Fatal("le jeton d'un tour antérieur ne doit pas couper le tour courant")
+	}
+}
+// L'outil peer coupé pendant un tour du canal : deux IA autonomes qui se relancent
+// la même question tourneraient sans fin.
+func TestOutilPeerCoupePendantUnTourDuCanal(t *testing.T) {
+	canalTurnActive.Add(1)
+	defer canalTurnActive.Add(-1)
+	out := runPeerTool(map[string]any{"action": "list"})
+	if !strings.HasPrefix(out, "[erreur]") {
+		t.Fatalf("l'outil peer aurait dû être coupé, obtenu : %s", out)
+	}
+	if !strings.Contains(out, "boucle") {
+		t.Fatalf("la coupure doit dire pourquoi (boucle) : %s", out)
+	}
+}
+
+

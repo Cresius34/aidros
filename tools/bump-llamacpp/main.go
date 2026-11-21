@@ -4,8 +4,8 @@
 // choisie et testée par le mainteneur, jamais par l'utilisateur. Cette version
 // tient en deux fichiers versionnés avec le code :
 //
-//	internal/ajean/LLAMA_CPP_VERSION      le tag amont (ex. b12257)
-//	internal/ajean/llama_cpp_assets.json  les binaires de ce tag, avec taille et SHA-256
+//	internal/aidros/LLAMA_CPP_VERSION      le tag amont (ex. b12257)
+//	internal/aidros/llama_cpp_assets.json  les binaires de ce tag, avec taille et SHA-256
 //
 // Pour changer de version :
 //

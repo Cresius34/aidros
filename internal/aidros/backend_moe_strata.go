@@ -1,0 +1,985 @@
+package aidros
+
+// Windows uses verified upstream CUDA/HIP releases. The Linux AJEAN MoE path
+// keeps its measured settings. Python, DLLs and sources stay inside this data root.
+import (
+	"context"
+	_ "embed"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+// Two distinct versions live here and must not be conflated: strataSourceVersion is
+// the Strata release we vendor (tag), strataVersion is the engine package version that
+// lands in engine/BUILD.json, and strataControlVersion is the control package shipped
+// beside it. The preflight check below compares BUILD.json against strataVersion only.
+const strataSourceVersion = "0.2.8"
+// Moteur Qwen : 0.1.48 → 0.1.54 dans 0.2.8 (fenêtres HIP de 16 rangées), puis
+// 0.1.59 dans 0.2.13 (chunked GDN scan gfx12 pour les prompts de 30 000 tokens
+// et plus). Monter cette constante est la PAIRE de rendre au paquet moteur son
+// propre engine/BUILD.json : le préflight ci-dessous compare l'un à l'autre, et
+// strataSourceDir() nomme le dossier d'installation d'après cette valeur.
+const strataVersion = "0.1.59"
+const strataControlVersion = "0.1.54"
+
+// strataSourceCommit désigne l'arbre source que l'installeur déplie (serve/, strata_control/,
+// setup.py). C'est le commit du paquet Control, qui est public. Le commit de BUILD.json du
+// moteur 0.1.54 est `8c1aea4bca1b` : il ne figure PAS dans le dépôt public (mesuré le 30/10 —
+// l'API répond « No commit found for SHA », le codeload renvoie 404). Ce n'est pas contradictoire :
+// les paquets moteur sont construits sur un arbre interne, et le préflight compare le
+// BUILD.json livré à strataVersion, jamais à ce commit. Laisser strataSourceCommit sur le
+// commit Control garde une source téléchargeable et vérifiable pour l'installation.
+const strataSourceCommit = "36f6663c25e60abdfc626abe48e0e8fa3a9fe762"
+const strataPathToken = "${AJEAN_HOME}/"
+
+//go:embed moe_portable_install.ps1
+var strataInstallScript []byte
+
+//go:embed moe_portable_setup.py
+var strataSetupWrapper []byte
+
+//go:embed moe_windows_manifest.json
+var strataWindowsManifest []byte
+
+func isStrataMoe(c map[string]string) bool {
+	return isMoeConfig(c) && c["MOE_RUNTIME"] == "strata-windows"
+}
+func strataSourceDir(backend, toolkit string) string {
+	if backend == "cuda" {
+		backend += toolkit
+	}
+	return filepath.Join(moeHome(), "strata-"+strataVersion+"-"+backend)
+}
+func strataPath(p string) string {
+	if p != "" && !filepath.IsAbs(p) {
+		return filepath.Join(AjeanHome(), p)
+	}
+	return p
+}
+func strataPresetName(family, quant, backend string) string {
+	return moePresetName(family, quant) + " · " + strings.ToUpper(backend)
+}
+
+// Replace only paths owned by this copy; never adopt another Strata installation.
+func strataPortableJSON(value any, encode bool) (any, error) {
+	switch v := value.(type) {
+	case map[string]any:
+		next := make(map[string]any, len(v))
+		for k, x := range v {
+			y, err := strataPortableJSON(x, encode)
+			if err != nil {
+				return nil, err
+			}
+			next[k] = y
+		}
+		return next, nil
+	case []any:
+		next := make([]any, len(v))
+		for i, x := range v {
+			y, err := strataPortableJSON(x, encode)
+			if err != nil {
+				return nil, err
+			}
+			next[i] = y
+		}
+		return next, nil
+	case string:
+		if encode && filepath.IsAbs(v) {
+			if err := parallelWritablePath(v); err != nil {
+				return nil, err
+			}
+			rel, err := filepath.Rel(AjeanHome(), v)
+			if err != nil {
+				return nil, err
+			}
+			return strataPathToken + filepath.ToSlash(rel), nil
+		}
+		if !encode && strings.HasPrefix(v, strataPathToken) {
+			p := filepath.Join(AjeanHome(), filepath.FromSlash(strings.TrimPrefix(v, strataPathToken)))
+			if err := parallelWritablePath(p); err != nil {
+				return nil, err
+			}
+			return p, nil
+		}
+	}
+	return value, nil
+}
+
+func strataReadConfig(path string) (map[string]any, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	var out map[string]any
+	err = json.NewDecoder(io.LimitReader(f, 2<<20)).Decode(&out)
+	return out, err
+}
+func strataWriteJSON(path string, value any) error {
+	b, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err = os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	tmp := path + ".ajean-new"
+	if err = os.WriteFile(tmp, append(b, '\n'), 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
+func moeStrataPreflight(c map[string]string) (string, map[string]any, error) {
+	if c["MOE_BACKEND"] != "hip" && c["MOE_BACKEND"] != "cuda" {
+		return "", nil, errors.New("backend MoE invalide")
+	}
+	path, src, py := strataPath(c["MOE_CONFIG"]), strataPath(c["MOE_SOURCE"]), strataPath(c["MOE_PYTHON"])
+	for _, p := range []string{path, src, py} {
+		if p == "" {
+			return "", nil, errors.New("installation MoE incomplète")
+		}
+		if err := parallelWritablePath(p); err != nil {
+			return "", nil, err
+		}
+	}
+	if !isFile(py) || !isFile(filepath.Join(src, "serve", "server.py")) {
+		return "", nil, errors.New("Python ou serveur MoE absent : reprendre l’installation depuis Moteur")
+	}
+	base, err := strataReadConfig(path)
+	if err != nil {
+		return "", nil, err
+	}
+	value, err := strataPortableJSON(base, false)
+	if err != nil {
+		return "", nil, err
+	}
+	base = value.(map[string]any)
+	exe, _ := base["exe"].(string)
+	if !isFile(exe) {
+		return "", nil, fmt.Errorf("moteur MoE absent : %s", exe)
+	}
+	if err := parallelWritablePath(exe); err != nil {
+		return "", nil, err
+	}
+	meta, err := strataReadConfig(filepath.Join(filepath.Dir(exe), "BUILD.json"))
+	if err != nil {
+		return "", nil, errors.New("moteur MoE différent de la version figée : reprendre son installation")
+	}
+	// LE MILLÉSIME NE REFUSE PLUS, depuis l'ordre de l'humain du 21/11 : « prévoir
+	// avertissement + millésime sur presets en vert si endpoint = moteur installé
+	// sinon rouge ». La garde rendait un exe incapable de démarrer le moteur que
+	// SON PRESET pointe, alors que le preset nomme déjà le dossier (les trois
+	// chemins MOE_* viennent de lui, pas de strataSourceDir, qui ne sert qu'à
+	// l'installeur). Un seul exe peut donc servir plusieurs millésimes : c'est ce
+	// qui manquait chez la voisine, où changer de moteur coûtait un rebuild.
+	//
+	// CE QUE LA GARDE PROTÉGEAIT, nommément : c'est cet exe qui écrit la config de
+	// lancement (moeStrataBuildConfig) avec les drapeaux de SON Control. Mesuré le
+	// 14/11 dans un seul sens : les 15 drapeaux de NOTRE run config sont acceptés
+	// par 0.1.59. L'autre sens (un vieux moteur lisant une config écrite par un exe
+	// neuf) n'a jamais été mesuré. Sans chien de garde (backend_moe_windows.go
+	// n'a aucun respawn, cmd.Wait L354) et 154-208 s de trou, un drapeau refusé
+	// était une panne obscure. D'ou l'avertissement visible, et non le silence :
+	// strataMillésimeDivergent, rendu par /api/status et par la liste des presets.
+	//
+	// L'INSTALLEUR, LUI, ÉPINGLE TOUJOURS : moe_portable_install.ps1 compare le
+	// moteur installé à engine_version du manifeste et throw. Baisser cette garde
+	// ne veut pas dire « installer n'importe quoi », mais « ne pas refuser ce qui
+	// est déjà sur le disque ». Précédent de la même forme : les verrous Gyro-S
+	// devenus avertissements le 26/10.
+	if meta["version"] != strataVersion {
+		fmt.Fprintf(os.Stderr, "[ajean] attention : moteur MoE %v, application épinglée %s — le preset demarre quand meme\n", meta["version"], strataVersion)
+	}
+	if c["MOE_BACKEND"] == "hip" && meta["backend"] != "hip" {
+		return "", nil, errors.New("le preset HIP ne référence pas un moteur HIP")
+	}
+	toolkit := fmt.Sprint(meta["toolkit"])
+	if toolkit == "<nil>" {
+		toolkit = strings.Split(fmt.Sprint(meta["cuda"]), ".")[0]
+	}
+	if c["MOE_BACKEND"] == "cuda" && (meta["backend"] == "hip" || toolkit != c["MOE_TOOLKIT"]) {
+		return "", nil, errors.New("le paquet CUDA ne correspond pas au preset")
+	}
+	if c["MOE_VISION"] == "1" {
+		vision, ok := base["vision"].(map[string]any)
+		if !ok || !isFile(fmt.Sprint(vision["exe"])) || !isFile(fmt.Sprint(vision["mmproj"])) {
+			return "", nil, errors.New("encodeur vision absent ; préparer le modèle avec la vision avant de l’activer")
+		}
+	}
+	return path, base, nil
+}
+
+func moeStrataBuildConfig(base map[string]any, c map[string]string, key string) (map[string]any, error) {
+	b, err := json.Marshal(base)
+	if err != nil {
+		return nil, err
+	}
+	var out map[string]any
+	if err = json.Unmarshal(b, &out); err != nil {
+		return nil, err
+	}
+	list, ok := out["args"].([]any)
+	if !ok {
+		return nil, errors.New("configuration MoE sans arguments")
+	}
+	args := make([]string, len(list))
+	for i, a := range list {
+		args[i] = fmt.Sprint(a)
+	}
+	// Keep upstream's backend recommendations. Apply only explicit user settings.
+	for flag, k := range map[string]string{"--max-context": "CTX", "--kv": "MOE_KV", "--spec": "MOE_SPEC", "--vram-reserve-mib": "MOE_VRAM_RESERVE"} {
+		if s := c[k]; s != "" {
+			args = setArg(args, flag, s)
+		}
+	}
+	// Deux drapeaux portent la mention « applique par l'application », pour que
+	// leur valeur survive a la fusion de « user_args » (strataSyncUserFlags) :
+	//   - la reserve, dont l'ecran affichait une valeur que le moteur ignorait ;
+	//   - la vision, que nous retirons d'« args » et que « user_args » remettrait.
+	// Les trois autres ne sont pas marques : --max-context, --kv et --spec sont
+	// aussi des reglages que la personne peut avoir decides a la main dans le
+	// controle du moteur, et les pousser dans « user_args » ecraserait son choix a
+	// chaque demarrage. Une etape a part, si on veut que l'ecran pilote aussi ceux-
+	// la : il faudra alors le dire a l'interface, pas le decider en silence.
+	applied := map[string]string{}
+	if s := c["MOE_VRAM_RESERVE"]; s != "" {
+		applied["--vram-reserve-mib"] = s
+	}
+	if c["MOE_VISION"] != "1" {
+		delete(out, "vision")
+		args = dropFlag(args, "--vision")
+		applied["--vision"] = "" // vide = l'option est retiree, pas reecrite
+	}
+	list = make([]any, len(args))
+	for i, a := range args {
+		list[i] = a
+	}
+	out["args"] = list
+	strataSyncUserFlags(out, applied)
+	out["host"] = "127.0.0.1"
+	port := firstNonEmpty(c["PORT"], "8080")
+	if parallelBuild() {
+		port = parallelEnginePort()
+	}
+	out["port"], _ = strconv.Atoi(port)
+	if key != "" {
+		out["api_key"] = key
+	} else {
+		delete(out, "api_key")
+	}
+	out["log"] = filepath.Join(moeHome(), "logs", "strata-"+c["MOE_BACKEND"]+".log")
+	delete(out, "mcp_servers") // tools are supplied by Ajean in the OpenAI request
+	delete(out, "images")      // no unrelated image generator is installed or started
+	return out, nil
+}
+
+// strataAsStrings : une liste JSON ([]any, ou []string) vue comme []string.
+// Les listes venaient de json.Decode ; celles construites ici sont des []any.
+func strataAsStrings(list any) []string {
+	switch v := list.(type) {
+	case []string:
+		return v
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, x := range v {
+			out = append(out, fmt.Sprint(x))
+		}
+		return out
+	}
+	return nil
+}
+
+// strataArgGroups : une liste d'arguments decoupee en groupes (le drapeau et les
+// valeurs qui le suivent), comme strata_control/user_args.py:def groups.
+func strataArgGroups(list any) [][]string {
+	var out [][]string
+	for _, a := range strataAsStrings(list) {
+		if strings.HasPrefix(a, "--") || len(out) == 0 {
+			out = append(out, []string{a})
+		} else {
+			out[len(out)-1] = append(out[len(out)-1], a)
+		}
+	}
+	return out
+}
+
+// strataSyncUserFlags rend effectifs les reglages que l'application ecrit.
+//
+// Le moteur ne lit pas « args » tel quel : a chaque demarrage il remet par-dessus
+// la cle « user_args » (serve/server.py L3081-3085 : args = user_args.merge(args,
+// cfg["user_args"])), et pour un meme drapeau la valeur de « user_args » gagne
+// (strata_control/user_args.py:def merge, L68-73). Or « user_args » est ecrit par
+// la preparation du moteur lui-meme : setup.py:def explicit_args (L6234-6237) y
+// pose le --vram-reserve-mib passe en ligne de commande, et notre installeur le
+// passe (moe_portable_install.ps1 L145). Le reglage de reserve affiche dans
+// l'application etait donc ignore par le moteur : ce que l'ecran disait n'etait
+// pas ce qui tournait.
+//
+// Le moteur fait deja ce geste pour ses propres ecrans : serve/runconfig.py
+// L149-167, apres avoir pose un drapeau dans « args », appelle
+// user_args.set_flag puis remet a jour « args_written ». Ce port applique la meme
+// regle aux seuls drapeaux que l'application ecrit elle-meme, drapeau par drapeau :
+// un drapeau mis a la main par la personne (vecteurs de controle, etc.) garde sa
+// place et sa valeur.
+//
+// « applied » : les drapeaux que l'application vient d'ecrire dans « args », avec
+// leur valeur ; une valeur vide signifie que le drapeau a ete retire de « args ».
+func strataSyncUserFlags(out map[string]any, applied map[string]string) {
+	if len(applied) == 0 {
+		return
+	}
+
+	groups := strataArgGroups(out["user_args"])
+	if len(groups) > 0 {
+		kept := make([][]string, 0, len(groups))
+		for _, g := range groups {
+			if _, ok := applied[g[0]]; ok {
+				continue // l'application vient de decider de ce drapeau
+			}
+			kept = append(kept, g)
+		}
+		// set_flag (user_args.py L129-134) : les groupes conserves dans leur ordre,
+		// puis les drapeaux de l'application remis a la fin avec leur valeur. Une
+		// valeur vide = le drapeau est retire, pas reecrit.
+		flags := make([]string, 0, len(applied))
+		for flag := range applied {
+			flags = append(flags, flag)
+		}
+		sort.Strings(flags)
+		for _, flag := range flags {
+			if v := applied[flag]; v != "" {
+				kept = append(kept, []string{flag, v})
+			}
+		}
+		if len(kept) == 0 {
+			delete(out, "user_args")
+		} else {
+			flat := make([]any, 0, len(kept))
+			for _, g := range kept {
+				for _, t := range g {
+					flat = append(flat, t)
+				}
+			}
+			out["user_args"] = flat
+		}
+	}
+
+	// « args_written » : la copie d'« args » telle que l'application vient de
+	// l'ecrire (strata_control/user_args.py:def stamp). Sans cette copie, la
+	// preparation suivante du moteur prendrait nos valeurs pour des reglages mis a
+	// la main et les remettrait dans « user_args » a notre place.
+	//
+	// Mis a jour seulement s'il existe deja, comme le fait runconfig.py L166-167 :
+	// une config plus ancienne qui n'a pas cette copie doit la garder vide, sinon
+	// on supprimerait le repli documente de setup.py (dropped_by_setup), qui
+	// retrouve les options ajoutees a la main faute de copie.
+	if args, ok := out["args"].([]any); ok {
+		if _, existed := out["args_written"]; existed {
+			copie := make([]any, len(args))
+			copy(copie, args)
+			out["args_written"] = copie
+		}
+	}
+}
+
+// strataMillésimeDuMoteur : le millésime QUE LE MOTEUR POSÉ SUR LE DISQUE se
+// déclare, lu dans le BUILD.json posé à côté de son exe, et la raison qui le rend
+// injoignable quand il n'est pas là. Lecture seule : stat + un JSON, aucun
+// processus, aucun modèle chargé.
+//
+// DEUX MILLÉSIMES, DEUX SENS, à ne jamais confondre (l'erreur qui a coûté quatre
+// tours de diagnostic chez la voisine le 17/11) :
+//   - moeMillésimeDe(cfg)    lit ce que LE PRESET veut dire, dans ses chemins
+//     MOE_CONFIG / MOE_PYTHON / MOE_SOURCE. C'est une INTENTION, écrite à la main.
+//   - cette fonction lit ce qui EST LÀ, dans le BUILD.json du moteur visé.
+//
+// Les deux peuvent diverger, et c'est le cas Bekka : son preset pointait
+// strata-0.1.48-hip, l'exe épinglé 0.1.57. Elle voyait « FLASH NEXT GYRO-S HIP »
+// dans l'interface, et l'interface ne dit le millésime nulle part.
+//
+// Le critère « VERT » de l'humain (21/11) : « en vert si endpoint = moteur
+// installé, sinon rouge ». Il est rendu ici, et porté par handlePresets.
+func strataMillésimeDuMoteur(c map[string]string) (millésime, avis string) {
+	if !isStrataMoe(c) {
+		return "", ""
+	}
+	path := strataPath(c["MOE_CONFIG"])
+	if path == "" {
+		return "", "MOE_CONFIG non défini"
+	}
+	base, err := strataReadConfig(path)
+	if err != nil {
+		return "", "configuration du moteur introuvable"
+	}
+	// DÉCODER, comme le fait moeStrataPreflight juste avant de tester ses chemins.
+	// La config du moteur porte ses chemins ENCODÉS sous ${AJEAN_HOME}/ (écrits par
+	// strataPortableJSON(…, true)) : testés tels quels, ils sont faux et le moteur
+	// paraît absent. Faute mesurée par mon propre filet au premier essai.
+	decoded, err := strataPortableJSON(base, false)
+	if err != nil {
+		return "", "configuration du moteur illisible"
+	}
+	base, _ = decoded.(map[string]any)
+	exe, _ := base["exe"].(string)
+	if exe == "" || !isFile(strataPath(exe)) {
+		return "", "moteur MoE absent du disque"
+	}
+	meta, err := strataReadConfig(filepath.Join(filepath.Dir(strataPath(exe)), "BUILD.json"))
+	if err != nil {
+		return "", "BUILD.json absent à côté du moteur"
+	}
+	v := fmt.Sprint(meta["version"])
+	if v == "" || v == "<nil>" {
+		return "", "BUILD.json sans version"
+	}
+	return v, ""
+}
+
+// strataMillésimePreset : le verdict affiché sur la ligne d'un preset MoE.
+//
+//	VERT  : le millésime que le preset demande, celui que le moteur posé déclare
+//	        et celui qu'a épinglé CETTE application sont les trois mêmes.
+//	ROUGE : ils diffèrent, avec le nom de l'écart dans l'avis.
+//
+// ⚠ CE QUE ROUGE NE VEUT PLUS DIRE, depuis que la garde du préflight est devenue
+// un avertissement (ordre du 21/11) : un preset rouge DÉMARRE QUAND MÊME. Rouge
+// veut dire « le millésime demandé n'est pas celui que cette application épingle,
+// ça peut ne pas marcher », plus « c'est refusé ». L'avis doit le dire, sinon la
+// couleur ment.
+func strataMillésimePreset(c map[string]string) (millésime string, ok bool, avis string) {
+	// Un preset qui n'est pas un moteur Strata n'a NI vert NI rouge : une couleur
+	// sur un preset sans rapport ferait mentir la légende. Faute mesurée par mon
+	// propre filet au premier essai — le preset llama.cpp tombait en rouge avec
+	// « le preset ne nomme pas son moteur », parce que la question du millésime
+	// n'est jamais posée pour lui.
+	if !isStrataMoe(c) {
+		return "", false, ""
+	}
+	demande := moeMillésimeDe(c)
+	pose, avis := strataMillésimeDuMoteur(c)
+	if avis != "" {
+		return pose, false, avis
+	}
+	if demande == "" {
+		return pose, false, "le preset ne nomme pas son moteur"
+	}
+	if demande != pose {
+		return pose, false, fmt.Sprintf("le preset demande %s, le moteur posé est %s", demande, pose)
+	}
+	if pose != strataVersion {
+		return pose, false, fmt.Sprintf("moteur %s, cette application épinglée %s", pose, strataVersion)
+	}
+	return pose, true, ""
+}
+
+func serveStrataMoe(c map[string]string) error {
+	_, base, err := moeStrataPreflight(c)
+	if err != nil {
+		return err
+	}
+	final, err := moeStrataBuildConfig(base, c, readAPIKey())
+	if err != nil {
+		return err
+	}
+	run := filepath.Join(moeHome(), "run", "strata-"+c["MOE_BACKEND"]+".json")
+	if err = strataWriteJSON(run, final); err != nil {
+		return err
+	}
+	if err = os.MkdirAll(filepath.Join(moeHome(), "logs"), 0o700); err != nil {
+		return err
+	}
+	if err = os.Chdir(strataPath(c["MOE_SOURCE"])); err != nil {
+		return err
+	}
+	// The upstream server assigns its own actual CUDA/HIP device numbers. A
+	// previous llama.cpp preset's visibility mask must not renumber them first.
+	_ = os.Unsetenv("CUDA_VISIBLE_DEVICES")
+	_ = os.Unsetenv("HIP_VISIBLE_DEVICES")
+	py := strataPath(c["MOE_PYTHON"])
+	args := []string{py, "-u", "-m", "serve.server", "--engine", "strata", "--config", run, "--host", "127.0.0.1", "--port", fmt.Sprint(final["port"])}
+	_ = putBytes(bkState, engineCmdlineKey, []byte(engineCmdline(args)))
+	fmt.Fprintf(os.Stderr, "[ajean serve] Strata %s · %s · port %v\n", strataVersion, c["MOE_BACKEND"], final["port"])
+	return execServer(py, args)
+}
+
+func normalizeStrataInstall(r moeInstallReq) (moeInstallReq, error) {
+	if r.Backend == "" {
+		r.Backend = "hip"
+	}
+	if r.Backend != "hip" && r.Backend != "cuda" {
+		return r, errors.New("choisir AMD HIP ou NVIDIA CUDA")
+	}
+	if r.Toolkit == "" {
+		r.Toolkit = "13"
+	}
+	if r.Toolkit != "12" && r.Toolkit != "13" {
+		return r, errors.New("version CUDA inconnue")
+	}
+	if r.Context == 0 {
+		r.Context = 86016
+	}
+	if r.Context < 32768 || r.Context > moeMaxCtx || r.Context%4096 != 0 {
+		return r, errors.New("contexte entre 32 768 et 262 144, multiple de 4 096")
+	}
+	if r.VRAMReserve == nil {
+		n := 4096
+		r.VRAMReserve = &n
+	}
+	if *r.VRAMReserve < 0 || *r.VRAMReserve > 65536 {
+		return r, errors.New("réserve VRAM hors limites")
+	}
+	// La famille et la taille doivent exister quelque part : dans nos tables, ou
+	// dans le catalogue vivant du moteur. Sans cette seconde source, toute taille
+	// que setup.py sait installer mais que nos tables ne nomment pas serait
+	// refusee — et, pire, moeQuants[r.Quant] rendrait la valeur zero pour une
+	// taille inconnue : ArenaGB = 0, donc « ça tient » annonce a tort.
+	if !moeKnowsChoice(r.Family, r.Quant) {
+		if cat, err := strataCatalogueGet(); err == nil {
+			if s := strataSize(cat, r.Family, r.Quant); s == nil || s.Experimental {
+				return r, errors.New("famille ou quantification inconnue du moteur")
+			} else if why := strataFamilyBlocked(r.Family, r.Backend); why != "" {
+				return r, errors.New(why)
+			}
+		} else {
+			return r, errors.New("famille ou quantification inconnue")
+		}
+	}
+	if r.GGUFDir != "" {
+		d := strataAbsPath(r.GGUFDir)
+		if !strataFileExists(d) {
+			return r, fmt.Errorf("le dossier de GGUF n'existe pas : %s", d)
+		}
+		r.GGUFDir = d
+	}
+	return r, nil
+}
+
+// moeKnowsChoice : le couple est-il dans nos tables recopiees ?
+func moeKnowsChoice(family, quant string) bool {
+	for _, f := range moeFamilies {
+		if f.ID == family && moeHas(f.Quants, quant) {
+			return true
+		}
+	}
+	return false
+}
+
+// strataAbsPath : un chemin choisi par l'humain, rendu absolu sous nos pieds.
+// On n'accepte que ce qui existe reellement ; le poseur, lui, ne recopie que des
+// jetons sans separateur de chemin (moe_portable_install.ps1 L137).
+func strataAbsPath(p string) string {
+	p = strings.TrimSpace(strings.Trim(p, "\""))
+	if filepath.IsAbs(p) {
+		return filepath.Clean(p)
+	}
+	return filepath.Clean(filepath.Join(AjeanHome(), p))
+}
+
+func runStrataInstallStep(dir, script string, args ...string) error {
+	if err := os.MkdirAll(filepath.Join(moeHome(), "logs"), 0o700); err != nil {
+		return err
+	}
+	log, err := os.OpenFile(filepath.Join(moeHome(), "logs", "installation.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		return err
+	}
+	defer log.Close()
+	cmd := hideCmd(exec.Command("powershell.exe", append([]string{"-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script}, args...)...))
+	cmd.Dir = dir
+	cmd.Env = upsertEnv(os.Environ(), "PYTHONUNBUFFERED=1")
+	cmd.Stdout = io.MultiWriter(log, &sinkWriter{})
+	cmd.Stderr = cmd.Stdout
+	prepareBoundChild(cmd)
+	if err = cmd.Start(); err != nil {
+		return err
+	}
+	bindChild(cmd)
+	setCurCmd(cmd)
+	err = cmd.Wait()
+	setCurCmd(nil)
+	if buildWasCanceled() {
+		return errors.New("installation MoE annulée ; relancer reprend les téléchargements déjà terminés")
+	}
+	return err
+}
+
+func moeStrataInstall(req moeInstallReq) {
+	if req.Backend == "" {
+		req.Backend = moeStrataEnvironment("").Backend
+	}
+	r, err := normalizeStrataInstall(req)
+	if err != nil {
+		lcFail(err)
+		return
+	}
+	env := moeStrataEnvironment(r.Backend)
+	if !env.Supported {
+		lcFail(errors.New(env.Reason))
+		return
+	}
+	// Le cout annonce vient du moteur quand on a son catalogue : nos tables
+	// recopiees ne connaissent que quatre tailles, et moeQuants rendrait 0 pour
+	// une taille qu'elles ne nomment pas.
+	qq := moeQuants[r.Quant]
+	if cat, err := strataCatalogueGet(); err == nil {
+		if s := strataSize(cat, r.Family, r.Quant); s != nil {
+			qq = strataQuant(s)
+		}
+	}
+	if f := moeFitFor(qq, env, moeHaveGB(r.Family, r.Quant)); !f.OK {
+		lcFail(errors.New(f.Why))
+		return
+	}
+	if why := strataFamilyBlocked(r.Family, r.Backend); why != "" {
+		lcFail(errors.New(why))
+		return
+	}
+	if err = os.MkdirAll(moeHome(), 0o700); err != nil {
+		lcFail(err)
+		return
+	}
+	if err = parallelWritablePath(moeHome()); err != nil {
+		lcFail(err)
+		return
+	}
+	script := filepath.Join(moeHome(), "installer-r6.ps1")
+	wrapper := filepath.Join(moeHome(), "ajean_setup.py")
+	if err = os.WriteFile(script, append([]byte{0xef, 0xbb, 0xbf}, strataInstallScript...), 0o600); err != nil {
+		lcFail(err)
+		return
+	}
+	if err = os.WriteFile(wrapper, strataSetupWrapper, 0o600); err != nil {
+		lcFail(err)
+		return
+	}
+	if err = os.WriteFile(filepath.Join(moeHome(), "windows-manifest.json"), strataWindowsManifest, 0o600); err != nil {
+		lcFail(err)
+		return
+	}
+	args := []string{"-MoeHome", moeHome(), "-Backend", r.Backend, "-Toolkit", r.Toolkit, "-Family", r.Family, "-Quant", r.Quant, "-Context", strconv.Itoa(r.Context), "-ReserveMiB", strconv.Itoa(*r.VRAMReserve)}
+	if r.Vision {
+		args = append(args, "-Vision")
+	}
+	if r.GGUFDir != "" {
+		args = append(args, "-GGUFDir", r.GGUFDir)
+	}
+	// Le cout annonce vient du moteur (voir plus haut), pas de nos tables.
+	lcPhase(fmt.Sprintf("Strata %s · %s %s : préparation portable puis ~%.0f Go de poids", strataVersion, r.Backend, r.Quant, qq.DownloadGB))
+	if err = runStrataInstallStep(moeHome(), script, args...); err != nil {
+		lcFail(fmt.Errorf("installation MoE : %w ; voir data/moe/logs/installation.log", err))
+		return
+	}
+	src := strataSourceDir(r.Backend, r.Toolkit)
+	path := filepath.Join(src, "strata-"+strings.ToLower(moeTag(r.Family, r.Quant))+".json")
+	base, err := strataReadConfig(path)
+	if err != nil {
+		lcFail(err)
+		return
+	}
+	portable, err := strataPortableJSON(base, true)
+	if err != nil {
+		lcFail(err)
+		return
+	}
+	if err = strataWriteJSON(path, portable); err != nil {
+		lcFail(err)
+		return
+	}
+	rel := func(p string) string { v, _ := filepath.Rel(AjeanHome(), p); return v }
+	cfg := map[string]string{"ENGINE": "moe", "MOE_RUNTIME": "strata-windows", "MOE_BACKEND": r.Backend, "MOE_TOOLKIT": r.Toolkit,
+		"MOE_SOURCE": rel(src), "MOE_PYTHON": rel(filepath.Join(src, "python", "python.exe")), "MOE_CONFIG": rel(path),
+		"MOE_KV": "int8", "MOE_SPEC": "3", "MOE_VISION": map[bool]string{true: "1", false: "0"}[r.Vision], "MOE_VRAM_RESERVE": strconv.Itoa(*r.VRAMReserve),
+		"CTX": strconv.Itoa(r.Context), "HOST": "127.0.0.1", "PORT": "18080", "REASONING": "on"}
+	// Carry the native agent/access and memory defaults; installing a MoE model
+	// must not silently turn off the user's existing memory setup.
+	for k, v := range ReadConfig() {
+		if strings.HasPrefix(k, "MEMORY_") || k == "MEM_MODE" {
+			cfg[k] = v
+		}
+	}
+	id := strataPresetName(r.Family, r.Quant, r.Backend)
+	if _, err = SavePreset(id, moeFamilyLabel(r.Family)+" "+r.Quant+" · "+strings.ToUpper(r.Backend), formatEnv(cfg)); err != nil {
+		lcFail(err)
+		return
+	}
+	lcPhase("modèle préparé ; activation dans le processus du TEST…")
+	if err = SwitchToPreset(filepath.Join(presetsDir(), id+".env")); err != nil {
+		lcFail(fmt.Errorf("installé, démarrage impossible : %w", err))
+		return
+	}
+	lcDone("MoE installé ; chargement en cours, vérifier son état puis lancer le test du moteur")
+}
+
+func moeStrataDetails(c map[string]string) *moeDetails {
+	n, _ := strconv.Atoi(c["MOE_VRAM_RESERVE"])
+	base, _ := strataReadConfig(strataPath(c["MOE_CONFIG"]))
+	_, visionAvailable := base["vision"].(map[string]any)
+	return &moeDetails{Version: "Strata " + strataVersion, Ctx: c["CTX"], KV: c["MOE_KV"], Spec: c["MOE_SPEC"], Backend: c["MOE_BACKEND"], VRAMReserve: n, Modern: true,
+		Vision: c["MOE_VISION"] == "1", VisionAvailable: visionAvailable, MainGPU: strings.ToUpper(c["MOE_BACKEND"]), Prefill: "auto", ShortRead: "auto", CacheRoot: "défaut du moteur"}
+}
+func moeStrataSettings(content string, r moeSettingsReq) (string, error) {
+	c := parseEnv(content)
+	if r.Ctx < 32768 || r.Ctx > moeMaxCtx || r.Ctx%4096 != 0 {
+		return "", errors.New("contexte hors limites")
+	}
+	if r.KV != "int8" && r.KV != "q4_0" && r.KV != "k8v4" {
+		return "", errors.New("cache KV inconnu")
+	}
+	if r.Spec < 2 || r.Spec > 4 {
+		return "", errors.New("MTP hors limites")
+	}
+	if r.Helper || r.Split == "layers" {
+		return "", errors.New("ce prototype utilise une carte par modèle ; pas de mélange AMD/NVIDIA")
+	}
+	if r.Vision && !moeStrataDetails(c).VisionAvailable {
+		return "", errors.New("la vision doit être choisie lors de la préparation initiale de ce modèle")
+	}
+	c["CTX"], c["MOE_KV"], c["MOE_SPEC"] = strconv.Itoa(r.Ctx), r.KV, strconv.Itoa(r.Spec)
+	c["MOE_VISION"] = map[bool]string{true: "1", false: "0"}[r.Vision]
+	if r.VRAMReserve != nil {
+		if *r.VRAMReserve < 0 || *r.VRAMReserve > 65536 {
+			return "", errors.New("réserve VRAM hors limites")
+		}
+		c["MOE_VRAM_RESERVE"] = strconv.Itoa(*r.VRAMReserve)
+	}
+	return formatEnv(c), nil
+}
+
+var strataGPUCache struct {
+	sync.Mutex
+	At   time.Time
+	GPUs []moeGPU
+}
+
+// Read-only discovery; no AMD SMI (which may ask for elevation on Windows).
+func strataWindowsCards() []moeGPU {
+	strataGPUCache.Lock()
+	defer strataGPUCache.Unlock()
+	if time.Since(strataGPUCache.At) < 30*time.Second {
+		return append([]moeGPU(nil), strataGPUCache.GPUs...)
+	}
+	var cards []moeGPU
+	if found, err := detectGPUs(); err == nil {
+		for _, g := range found {
+			mib, _ := strconv.ParseFloat(g.MemTotal, 64)
+			cap, _ := strconv.ParseFloat(g.Cap, 64)
+			if cap >= 6 && mib >= 7500 {
+				cards = append(cards, moeGPU{Index: g.Index, Name: g.Name, VRAMGB: mib / 1024, Arch: int(cap*10 + .5), Backend: "cuda"})
+			}
+		}
+	}
+	if runtime.GOOS == "windows" {
+		const ps = `$regs=@(Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}' -ErrorAction SilentlyContinue | Where-Object {$_.PSChildName -match '^\d{4}$'} | ForEach-Object {Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue}); $items=@(Get-CimInstance Win32_VideoController | Where-Object {$_.PNPDeviceID -match 'VEN_1002'} | ForEach-Object {$card=$_; $size=0; foreach($r in $regs){if($r.DriverDesc -eq $card.Name -and $r.'HardwareInformation.qwMemorySize' -gt $size){$size=$r.'HardwareInformation.qwMemorySize'}}; [PSCustomObject]@{name=$card.Name;pnp=$card.PNPDeviceID;bytes=$size}}); [PSCustomObject]@{items=$items} | ConvertTo-Json -Depth 3 -Compress`
+		ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+		defer cancel()
+		cmd := hideCmd(exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-NonInteractive", "-Command", ps))
+		if b, err := cmd.Output(); err == nil {
+			cards = append(cards, strataParseAMDCards(b)...)
+		}
+	}
+	strataGPUCache.At, strataGPUCache.GPUs = time.Now(), cards
+	return append([]moeGPU(nil), cards...)
+}
+func strataParseAMDCards(b []byte) []moeGPU {
+	var input struct {
+		Items []struct {
+			Name  string
+			PNP   string
+			Bytes float64
+		}
+	}
+	if json.Unmarshal(b, &input) != nil {
+		return nil
+	}
+	var out []moeGPU
+	for i, g := range input.Items {
+		upper := strings.ToUpper(g.PNP + " " + g.Name)
+		arch := ""
+		for id, a := range map[string]string{"744C": "gfx1100", "7448": "gfx1100", "745E": "gfx1100", "747E": "gfx1101", "7480": "gfx1102", "7590": "gfx1200", "7550": "gfx1201", "7551": "gfx1201", "73BF": "gfx1030", "73AF": "gfx1030", "73A5": "gfx1030"} {
+			if strings.Contains(upper, "DEV_"+id) {
+				arch = a
+				break
+			}
+		}
+		if arch == "" && strings.Contains(upper, "R9700") {
+			arch = "gfx1201"
+		}
+		if arch != "" {
+			out = append(out, moeGPU{Index: i, Name: g.Name, VRAMGB: g.Bytes / (1 << 30), HIPArch: arch, Backend: "hip"})
+		}
+	}
+	return out
+}
+func strataSelectEnvironment(cards []moeGPU, backend string, ram, disk float64) moeEnv {
+	e := moeEnv{Main: -1, Helper: -1, RAMGB: ram, DiskFreeGB: disk, Backend: backend, Portable: true}
+	for _, b := range []string{"hip", "cuda"} {
+		for _, g := range cards {
+			if g.Backend == b {
+				e.Backends = append(e.Backends, b)
+				break
+			}
+		}
+	}
+	if e.Backend == "" && len(e.Backends) > 0 {
+		e.Backend = e.Backends[0]
+	}
+	for _, g := range cards {
+		if g.Backend == e.Backend {
+			e.GPUs = append(e.GPUs, g)
+		}
+	}
+	if len(e.GPUs) == 0 {
+		e.Visible = true
+		e.Reason = "aucun GPU compatible détecté pour ce backend ; pilote requis"
+		return e
+	}
+	sort.SliceStable(e.GPUs, func(i, j int) bool { return e.GPUs[i].VRAMGB > e.GPUs[j].VRAMGB })
+	e.Main = e.GPUs[0].Index
+	e.Visible = true
+	if e.GPUs[0].VRAMGB > 0 && e.GPUs[0].VRAMGB < 7.5 {
+		e.Reason = "8 Go de VRAM minimum"
+		return e
+	}
+	e.Supported = true
+	return e
+}
+func moeStrataEnvironment(backend string) moeEnv {
+	disk := float64(diskFree(AjeanHome())) / 1e9
+	return strataSelectEnvironment(strataWindowsCards(), backend, totalRAMGB(), disk)
+}
+
+// strataPanelFamily : une ligne du panneau « Moteur MoE ». Type au niveau paquet
+// et pas de la fonction, pour qu'un test puisse le construire et vérifier le
+// contrat JSON sans serveur HTTP.
+type strataPanelFamily struct {
+	moeFamily
+	Fits      []moeFit `json:"fits"`
+	Recommend string   `json:"recommend"`
+	Blocked   string   `json:"blocked,omitempty"` // famille que ce poste ne peut pas installer en un clic
+}
+
+func handleStrataMoe(w http.ResponseWriter, r *http.Request) {
+	e := moeStrataEnvironment(r.URL.Query().Get("backend"))
+	// Le catalogue vivant du moteur, si son serveur repond. S'il est absent ou
+	// muet, on retombe sur nos deux tables : le panneau doit continuer d'afficher
+	// ce qu'il a toujours affiche.
+	cat, catErr := strataCatalogueGet()
+	var installed []string
+	list, _ := ListPresets()
+	presets := map[string]map[string]string{}
+	backends := map[string]string{}
+	active := map[string]bool{}
+	for _, p := range list {
+		raw, err := ReadPreset(p.ID)
+		if err != nil {
+			continue
+		}
+		c := parseEnv(raw)
+		if isStrataMoe(c) {
+			installed = append(installed, p.ID)
+			presets[p.ID] = c
+			backends[p.ID] = c["MOE_BACKEND"]
+			active[p.ID] = p.Active
+		}
+	}
+	src := strataFamilies(cat, e.Backend)
+	if len(src) == 0 {
+		src = moeFamilies // repli : nos tables recopiees, si le serveur n'a pas repondu
+	}
+	families := strataPanelFamilies(e, cat, catErr, src, presets, active)
+	sendJSON(w, 200, strataPanelResponse(e, families, installed, backends, cat, catErr))
+}
+
+// strataPanelFamilies : les lignes du panneau, pour chaque famille proposee.
+// Séparé du handler pour qu'un test puisse jouer le contrat JSON sans serveur
+// HTTP, avec un catalogue factice — c'est ce qui manquait à la révision 4 :
+// ses tests vérifiaient les tables, jamais ce que `encoding/json` en fait.
+func strataPanelFamilies(e moeEnv, cat *strataCatalogue, catErr error, src []moeFamily,
+	presets map[string]map[string]string, active map[string]bool) []strataPanelFamily {
+	families := make([]strataPanelFamily, 0, len(src))
+	for _, f := range src {
+		// Fits commence à TABLEAU VIDE, jamais à nil. Le contrat est là : l'interface
+		// lit f.fits.find(...) sur toutes les familles sans filtre, et une famille
+		// sans taille rendue « null » fait tomber la boucle entière. Mesuré le
+		// 31/10/2026 avec la révision 4 : la famille NVFP4, écartée par
+		// strataFamilyBlocked, rend zéro taille → « fits: null » → l'engrenage des
+		// presets MoE ne répond plus ET le panneau Configuration reste bloqué sur
+		// son squelette de chargement (loadCfg lève avant swapContent). Un seul
+		// défaut, deux symptômes, et aucun des deux visible aux tests Go.
+		v := strataPanelFamily{moeFamily: f, Fits: []moeFit{}, Recommend: moeRecommend(f.ID, e)}
+		if why := strataFamilyBlocked(f.ID, e.Backend); why != "" {
+			v.Blocked = why
+		}
+		for _, q := range f.Quants {
+			// Les couts viennent du moteur quand on les a, sinon de nos tables.
+			qq, connu := moeQuants[q]
+			if s := strataSize(cat, f.ID, q); s != nil {
+				qq = strataQuant(s)
+				connu = true
+			}
+			if !connu {
+				continue // le moteur nomme une taille dont on ne sait pas chiffrer le cout
+			}
+			have := moeHaveGB(f.ID, q)
+			if catErr == nil {
+				have = strataHaveGB(cat, f.ID, q)
+			}
+			fit := moeFitFor(qq, e, have)
+			if s := strataSize(cat, f.ID, q); s != nil {
+				fit.EngineVerdict = s.OnThisPC
+				fit.EngineMin = strataEngineMin(s.EngineMin)
+			}
+			if why := strataFamilyBlocked(f.ID, e.Backend); why != "" {
+				fit.Blocked = why
+			}
+			id := strataPresetName(f.ID, q, e.Backend)
+			if c, ok := presets[id]; ok {
+				fit.Preset = id
+				fit.Active = active[id]
+				fit.Details = moeStrataDetails(c)
+			}
+			v.Fits = append(v.Fits, fit)
+		}
+		families = append(families, v)
+	}
+	return families
+}
+
+// strataPanelResponse : ce que le panneau recoit. Séparé du handler pour que le
+// test puisse vérifier le contenu sans serveur HTTP.
+func strataPanelResponse(e moeEnv, families any, installed []string, backends map[string]string,
+	cat *strataCatalogue, catErr error) map[string]any {
+	resp := map[string]any{"version": "Strata " + strataVersion, "env": e, "families": families,
+		"installed": installed, "preset_backends": backends, "modern": true,
+		"default_context": 86016, "default_vram_reserve_mib": 4096,
+		"catalogue": "local"}
+	if catErr == nil && cat != nil {
+		resp["catalogue"] = "moteur"
+		resp["catalogue_source"] = cat.Source
+		resp["contexts"] = cat.Contexts
+		resp["context_note"] = cat.ContextNote
+		if cat.Recommendation != nil {
+			resp["engine_recommend"] = map[string]any{
+				"family": cat.Recommendation.Family, "model": cat.Recommendation.Model,
+				"context": cat.Recommendation.Context,
+				"why":     cat.Recommendation.Why, "notes": cat.Recommendation.Notes,
+			}
+		}
+	} else if catErr != nil {
+		resp["catalogue_error"] = catErr.Error()
+	}
+	return resp
+}
