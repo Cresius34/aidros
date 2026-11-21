@@ -484,6 +484,14 @@ foreach ($d in @($progs, [Environment]::GetFolderPath('Desktop'))) {
       # Icône épinglée sur l'exe : sans ça, Windows garde parfois en cache
       # l'icône d'un binaire remplacé et affiche un carré blanc.
       if ($s.IconLocation -ne "$t,0") { $s.IconLocation="$t,0"; $chg=$true }
+      # Le libellé que Windows affiche au survol suit le nom de l'application.
+      # Le réparer aussi pour un raccourci QUI EXISTE DÉJÀ : sans cette ligne,
+      # le correctif ne touchait jamais la machine où le raccourci est posé
+      # depuis des mois — il ne s'appliquait qu'aux créations. Le garde-fou
+      # voulu par ce bloc (« ne pas défaire un déplacement volontaire ») porte
+      # sur la cible du raccourci, pas sur son texte : réaligner le texte ne
+      # déplace rien.
+      if ($s.Description -ne 'Aidros') { $s.Description='Aidros'; $chg=$true }
       if ($chg) { $s.Save() }
     } catch {}
     $done+=$d; continue
@@ -492,7 +500,7 @@ foreach ($d in @($progs, [Environment]::GetFolderPath('Desktop'))) {
     $s=$w.CreateShortcut($lnk)
     $s.TargetPath=$t
     $s.WorkingDirectory=(Split-Path $t)
-    $s.Description='AJEAN, votre IA locale'
+    $s.Description='Aidros'
     # Minimisé (7) : le binaire étant en sous-système console, Windows lui alloue
     # une console au lancement. AJEAN la referme aussitôt, mais demander un
     # démarrage minimisé garantit qu'elle n'est jamais peinte à l'écran.

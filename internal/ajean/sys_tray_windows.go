@@ -21,22 +21,29 @@ import (
 // notification. Bloque jusqu'à ce que l'utilisateur choisisse « Quitter ».
 func runTray(url string) {
 	systray.Run(func() {
-		title, tip := "AJEAN", "AJEAN — votre IA locale"
+		// Les cinq libellés viennent d'une fonction, pas de littéraux ici :
+		// runTray bloque jusqu'à « Quitter » et exige une session graphique,
+		// donc rien de ce qui s'affiche sous l'horloge n'était vérifiable. Les
+		// libellés vivent dans sys_marque_os.go, gardés par
+		// TestLibellesTrayPortentUnNom.
+		//
+		// L'infobulle ne dit PLUS le port. Elle le disait (« … — port 18090 »)
+		// et l'humain a demandé le nom seul, capture à l'appui. Coût assumé et
+		// nommé : le port n'est plus lisible sous l'horloge ; il reste dans
+		// l'onglet Statut et dans /api/status.
+		title, tip, ouvrir, quitter, avisQuitter := libellesTray()
 		if parallelBuild() {
-			title = "AJEAN Mémoire TEST"
-			tip = "AJEAN Mémoire TEST — port " + parallelUIPort()
+			// Le build portable n'arrête pas le moteur en quittant (il ne
+			// l'arrête pas : voir la fonction de sortie). Le dire ici vaut
+			// mieux qu'un libellé qui promet « décharger le modèle ».
+			avisQuitter = "Arrêter cette copie et son encodeur"
 		}
 		systray.SetIcon(trayIcon())
 		systray.SetTitle(title)
 		systray.SetTooltip(tip)
-		mOpen := systray.AddMenuItem("Ouvrir "+title, "Ouvrir l'interface")
+		mOpen := systray.AddMenuItem(ouvrir, "Ouvrir l'interface")
 		systray.AddSeparator()
-		quitLabel, quitTip := "Quitter", "Arrêter AJEAN et décharger le modèle"
-		if parallelBuild() {
-			quitLabel = "Quitter le TEST"
-			quitTip = "Arrêter uniquement l’encodeur CPU de cette copie"
-		}
-		mQuit := systray.AddMenuItem(quitLabel, quitTip)
+		mQuit := systray.AddMenuItem(quitter, avisQuitter)
 
 		go func() {
 			for {
