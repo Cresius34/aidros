@@ -11588,7 +11588,7 @@ function moeCatalogueLine(){
     el.textContent = 'Modèles lus dans le catalogue du moteur ('+escHtml(s.catalogue_source||'setup.py')+') : '
       +(s.families||[]).length+' familles, '+n+' tailles.';
   }else{
-    el.textContent = 'Catalogue du moteur indisponible — liste interne d’Ajean ('
+    el.textContent = 'Catalogue du moteur indisponible — liste interne d’Aidros ('
       +((s.families||[]).length)+' familles). '+(s.catalogue_error||'');
   }
 }
@@ -12401,7 +12401,7 @@ function renderBridge(d){
       note.textContent = 'Écoute sur le port ' + d.port + ' ; le cerveau vient de : ' + src + '.';
     } else if(live){
       mdl.textContent = 'Aucun modèle ne répond derrière ce pont';
-      note.textContent = 'Le pont écoute mais rien ne répond derrière (' + src + ') : activer un preset — MoE local, API externe ou cloud — sinon l’autre Ajean recevra une erreur.';
+      note.textContent = 'Le pont écoute mais rien ne répond derrière (' + src + ') : activer un preset — MoE local, API externe ou cloud — sinon l’autre Aidros recevra une erreur.';
     } else {
       mdl.textContent = 'Aucun modèle prêté';
       note.textContent = 'Un pont ouvert sans preset actif n’a rien à prêter : activer un preset (page Modèles), MoE local, API externe ou cloud.';

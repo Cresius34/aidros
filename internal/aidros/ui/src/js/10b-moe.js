@@ -156,7 +156,7 @@ function moeCatalogueLine(){
     el.textContent = 'Modèles lus dans le catalogue du moteur ('+escHtml(s.catalogue_source||'setup.py')+') : '
       +(s.families||[]).length+' familles, '+n+' tailles.';
   }else{
-    el.textContent = 'Catalogue du moteur indisponible — liste interne d’Ajean ('
+    el.textContent = 'Catalogue du moteur indisponible — liste interne d’Aidros ('
       +((s.families||[]).length)+' familles). '+(s.catalogue_error||'');
   }
 }

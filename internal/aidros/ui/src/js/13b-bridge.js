@@ -69,7 +69,7 @@ function renderBridge(d){
       note.textContent = 'Écoute sur le port ' + d.port + ' ; le cerveau vient de : ' + src + '.';
     } else if(live){
       mdl.textContent = 'Aucun modèle ne répond derrière ce pont';
-      note.textContent = 'Le pont écoute mais rien ne répond derrière (' + src + ') : activer un preset — MoE local, API externe ou cloud — sinon l’autre Ajean recevra une erreur.';
+      note.textContent = 'Le pont écoute mais rien ne répond derrière (' + src + ') : activer un preset — MoE local, API externe ou cloud — sinon l’autre Aidros recevra une erreur.';
     } else {
       mdl.textContent = 'Aucun modèle prêté';
       note.textContent = 'Un pont ouvert sans preset actif n’a rien à prêter : activer un preset (page Modèles), MoE local, API externe ou cloud.';
