@@ -220,7 +220,8 @@ Installation:
   serve                         entrypoint du service : exec llama-server (usage interne)
 
 Env:
-  AJEAN_HOME   racine des données (défaut : /etc/ajean, %%ProgramData%%\ajean sous Windows)
+  AJEAN_HOME   racine des données (défaut : /etc/aidros, %%ProgramData%%\Aidros sous Windows ;
+               le nom « ajean » d'avant reste lu s'il existe déjà — ne pas perdre sa mémoire)
   EDITOR       éditeur pour 'ajean edit' (défaut : nano, notepad sous Windows)
 `, Version)
 }

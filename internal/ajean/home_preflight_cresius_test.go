@@ -8,7 +8,8 @@ package ajean
 // moeStrataPreflight resout MOE_CONFIG / MOE_SOURCE / MOE_PYTHON RELATIFS depuis
 // AjeanHome() (backend_moe_strata.go:145 + strataPath). AjeanHome() n'a que trois
 // sources (run.go:228) : $AJEAN_HOME, /etc/default/ajean (absent sous Windows),
-// puis defaultAjeanHome() = homeRoot()+"\ajean" = C:\ProgramData\ajean.
+// puis defaultAjeanHome() = homeRoot()+"\Aidros" = C:\ProgramData\Aidros (le nom
+// « ajean » d'avant reste admis s'il existe déjà, voir repli_dossier_aidros_test.go).
 //
 // Mesure de ce soir : AJEAN_HOME n'est dans le registre NI machine NI utilisateur.
 // L'app lancee depuis l'explorateur (chaine des peres mesuree : explorer.exe ->
@@ -62,9 +63,13 @@ func TestPreflightSurLeVraiHome(t *testing.T) {
 // TestPreflightSurLeRepli : ce que l'app trouve quand AJEAN_HOME n'est pas
 // heritee, c'est-a-dire quand on la lance en double-cliquant. C'est LA cause du
 // « le binaire archive ne demarre pas Strata » : l'archive n'a aucun data a cote
-// d'elle, et le repli C:\ProgramData\ajean est un 0.18.4 du 18/10 sans moteur.
+// d'elle, et le dossier de repli n'a aucun moteur installe.
+//
+// Le repli est resolu PAR LA FONCTION, pas ecrit en dur : il s'appelle « Aidros »
+// depuis le 21/11 et « ajean » avant, et un test qui forcerait l'un des deux noms
+// cesserait de tester le repli le jour ou le nom bouge — sans le dire.
 func TestPreflightSurLeRepli(t *testing.T) {
-	repli := filepath.Join(homeRoot(), "ajean")
+	repli := defaultAjeanHome()
 	t.Setenv("AJEAN_HOME", repli)
 	if _, err := os.Stat(filepath.Join(repli, "moe")); err == nil {
 		t.Skip("le repli a un data\\moe : la demonstration ne tient plus ici")

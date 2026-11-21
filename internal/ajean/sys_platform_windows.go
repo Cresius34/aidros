@@ -56,7 +56,29 @@ func homeRoot() string {
 }
 
 // defaultAjeanHome est la racine des données quand $AJEAN_HOME est absent.
-func defaultAjeanHome() string { return filepath.Join(homeRoot(), "ajean") }
+//
+// Elle s'appelle « Aidros » depuis le renommage du 21/11 (ordre de l'humain :
+// « il cherche le mauvais dossier, fais-lui chercher un dossier Aidros »).
+//
+// Le dossier « ajean » reste ADMIS, en second seulement, et cet ordre est un
+// contrat : une machine installée avant le renommé a sa mémoire sous
+// <ProgramData>\ajean. Repartir sur un Aidros vide, c'est l'application qui
+// s'ouvre SANS MÉMOIRE et sans se plaindre — un dossier créé par la machine ne
+// s'appelle pas « installation vide » tout seul. Donc : Aidros s'il existe,
+// sinon ajean s'il existe, sinon Aidros (il sera créé).
+//
+// Le cas « les deux existent » est tranché en faveur d'Aidros : le renommage
+// d'un old en Aidros est LE geste de bascule, et il doit être suffisant pour
+// compter, sans avoir à supprimer l'ancien le même jour.
+func defaultAjeanHome() string {
+	nouveau := filepath.Join(homeRoot(), "Aidros")
+	if !isDir(nouveau) {
+		if ancien := filepath.Join(homeRoot(), "ajean"); isDir(ancien) {
+			return ancien
+		}
+	}
+	return nouveau
+}
 
 // defaultEditor is used by `ajean edit` when $EDITOR is unset.
 func defaultEditor() string { return "notepad" }

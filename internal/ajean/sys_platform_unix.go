@@ -7,9 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -19,24 +17,48 @@ import (
 // defaultAjeanHome est la racine des données quand ni $AJEAN_HOME ni
 // /etc/default/ajean n'en imposent une.
 //
-// Linux : /etc/ajean (machine de prod, service systemd lancé par root).
-// macOS : /etc/ajean n'est PAS écrivable par une app lancée depuis le Finder
-// (« mkdir /etc/ajean: permission denied »), et un Mac est une machine de bureau,
-// pas un serveur — on retombe donc sur le dossier utilisateur standard, sauf si
-// un `sudo ajean install` a déjà créé /etc/ajean à notre nom.
-func defaultAjeanHome() string { return unixHome("ajean") }
+// Le dossier s'appelle « aidros » depuis le renommage du 21/11, le nom « ajean »
+// restant ADMIS en second (voir sys_platform_windows.go : même contrat, même
+// raison — une machine installée avant le renommé a sa mémoire sous l'ancien
+// nom). Sur macOS, c'est ~/Library/Application Support/aidros.
+//
+// /etc/default/ajean garde son nom : c'est un fichier que l'installeur écrit et
+// que lit readEtcDefault (run.go:249), sur une machine déjà installée. Le
+// renommer sans lire l'ancien rendrait la racine introuvable chez l'utilisateur
+// qui l'a. Il n'est donc PAS question d'y toucher ici.
+func defaultAjeanHome() string { return unixHome("aidros", "ajean") }
 
-func unixHome(name string) string {
+// unixHome rend le chemin du dossier de données. Le nom d'aujourd'hui
+// (nouveau) gagne ; le nom d'hier (ancien) n'est retenu QUE s'il existe déjà,
+// parce qu'il y porte la mémoire et les clés de quelqu'un. Aucun test
+// d'écriture n'est ajouté sur le chemin de l'admission : un simple Stat, pour ne
+// pas aller poser une sonde dans /etc deux fois par appel.
+func unixHome(nouveau, ancien string) string {
+	// Linux, et macOS lancé par root : un chemin machine, sans test d'écriture.
 	if runtime.GOOS != "darwin" || os.Geteuid() == 0 {
-		return "/etc/" + name
+		if isDir("/etc/" + nouveau) {
+			return "/etc/" + nouveau
+		}
+		if isDir("/etc/" + ancien) {
+			return "/etc/" + ancien // la machine a été installée avant le renommé
+		}
+		return "/etc/" + nouveau // il sera créé
 	}
-	if isWritableDir("/etc/" + name) {
-		return "/etc/" + name // installé par `sudo ajean install` puis chown à l'utilisateur
+	// macOS : /etc n'est PAS écrivable par une app lancée depuis le Finder
+	// (« mkdir /etc/aidros: permission denied »), et un Mac est une machine de
+	// bureau, pas un serveur — on retombe donc sur le dossier utilisateur.
+	if isWritableDir("/etc/" + nouveau) {
+		return "/etc/" + nouveau // installé par `sudo ajean install` puis chown à l'utilisateur
 	}
 	if home, err := os.UserHomeDir(); err == nil {
-		return filepath.Join(home, "Library", "Application Support", name)
+		for _, name := range []string{nouveau, ancien} {
+			if cand := filepath.Join(home, "Library", "Application Support", name); isDir(cand) {
+				return cand
+			}
+		}
+		return filepath.Join(home, "Library", "Application Support", nouveau)
 	}
-	return "/etc/" + name
+	return "/etc/" + nouveau
 }
 
 // isWritableDir teste qu'un dossier existe ET qu'on peut y écrire (le seul test
@@ -326,47 +348,3 @@ func killTree(pid int) {
 		_ = syscall.Kill(-pid, syscall.SIGKILL)
 	}
 }
-
-// reVerNum capture le premier numéro de version pointé d'un chemin
-// (« /usr/local/cuda-12.8/lib64 » → « 12.8 »).
-var reVerNum = regexp.MustCompile(`\d+(?:\.\d+)+`)
-
-func pathVersion(s string) string { return reVerNum.FindString(filepath.ToSlash(s)) }
-
-// cmpVersion compare deux versions pointées NUMÉRIQUEMENT (« 12.10 » > « 12.4 »)
-// là où un tri de chaînes se tromperait. Renvoie -1, 0 ou 1. Une chaîne vide est
-// plus petite que toute version.
-func cmpVersion(a, b string) int {
-	if a == b {
-		return 0
-	}
-	as, bs := strings.Split(a, "."), strings.Split(b, ".")
-	n := len(as)
-	if len(bs) > n {
-		n = len(bs)
-	}
-	for i := 0; i < n; i++ {
-		var x, y int
-		if i < len(as) {
-			x, _ = strconv.Atoi(as[i])
-		}
-		if i < len(bs) {
-			y, _ = strconv.Atoi(bs[i])
-		}
-		if x != y {
-			if x < y {
-				return -1
-			}
-			return 1
-		}
-	}
-	return 0
-}
-
-// sortByVersionDesc trie des chemins par version décroissante (sémantique).
-func sortByVersionDesc(paths []string) {
-	sort.SliceStable(paths, func(i, j int) bool {
-		return cmpVersion(pathVersion(paths[i]), pathVersion(paths[j])) > 0
-	})
-}
-
