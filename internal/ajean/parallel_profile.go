@@ -56,10 +56,20 @@ const parallelMemoryRevision = 7
 // pour une carte dédiée (#182, et c'est bien ce chemin qui nous sert : amd-smi est refusé sur
 // Windows, le repli Vulkan fait foi), le mot d'activité des tours terminés qui masquait durée
 // et débit (#173), plus la voix de Jean et le classement des fichiers par le sens.
+// Sur la base 0.20.1 : les révisions 1 à 3 sont la fusion de l'amont, le routage MoE
+// rétabli et le pilotage du pont (trois portes dans le menu, et le voisin piloté depuis
+// sa carte avec le millésime de SON moteur). La révision 4 rend ce millésime lisible
+// partout où il se décide : il AVERTIT au lieu de refuser le démarrage (un exe peut
+// désormais servir plusieurs millésimes, le preset nomme déjà le sien), et chaque preset
+// MoE porte une pastille VERTE ou ROUGE — verte quand le moteur posé est celui que le
+// preset désigne ET celui qu'épinglette cette application. Plus deux corrections du
+// contexte lui-même : un ordre de pilotage (stop, reprise, arrêt) ne repart plus dans
+// les « constraints » du résumé, et la sortie des outils est signalée au modèle comme
+// une DONNÉE à lire, non comme une consigne.
 // Doit rester identique à
 // cmd/ajean-memory-test/versioninfo.json (StringFileInfo.ProductVersion et
 // FileVersion), vérifié par TestVersionFlavorWindowsSuit.
-const buildFlavorSuffix = ".3 Cresius"
+const buildFlavorSuffix = ".4 Cresius"
 
 // uiBadgeLabel : intitulé affiché sous le logo par le build portable, à la
 // place du repère « TEST mémoire · R6 ». C'est le nom du patch, pas un numéro.

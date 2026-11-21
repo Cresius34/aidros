@@ -4,13 +4,13 @@
       "Major": 0,
       "Minor": 20,
       "Patch": 1,
-      "Build": 3
+      "Build": 4
     },
     "ProductVersion": {
       "Major": 0,
       "Minor": 20,
       "Patch": 1,
-      "Build": 3
+      "Build": 4
     },
     "FileFlagsMask": "3f",
     "FileFlags": "00",
@@ -20,13 +20,13 @@
   },
   "StringFileInfo": {
     "CompanyName": "AJEAN contributors",
-    "FileDescription": "Base 0.20.1 amont, EmbeddingGemma 2 + recherche, MoE AMD Strata (catalogue de modèles lu dans le moteur, plus de liste recopiée), canal Ajean-Ajean (pont qui rend un tour d'agent et dit pourquoi il ne le rend pas, outil peer, auteur de chaque message : un ordre humain cible un poste, un ordre d'IA jamais), pilotage du pont réglable dans le menu (trois portes distinctes : prêter le modèle, l'agent du voisin, changer le moteur de la machine) et pilotage d'un voisin depuis sa carte, avec le millésime de son moteur",
+    "FileDescription": "Base 0.20.1 amont, EmbeddingGemma 2 + recherche, MoE AMD Strata (catalogue de modèles lu dans le moteur, plus de liste recopiée), canal Ajean-Ajean (pont qui rend un tour d'agent et dit pourquoi il ne le rend pas, outil peer, auteur de chaque message : un ordre humain cible un poste, un ordre d'IA jamais), pilotage du pont réglable dans le menu (trois portes distinctes : prêter le modèle, l'agent du voisin, changer le moteur de la machine) et pilotage d'un voisin depuis sa carte, avec le millésime de son moteur. Cette révision : le millésime du moteur avertit au lieu de refuser le démarrage, et s'affiche en vert ou en rouge sur chaque preset MoE (vert = le moteur posé est celui que le preset désigne et celui qu'épinglette cette application) ; un ordre de pilotage (stop, reprise, arrêt) ne repart plus dans les contraintes du résumé de contexte ; la sortie des outils est signalée au modèle comme une donnée à lire, non comme une consigne.",
     "InternalName": "ajean-memoire-test",
     "LegalCopyright": "Copyright (c) 2026 AJEAN contributors. MIT License.",
     "OriginalFilename": "ajean-memoire-test.exe",
-    "ProductName": "AJEAN v0.20.1.3 Cresius",
-    "FileVersion": "0.20.1.3 Cresius",
-    "ProductVersion": "0.20.1.3 Cresius",
+    "ProductName": "AJEAN v0.20.1.4 Cresius",
+    "FileVersion": "0.20.1.4 Cresius",
+    "ProductVersion": "0.20.1.4 Cresius",
     "Comments": "https://github.com/nathaninline/ajean — projet open source (MIT)"
   },
   "VarFileInfo": {
