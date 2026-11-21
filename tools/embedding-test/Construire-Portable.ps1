@@ -11,7 +11,7 @@ try {
     & go generate ./internal/aidros
     if ($LASTEXITCODE -ne 0) { throw 'Assemblage de l interface echoue.' }
     $env:GOOS = 'windows'; $env:GOARCH = 'amd64'; $env:CGO_ENABLED = '0'
-    & go build -trimpath -ldflags '-s -w' -o (Join-Path $targetDirectory 'ajean-memoire-test.exe') ./cmd/ajean-memory-test
+    & go build -trimpath -ldflags '-s -w' -o (Join-Path $targetDirectory 'ajean-memoire-test.exe') ./cmd/aidros-memory-test
     if ($LASTEXITCODE -ne 0) { throw 'Compilation du prototype echouee.' }
     foreach ($name in @('Lancer-Test','Installer-Modele','Copier-Memoire','Copier-Presets','Installer-Multimodal')) {
         foreach ($extension in @('.cmd','.ps1')) {

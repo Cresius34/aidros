@@ -354,13 +354,13 @@ Go 1.25 or later. AJEAN is pure Go; the interface is embedded in the binary.
 ```bash
 git clone https://github.com/nathaninline/ajean.git
 cd ajean
-CGO_ENABLED=0 go build -o ajean ./cmd/ajean   # Linux, Windows
-go build -o ajean ./cmd/ajean                 # macOS (the menu bar icon needs CGO)
+CGO_ENABLED=0 go build -o aidros ./cmd/aidros   # Linux, Windows
+go build -o aidros ./cmd/aidros                 # macOS (the menu bar icon needs CGO)
 ```
 
 **Layout**
 
-- `cmd/ajean/`: entry point and Windows resources.
+- `cmd/aidros/`: entry point and Windows resources.
 - `internal/ajean/`: all the code, files grouped by prefix (`web_*`, `chat_*`, `llm_*`, `backend_*`, `relay_*`, `sys_*`, `mcp_*`, `jean_*`); a map in `doc.go`.
 - `internal/ajean/ui/`: the web interface. `index.html` is **generated**: edit `ui/src/`, then run `go generate ./internal/ajean`.
 - `tools/`: build helpers (`assemble-ui`, `gen-icon`, `verify-i18n`).

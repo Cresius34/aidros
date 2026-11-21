@@ -19,11 +19,11 @@
     "FileSubType": "00"
   },
   "StringFileInfo": {
-    "CompanyName": "AJEAN contributors",
+    "CompanyName": "Aidros contributors",
     "FileDescription": "Aidros",
     "InternalName": "aidros",
-    "LegalCopyright": "Copyright (c) 2026 AJEAN contributors. MIT License.",
-    "OriginalFilename": "ajean.exe",
+    "LegalCopyright": "Copyright (c) 2026 Aidros contributors. MIT License.",
+    "OriginalFilename": "aidros.exe",
     "ProductName": "Aidros",
     "ProductVersion": "1.0.0",
     "Comments": "https://github.com/nathaninline/ajean — projet open source (MIT)"

@@ -1,8 +1,8 @@
-// gen-icon écrit cmd/ajean/icon.ico à partir de l'icône de marque dessinée dans
+// gen-icon écrit cmd/aidros/icon.ico à partir de l'icône de marque dessinée dans
 // internal/aidros (sys_brand_icon.go), pour que l'icône du .exe soit toujours la
 // même que le favicon de l'UI et que celle de la zone de notification.
 //
-// Lancé par `go generate ./cmd/ajean`, AVANT goversioninfo qui embarque le .ico
+// Lancé par `go generate ./cmd/aidros`, AVANT goversioninfo qui embarque le .ico
 // dans les ressources Windows.
 package main
 

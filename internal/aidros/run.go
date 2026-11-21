@@ -1,5 +1,5 @@
 // ajean — single-binary LLM server manager + web UI for llama.cpp deployments.
-// Point d'entrée réel : Main(), appelé par cmd/ajean (les métadonnées Windows
+// Point d'entrée réel : Main(), appelé par cmd/aidros (les métadonnées Windows
 // .syso/go:generate vivent là-bas, dans le dossier du package main).
 package aidros
 
@@ -21,7 +21,7 @@ import (
 // dans le millésime (ordre de l'humain du 21/11) : il vit dans l'étiquette git.
 const Version = "1.0"
 
-// Main est le vrai main() du binaire (cmd/ajean ne fait que l'appeler).
+// Main est le vrai main() du binaire (cmd/aidros ne fait que l'appeler).
 func Main() {
 	if parallelBuild() {
 		mustExit(initParallelProfile())

@@ -391,7 +391,7 @@ func portBusy(port int) bool {
 }
 
 // binaryVersion lit la version dans les ressources du fichier (VS_VERSIONINFO,
-// posées par goversioninfo, cf cmd/ajean/versioninfo.json), comme le fait
+// posées par goversioninfo, cf cmd/aidros/versioninfo.json), comme le fait
 // l'onglet « Détails » des propriétés Windows.
 //
 // ⚠️ NE PAS remplacer par un `ajean version` exécuté : le binaire est compilé en

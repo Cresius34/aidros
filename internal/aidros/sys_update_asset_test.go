@@ -54,12 +54,12 @@ func TestNomDAssetDistinctDuSchema07(t *testing.T) {
 // Les six noms publiés par la release, vérifiés un par un.
 func TestNomsDAssetParPlateforme(t *testing.T) {
 	for _, c := range []struct{ goos, goarch, want string }{
-		{"linux", "amd64", "ajean-linux"},
-		{"linux", "arm64", "ajean-linux-arm"},
-		{"darwin", "amd64", "ajean-macos"},
-		{"darwin", "arm64", "ajean-macos-arm"},
-		{"windows", "amd64", "ajean-windows.exe"},
-		{"windows", "arm64", "ajean-windows-arm.exe"},
+		{"linux", "amd64", "aidros-linux"},
+		{"linux", "arm64", "aidros-linux-arm"},
+		{"darwin", "amd64", "aidros-macos"},
+		{"darwin", "arm64", "aidros-macos-arm"},
+		{"windows", "amd64", "aidros-windows.exe"},
+		{"windows", "arm64", "aidros-windows-arm.exe"},
 	} {
 		if got := assetNameFor(c.goos, c.goarch); got != c.want {
 			t.Errorf("%s/%s → %q, attendu %q", c.goos, c.goarch, got, c.want)

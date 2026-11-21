@@ -119,7 +119,7 @@ If you have Go installed:
 
 ```bash
 go generate ./internal/ajean   # rebuilds internal/ajean/ui/index.html from src/
-go build ./cmd/ajean           # rebuilds the ajean binary with your translation baked in
+go build ./cmd/aidros           # rebuilds the aidros binary with your translation baked in
 ```
 
 Run the resulting binary, open the web UI, and pick your language from the

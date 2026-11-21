@@ -1,4 +1,4 @@
-// AJEAN — cœur du binaire (package ajean, appelé par cmd/ajean). Go n'autorise
+// AJEAN — cœur du binaire (package aidros, appelé par cmd/aidros). Go n'autorise
 // pas de sous-dossiers dans un même package : les fichiers sont donc préfixés
 // par domaine.
 //

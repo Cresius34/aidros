@@ -4,8 +4,8 @@ package main
 
 import "github.com/nathaninline/ajean/internal/aidros"
 
-//go:generate goversioninfo -64 -icon=../ajean/icon.ico -o resource_windows_amd64.syso versioninfo.json
-//go:generate goversioninfo -64 -arm -icon=../ajean/icon.ico -o resource_windows_arm64.syso versioninfo.json
+//go:generate goversioninfo -64 -icon=../aidros/icon.ico -o resource_windows_amd64.syso versioninfo.json
+//go:generate goversioninfo -64 -arm -icon=../aidros/icon.ico -o resource_windows_arm64.syso versioninfo.json
 
 func main() {
 	aidros.BuildFlavor = "embedding-test"

@@ -69,7 +69,7 @@ démarrer si ce port est pris :
 
 `app`, `web` et le double-clic sont détournés vers `cmdParallelApp()`. Pour
 servir sur un port libre ou mesurer une configuration isolée, utiliser le
-binaire officiel `cmd/ajean` : il respecte `AJEAN_HOME` et accepte un port.
+binaire officiel `cmd/aidros` : il respecte `AJEAN_HOME` et accepte un port.
 
 ## Intégration retenue
 
@@ -163,5 +163,5 @@ Vérification développement : `CI=1 go test ./...`, `go vet ./...`,
 le setup figé : définir `AJEAN_STRATA_SOURCE` vers son checkout avant ce dernier
 test. L’interface se régénère avec `go generate ./internal/ajean` ; la compilation
 Windows utilise `cmd/ajean-memory-test`, sans changer les ressources de
-`cmd/ajean`. Les manifests et le code Python/PowerShell sont embarqués dans le
+`cmd/aidros`. Les manifests et le code Python/PowerShell sont embarqués dans le
 binaire, ils ne doivent pas être oubliés dans une contribution.

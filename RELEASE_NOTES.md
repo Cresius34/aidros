@@ -2,7 +2,7 @@
 Version corrective de la 0.20 : reprise d'une installation passée par la 0.19, et éditeur des presets Service.
 
 **Projet dérivé, usage personnel.** Cette version est construite sur le dépôt
-`Cresius34/ajean`, fork de [**nathaninline/ajean**](https://github.com/nathaninline/ajean)
+`Cresius34/aidros`, fork de [**nathaninline/ajean**](https://github.com/nathaninline/ajean)
 — le projet principal, et la seule source des versions publiées d'AJEAN. Les
 correctifs décrits ci-dessous forment une **ligne privée** : ils ne sont ni
 validés sur d'autres machines, ni garantis transposables. Pour installer AJEAN,
@@ -658,9 +658,9 @@ ajean update
 
 ou, depuis le dépôt :
 
-1. `git clone https://github.com/Cresius34/ajean`
+1. `git clone https://github.com/Cresius34/aidros`
 2. `git checkout v0.18.17+rev1`
-3. `go build -o ajean.exe ./cmd/ajean`
+3. `go build -o aidros.exe ./cmd/aidros`
 
 ---
 
@@ -668,7 +668,7 @@ ou, depuis le dépôt :
 
 # Release notes — AJEAN `0.18.17.1 Cresius` / tag `v0.18.17+rev1`
 
-**Derived project, personal use.** This build comes from the `Cresius34/ajean`
+**Derived project, personal use.** This build comes from the `Cresius34/aidros`
 repository, a fork of [**nathaninline/ajean**](https://github.com/nathaninline/ajean)
 — the upstream project, and the only source of published AJEAN releases. The
 fixes below form a **private patch line**: they are not validated on other
@@ -1283,9 +1283,9 @@ ajean update
 
 or, from the repository:
 
-1. `git clone https://github.com/Cresius34/ajean`
+1. `git clone https://github.com/Cresius34/aidros`
 2. `git checkout v0.18.17+rev1`
-3. `go build -o ajean.exe ./cmd/ajean`
+3. `go build -o aidros.exe ./cmd/aidros`
 Depuis la 0.19 sous Linux, relancer une fois `sudo ajean install` pour retirer les anciennes unités.
 
 Testé par les tests automatiques et sur un serveur Linux passé par la 0.18 puis la 0.19 (reprise du preset, nettoyage par `ajean install`, modèle relancé). L'éditeur Service n'a pas été vérifié à l'écran.

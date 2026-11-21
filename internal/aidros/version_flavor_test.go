@@ -45,7 +45,7 @@ func TestVersionFlavorWindowsSuit(t *testing.T) {
 	}
 }
 
-// TestVersionFlavorPlainEntry : le point d'entrée normal (cmd/ajean) n'ajoute
+// TestVersionFlavorPlainEntry : le point d'entrée normal (cmd/aidros) n'ajoute
 // aucun suffixe : Version seule.
 func TestVersionFlavorPlainEntry(t *testing.T) {
 	BuildFlavor = ""

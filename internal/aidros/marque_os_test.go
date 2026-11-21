@@ -140,7 +140,7 @@ func TestRessourceWindowsPorteUnNom(t *testing.T) {
 		chemin string
 		borne  int
 	}{
-		{"../../cmd/ajean/versioninfo.json", longueurLibelleOs},
+		{"../../cmd/aidros/versioninfo.json", longueurLibelleOs},
 		{"../../cmd/ajean-memory-test/versioninfo.json", longueurLibelleOs},
 	} {
 		b, err := os.ReadFile(c.chemin)

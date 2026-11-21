@@ -52,8 +52,8 @@ type ghRelease struct {
 }
 
 // updateAssetName est le nom de l'asset de release pour la plateforme courante :
-// ajean-linux, ajean-linux-arm, ajean-macos, ajean-macos-arm, ajean-windows.exe,
-// ajean-windows-arm.exe. Un seul nom publié, un seul nom cherché.
+// aidros-linux, aidros-linux-arm, aidros-macos, aidros-macos-arm, aidros-windows.exe,
+// aidros-windows-arm.exe. Un seul nom publié, un seul nom cherché.
 //
 // Ces noms sont volontairement lisibles — « macos » plutôt que « darwin », pas
 // de « amd64 » pour le cas courant — et volontairement DIFFÉRENTS du schéma
@@ -67,7 +67,7 @@ func updateAssetName() string { return assetNameFor(runtime.GOOS, runtime.GOARCH
 // assetNameFor est séparée pour être vérifiable sur les six plateformes, et pas
 // seulement sur celle qui exécute les tests.
 func assetNameFor(goos, goarch string) string {
-	name := "ajean-" + map[string]string{
+	name := "aidros-" + map[string]string{
 		"darwin":  "macos",
 		"linux":   "linux",
 		"windows": "windows",
