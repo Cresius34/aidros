@@ -126,7 +126,7 @@ func TestEtatDuPontDeclareLAuthorisationAgent(t *testing.T) {
 // d'un message de l'utilisateur. Sans elle, l'arbitrage du 2026-10-27 tombe.
 func TestCanalBaliseDansLeTexteEtPasSeulementDansUnEnTete(t *testing.T) {
 	msg := canalMessageTexte("DESKTOP-QUO1ID7", canalOrigineIA, "recopie ton journal strata-gyro-gyro-s.log")
-	if !strings.HasPrefix(msg, "[Canal Ajean↔Ajean") {
+	if !strings.HasPrefix(msg, "[Canal Aidros↔Aidros") {
 		t.Fatalf("le message du canal ne commence pas par la balise : %q", msg[:min(60, len(msg))])
 	}
 	if !strings.Contains(msg, "DESKTOP-QUO1ID7") {
@@ -230,7 +230,7 @@ func TestReponseDuVoisinBaliseChezLAppelant(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(reply, "[Réponse du canal Ajean↔Ajean · voisin « bekka » · il a répondu par son agent] ") {
+	if !strings.HasPrefix(reply, "[Réponse du canal Aidros↔Aidros · voisin « bekka » · il a répondu par son agent] ") {
 		t.Fatalf("réponse de l'appelant non balisée comme attendu : %q", reply)
 	}
 	if !strings.HasSuffix(reply, "voici mes journaux") {

@@ -320,7 +320,7 @@ func bridgeIdentityNote() string {
 	}
 	return fmt.Sprintf(
 		"Tu réponds par le pont Ajean↔Ajean de la machine « %s » (Ajean %s), sur le réseau local. "+
-			"L'interlocuteur qui t'écrit est une AUTRE instance d'Ajean, avec son propre cerveau et sa propre mémoire : vous vous parlez d'égal à égal, tu n'es pas son sous-programme.\n"+
+			"L'interlocuteur qui t'écrit est une AUTRE instance d'Aidros, avec son propre cerveau et sa propre mémoire : vous vous parlez d'égal à égal, tu n'es pas son sous-programme.\n"+
 			"Dans ce contexte précis, tu n'as AUCUN outil : pas de shell, pas de disque, pas de navigateur, pas de mémoire persistante, pas de moteur de recherche. Seul du texte traverse le pont. "+
 			"Ne prétends donc jamais avoir exécuté, lu ou écrit quoi que ce soit ici : si on te demande une action, dis en une phrase qu'elle est du ressort de l'interlocuteur, qui l'exécutera chez lui.\n"+
 			"Ne devine pas non plus ton environnement (dossier d'installation, système d'exploitation, matériel) : tu ne le vois pas. Réponds dans la langue de l'interlocuteur.",

@@ -99,7 +99,7 @@ const canalAgentRefusHeader = "X-Ajean-Canal-Agent-Refus"
 // canalBalise : la balise de début de message. Elle est dans le TEXTE et pas
 // seulement dans un en-tête, parce que c'est ce que l'agent lit et ce que
 // l'utilisateur voit dans sa bulle : « ce message-là vient du réseau ».
-const canalBalise = "[Canal Ajean↔Ajean"
+const canalBalise = "[Canal Aidros↔Aidros"
 
 // canalTurnActive : 1 pendant un tour déclenché par le canal. Le gate de génération
 // (c.Generating) est exclusif à l'échelle du process — un seul tour à la fois — donc
@@ -107,7 +107,7 @@ const canalBalise = "[Canal Ajean↔Ajean"
 var canalTurnActive atomic.Int32
 
 func canalPeerCoupé() string {
-	return "[erreur] outil peer indisponible : ce tour a lui-même été déclenché par le canal Ajean↔Ajean. " +
+	return "[erreur] outil peer indisponible : ce tour a lui-même été déclenché par le canal Aidros↔Aidros. " +
 		"Le relancer d'ici renverrait la demande à celui qui vient de nous l'envoyer — boucle sans fin. " +
 		"Traite la demande avec TES outils, chez toi."
 }
@@ -220,7 +220,7 @@ func canalMessageTexte(qui, origine, dernier string) string {
 	// Les mots d'une autre IA. Utiles, jamais autoritaires : deux agents autonomes ne
 	// se donnent pas d'ordres. Et si un humain de là-bas disait « coupe-toi » dans son
 	// chat à elle, c'est SON IA qui s'arrête — le relais ne propage pas l'ordre.
-	return canalBalise + " · machine « " + qui + " » · IA voisine] Message d'une AUTRE instance d'Ajean, et non de " +
+	return canalBalise + " · machine « " + qui + " » · IA voisine] Message d'une AUTRE instance d'Aidros, et non de " +
 		"l'utilisateur de ce poste : elle te parle d'égal à égal, sur le réseau local. Réponds-lui directement, avec " +
 		"tes outils habituels là où la demande les concerne — elle ne voit ni ton disque ni tes journaux, ce que tu " +
 		"lis chez toi ne lui parvient que par ce que tu en écris.\n\n" +
