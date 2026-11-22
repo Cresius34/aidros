@@ -125,15 +125,19 @@ func appFirstRun() bool {
 		// Échec le plus courant : pas les droits sur %ProgramData%. AJEAN reste
 		// parfaitement utilisable depuis son emplacement actuel, le dossier de
 		// données étant ailleurs — on démarre donc au lieu d'abandonner.
-		messageBox("Installation impossible\n\n"+err.Error()+"\n\nAJEAN va démarrer depuis l'emplacement actuel.", "AJEAN", mbIconInfo)
+		messageBox("Installation impossible\n\n"+err.Error()+"\n\n"+uiBadgeLabel+" va démarrer depuis l'emplacement actuel.", uiBadgeLabel, mbIconInfo)
 		return false
 	}
 	_, _ = addToUserPath(filepath.Dir(target))
 	shortcuts := ensureShortcuts(target)
 
-	messageBox("AJEAN est installé\n\n"+target+"\n\n"+shortcuts+
+	// Le nom vient de uiBadgeLabel, la source unique (parallel_profile.go:92) :
+	// la boîte de dialogue, l'infobulle de l'icône et le nom du .lnk portent le
+	// même texte. Écrire « AJEAN » ici l'aurait laissée seule à contredire
+	// l'application qu'elle vient d'installer.
+	messageBox(uiBadgeLabel+" est installé\n\n"+target+"\n\n"+shortcuts+
 		"\n\nL'application va démarrer. Vous pouvez supprimer le fichier téléchargé.",
-		"AJEAN", mbIconInfo)
+		uiBadgeLabel, mbIconInfo)
 
 	return launch(target)
 }
@@ -254,23 +258,23 @@ func runAsInstaller(target string) bool {
 		// sans redémarrer ne changerait RIEN à ce que l'utilisateur a sous les
 		// yeux : l'onglet qui s'ouvrirait serait servi par l'ancienne version. On
 		// pose donc la seule question qui compte.
-		question := "Mettre à jour AJEAN en version " + Version + " ?\n\n" +
-			"AJEAN est en cours d'exécution (version " + verLabel(installed) + "). Il sera fermé, mis à jour, puis relancé.\n\n" +
+		question := "Mettre à jour " + uiBadgeLabel + " en version " + Version + " ?\n\n" +
+			uiBadgeLabel + " est en cours d'exécution (version " + verLabel(installed) + "). Il sera fermé, mis à jour, puis relancé.\n\n" +
 			"Non garde la version actuelle."
 		if installed == Version {
 			// Même numéro, fichier différent (préversion republiée, build de test).
-			question = "Remplacer AJEAN " + Version + " par ce fichier ?\n\n" +
-				"AJEAN est en cours d'exécution, dans une autre copie de la version " + Version + ". Il sera fermé, remplacé, puis relancé.\n\n" +
+			question = "Remplacer " + uiBadgeLabel + " " + Version + " par ce fichier ?\n\n" +
+				uiBadgeLabel + " est en cours d'exécution, dans une autre copie de la version " + Version + ". Il sera fermé, remplacé, puis relancé.\n\n" +
 				"Non garde la copie actuelle."
 		}
-		if messageBox(question, "Mise à jour d'AJEAN", mbYesNo|mbIconQuestion) != idYes {
+		if messageBox(question, "Mise à jour d'"+uiBadgeLabel, mbYesNo|mbIconQuestion) != idYes {
 			ensureShortcuts(target)
 			return launch(target) // l'instance en cours reprend la main (port occupé)
 		}
 		stopProcesses(running)
 		if err := replaceInstalled(target); err != nil {
-			messageBox("La mise à jour a échoué\n\n"+err.Error()+"\n\nAJEAN va redémarrer dans sa version actuelle.",
-				"AJEAN", mbIconInfo)
+			messageBox("La mise à jour a échoué\n\n"+err.Error()+"\n\n"+uiBadgeLabel+" va redémarrer dans sa version actuelle.",
+				uiBadgeLabel, mbIconInfo)
 		}
 		ensureShortcuts(target)
 		return launch(target)
@@ -445,6 +449,16 @@ type vsFixedFileInfo struct {
 	FileDateLS       uint32
 }
 
+// nomRaccourci : le NOM DU FICHIER .lnk, donc le texte que Windows affiche sur le
+// Bureau et dans le menu Démarrer (l'explorateur masque l'extension). Il vient de
+// uiBadgeLabel, la même source que l'infobulle de l'icône système
+// (sys_marque_os.go:42) : une seule source pour un seul nom.
+//
+// Le libellé AU SURVOL, lui, reste posé en littéral par le script : il est gardé
+// tel quel par TestLibelleRaccourciPorteUnNom, qui compte ses DEUX occurrences
+// (réparation de l'existant + création). Ne pas le rendre dynamique ici.
+func nomRaccourci() string { return uiBadgeLabel + ".lnk" }
+
 // ensureShortcuts garantit qu'un raccourci « AJEAN » existe dans le menu
 // Démarrer et sur le Bureau, et qu'il pointe sur le bon exécutable. Appelée à
 // CHAQUE lancement du fichier téléchargé, pas seulement à l'installation :
@@ -460,11 +474,28 @@ func ensureShortcuts(target string) string {
 	ps := fmt.Sprintf(`$t=%s
 $w=New-Object -ComObject WScript.Shell
 $done=@()
+# Le nom du fichier .lnk EST le libellé que Windows affiche sur le Bureau et dans
+# le menu Démarrer (l'extension est masquée). Il vient de uiBadgeLabel, la même
+# source que l'infobulle de l'icône système (sys_marque_os.go:42) : un seul nom.
+$nom=%s
+# Le nom d'avant, figé ici comme « jean.exe » l'est ailleurs : c'est une date, pas
+# une valeur à faire évoluer. Un poste installé d'avant porte « AJEAN.lnk ».
+$lnkVieux='AJEAN.lnk'
 $progs=Join-Path ([Environment]::GetFolderPath('StartMenu')) 'Programs'
 foreach ($d in @($progs, [Environment]::GetFolderPath('Desktop'))) {
   if (-not $d) { continue }
   if (-not (Test-Path $d)) { continue }
-  $lnk=Join-Path $d 'AJEAN.lnk'
+  # Le renommage du raccourci ne doit pas DOUBLONNER. Sans ce bloc, un poste
+  # installé d'avant se réveille avec « AJEAN.lnk » ET « Aidros.lnk » côte à côte
+  # sur le Bureau : deux icônes pour une application, et plus personne ne sait
+  # laquelle il a épinglée. On RENOMME ce qui existe ; si les deux existent déjà,
+  # l'ancien est de trop et on le retire.
+  $a=Join-Path $d $lnkVieux
+  $lnk=Join-Path $d $nom
+  if (Test-Path $a) {
+    if (Test-Path $lnk) { try { Remove-Item $a -Force } catch {} }
+    else { try { Move-Item $a $lnk -Force } catch {} }
+  }
   # Un raccourci existant est REPOINTÉ s'il vise autre chose que le binaire
   # canonique — typiquement l'ancien « ajean.exe », qui n'est plus qu'un alias.
   # Le laisser en l'état condamnait l'utilisateur à relancer indéfiniment une
@@ -510,27 +541,38 @@ foreach ($d in @($progs, [Environment]::GetFolderPath('Desktop'))) {
     $done+=$d
   } catch {}
 }
-Write-Output ($done -join ';')`, psQuote(target))
+Write-Output ($done -join ';')`, psQuote(target), psQuote(nomRaccourci()))
 	cmd := hideCmd(exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", ps))
 	out, err := cmd.CombinedOutput()
 	if err != nil || strings.TrimSpace(string(out)) == "" {
-		return "(raccourcis non créés — lancez AJEAN depuis " + target + ")"
+		return "(raccourcis non créés — lancez " + uiBadgeLabel + " depuis " + target + ")"
 	}
-	return "Raccourci « AJEAN » ajouté au menu Démarrer et au Bureau."
+	// Le texte cite le NOM DU FICHER .lnk posé, pas un nom écrit à la main : cette
+	// phrase atterrit dans la boîte de dialogue qui suit l'installation. Un
+	// « Raccourci « AJEAN » ajouté » sous-entendrait au poste que l'icône porte ce
+	// nom, alors qu'il porte désormais celui de uiBadgeLabel.
+	return "Raccourci « " + uiBadgeLabel + " » ajouté au menu Démarrer et au Bureau."
 }
 
 // removeShortcuts efface les raccourcis posés par ensureShortcuts. Renvoie true
 // si au moins un a été supprimé. Balaie aussi l'ancien emplacement (racine du
 // menu Démarrer, utilisé jusqu'en 0.6.11) pour ne pas laisser d'orphelin.
+//
+// Balaie les DEUX noms : un poste installé d'avant porte « AJEAN.lnk », un poste
+// installé d'après porte « Aidros.lnk ». N'en chercher qu'un laisserait un
+// orphelin sur le Bureau de l'un ou de l'autre.
 func removeShortcuts() bool {
-	ps := `$n=0
+	nomC, nomV := nomRaccourci(), "AJEAN.lnk"
+	ps := fmt.Sprintf(`$n=0
 $sm=[Environment]::GetFolderPath('StartMenu')
 foreach ($d in @($sm, (Join-Path $sm 'Programs'), [Environment]::GetFolderPath('Desktop'))) {
   if (-not $d) { continue }
-  $p=Join-Path $d 'AJEAN.lnk'
-  if (Test-Path $p) { try { Remove-Item $p -Force; $n++ } catch {} }
+  foreach ($nom in @(%s, %s)) {
+    $p=Join-Path $d $nom
+    if (Test-Path $p) { try { Remove-Item $p -Force; $n++ } catch {} }
+  }
 }
-Write-Output $n`
+Write-Output $n`, psQuote(nomC), psQuote(nomV))
 	out, err := hideCmd(exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", ps)).CombinedOutput()
 	return err == nil && strings.TrimSpace(string(out)) != "0"
 }
