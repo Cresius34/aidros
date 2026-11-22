@@ -244,10 +244,10 @@ func runAsInstaller(target string) bool {
 		// serait une régression silencieuse, et démarrer sans rien dire laisserait
 		// croire qu'on utilise la version qu'on vient de télécharger.
 		if messageBox(
-			"Démarrer AJEAN "+installed+" ?\n\n"+
+			"Démarrer "+uiBadgeLabel+" "+installed+" ?\n\n"+
 				"Une version plus récente que ce fichier ("+Version+") est déjà installée sur cet ordinateur. Rien ne sera remplacé.\n\n"+
 				"Non ferme simplement cette fenêtre.",
-			"AJEAN", mbYesNo|mbIconQuestion) != idYes {
+			uiBadgeLabel, mbYesNo|mbIconQuestion) != idYes {
 			return true // rien à faire, on quitte sans démarrer
 		}
 		ensureShortcuts(target)
@@ -459,7 +459,7 @@ type vsFixedFileInfo struct {
 // (réparation de l'existant + création). Ne pas le rendre dynamique ici.
 func nomRaccourci() string { return uiBadgeLabel + ".lnk" }
 
-// ensureShortcuts garantit qu'un raccourci « AJEAN » existe dans le menu
+// ensureShortcuts garantit qu'un raccourci portant le NOM DU PRODUIT existe dans le menu
 // Démarrer et sur le Bureau, et qu'il pointe sur le bon exécutable. Appelée à
 // CHAQUE lancement du fichier téléchargé, pas seulement à l'installation :
 // un raccourci perdu (nettoyage, migration de profil, dossier Démarrer
