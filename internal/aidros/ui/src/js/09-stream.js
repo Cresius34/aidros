@@ -147,10 +147,11 @@ function ensureGenEl(){
     // Fondu d'arrivée à la PREMIÈRE pose seulement (l'élément est ensuite déplacé en
     // fin de fil à chaque bloc : sans ça l'animation se rejouerait en boucle).
     GENEL.addEventListener('animationend', function(){ this.classList.remove('gs-in'); }, {once:true});
-    // Le J du favicon AJEAN : deux carrés empilés (la barre) + un carré décalé à
-    // gauche en bas (le pied du J). Statique, en accent. Classe (pas id) : plusieurs
-    // lignes figées coexistent dans le fil, une par tour terminé.
-    GENEL.innerHTML='<svg class="jlogo" viewBox="0 0 12 12" aria-hidden="true"><rect x="6" y="3" width="2" height="2"/><rect x="6" y="5" width="2" height="2"/><rect x="4" y="7" width="2" height="2"/></svg><span class="jact"></span><span class="gtxt"></span>'; }
+    // LA MARQUE, en accent, statique. Son dessin vient de sys_brand_icon.go comme
+    // le reste (voir @@MARQUE_INLINE@@ du gabarit) : plus de copie à la main.
+    // Classe (pas id) : plusieurs lignes figées coexistent dans le fil, une par
+    // tour terminé.
+    GENEL.innerHTML='<svg class="jlogo" viewBox="0 0 12 12" aria-hidden="true">@@MARQUE_INLINE@@</svg><span class="jact"></span><span class="gtxt"></span>'; }
   if(GENEL.parentNode!==chat || chat.lastElementChild!==GENEL) chat.appendChild(GENEL); // toujours en dernier
   return GENEL;
 }

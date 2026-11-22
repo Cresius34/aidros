@@ -244,10 +244,11 @@ func fondNoir(g [][]bool) int {
 // motif laisse voir le fond de la barre de menus.
 //
 // ➜ Les deux attentes, écrites à l'endroit :
-//   · le motif (l'anneau, les têtes) doit être TRANSPARENT : c'est le pochoir ;
-//   · le trou de l'anneau doit être OPAQUE, comme le reste du carré : si le trou
-//     était transparent, macOS colorerait l'anneau et creuserait le trou — l'anneau
-//     disparaîtrait, remplacé par son propre négatif.
+//
+//	· le motif (l'anneau, les têtes) doit être TRANSPARENT : c'est le pochoir ;
+//	· le trou de l'anneau doit être OPAQUE, comme le reste du carré : si le trou
+//	  était transparent, macOS colorerait l'anneau et creuserait le trou — l'anneau
+//	  disparaîtrait, remplacé par son propre négatif.
 func TestTrouResteTransparentDansLaVarianteMacOS(t *testing.T) {
 	img := brandIconImage(32, brandBlack, brandClear)
 	// En pixels de l'image, à 32 px : le centre est (16,16), le haut de l'anneau
@@ -342,97 +343,370 @@ func TestDraweursPartagentLaGeometrie(t *testing.T) {
 	sonde(1.2, 1.2, false, "le coin haut gauche, hors anneau et hors têtes")
 }
 
-// TestFaviconPartageLaGeometrie : le quatrième dessinateur de la marque est un
-// SVG ÉCRIT À LA MAIN dans ui/src/index.tmpl.html. Son propre commentaire lui
-// prêtait la « même géométrie que sys_brand_icon.go » ; mesuré le 22/11, c'était
-// faux — le SVG dessinait encore le « j » que Go avait déjà remplacé. Ce filet LIT
-// le gabarit et compare chiffre par chiffre. C'est le seul des quatre draweurs qui
-// ne PEUT PAS lire marqueDisques (c'est du texte d'un autre monde), donc c'est le
-// seul qui a besoin d'un filet pour ne pas dériver.
+// TestLesDeuxSVGPartagentLaGeometrie : la marque en SVG n'est plus une copie à
+// surveiller, c'est un PRODUIT de ce paquet. Mesuré 22/11 au soir : quatre
+// fichiers de l'interface portaient chacun leur copie écrite à la main du « J »
+// d'avant, et l'humain le voyait encore à l'écran. tools/assemble-ui pose
+// désormais @@MARQUE@@ / @@MARQUE_INLINE@@ / @@MARQUE_PNG_180@@, dessinés ici.
 //
-// ⚠ Le trait SVG est CENTRÉ sur son tracé, l'inverse de GDI. Le cercle du gabarit
-// est donc au RAYON MOYEN de l'anneau, avec un trait de l'épaisseur de l'anneau :
-// ses deux bords tombent exactement sur marqueRayonInt et marqueRayonExt.
-func TestFaviconPartageLaGeometrie(t *testing.T) {
-	src, err := os.ReadFile("ui/src/index.tmpl.html")
-	if err != nil {
-		t.Fatalf("gabarit introuvable : %v", err)
-	}
-	line := ""
-	for _, l := range strings.Split(string(src), "\n") {
-		if strings.Contains(l, `rel="icon"`) {
-			line = strings.TrimSpace(strings.TrimSuffix(strings.TrimSuffix(l, `">`), `">`))
-			break
+// Le filet n'est PAS une tautologie. marqueDisques décrit la marque en GO ; le
+// SVG la décrit en SVG, et les deux mondes n'ont pas la même convention de
+// trait : GDI trace À L'INTÉRIEUR du rectangle, SVG centre son trait SUR le
+// tracé. Le cercle du SVG doit donc être au RAYON MOYEN avec un trait de
+// l'épaisseur de l'anneau, pour que ses deux bords tombent sur marqueRayonInt et
+// marqueRayonExt. Rendre le rayon EXTÉRIEUR ici donnerait un anneau d'une
+// demi-épaisseur trop épais — faute que seule une relecture comme celle-ci voit,
+// parce qu'aucun des deux draweurs ne la dit.
+//
+// Il vérifie aussi OÙ chaque SVG atterrit, car ce n'est pas du goût mais la
+// grammaire du voisin : l'un vit DANS une data:URI elle-même dans href="…",
+// l'autre DANS le contenu d'un élément et dans une chaîne JS entre apostrophes.
+// Le guillemet qui casse l'un protège l'autre.
+func TestLesDeuxSVGPartagentLaGeometrie(t *testing.T) {
+	t.Run("data:URI (favicon, manifeste, notification)", func(t *testing.T) {
+		for _, tord := range defautsMarqueSVG(BrandMarqueSVG(), modeURI) {
+			t.Error(tord)
 		}
-	}
-	if line == "" {
-		t.Fatal("aucune balise rel=\"icon\" dans le gabarit : le favicon n'est plus servi")
+	})
+	t.Run("inline (voile de chargement, ligne d'activité)", func(t *testing.T) {
+		for _, tord := range defautsMarqueSVG(BrandMarqueSVGInline(), modeInline) {
+			t.Error(tord)
+		}
+	})
+}
+
+// Les deux destinations d'un SVG de la marque.
+const (
+	modeURI    = "uri"    // dans data:image/svg+xml,… lui-même dans href="…"
+	modeInline = "inline" // dans le contenu d'un <svg>, ou une chaîne JS '…'
+)
+
+// defautsMarqueSVG relit un SVG de la marque et rend la LISTE de ce qui cloche,
+// vide s'il est juste. Fonction PURE, et c'est voulu : la contre-épreuve doit
+// pouvoir la jouer sur un SVG volontairement cassé sans faire rougir le test qui
+// la joue.
+func defautsMarqueSVG(svg, mode string) []string {
+	var tords []string
+	ajouter := func(format string, a ...any) {
+		tords = append(tords, fmt.Sprintf(format, a...))
 	}
 
 	c, rExt, e, disques := marqueDisques()
-	rInt := rExt - e
-	rMoyen := (rExt + rInt) / 2
+	rMoyen := (rExt + (rExt - e)) / 2
 
 	// ⚠ On COMPARE DES NOMBRES, pas des chaînes. Ma première version exigeait un
 	// formatage précis (« %.6g ») et échouait sur 1.93 contre 1.92968 : le chiffre
-	// du gabarit était juste, sa PRÉCISION était la sienne. Un filet qui refuse
-	// 1.93 pour 1.92968 est un filet qui se plaint pour rien, et à force on
-	// l'ignore. D'où la tolérance : ce qui compte est que le SVG tombe sur la forme,
-	// pas combien de décimales il écrit.
+	// était juste, sa PRÉCISION était la sienne. Un filet qui refuse 1.93 pour
+	// 1.92968 est un filet qui se plaint pour rien, et à force on l'ignore.
 	const tolr = 0.002
 
-	// L'anneau : un <circle> au rayon MOYEN, au trait de l'épaisseur de l'anneau.
-	// SVG centre son trait sur le tracé (l'inverse de GDI) : ses deux bords tombent
-	// donc sur nos 2.7 et 4.7.
-	ann := regexp.MustCompile(`cx='([^']+)' cy='([^']+)' r='([^']+)' fill='none' stroke='%23fff' stroke-width='([^']+)'`).FindStringSubmatch(line)
-	if ann == nil {
-		t.Fatal("le favicon ne porte pas d'anneau (un cercle sans remplissage, au trait blanc) : " +
-			"la marque est un anneau, pas un disque")
+	// La couleur selon la destination : une data:URI n'a pas de CSS, son blanc y
+	// est ÉCRIT ; en inline la couleur vient de currentColor, donc du thème voisin.
+	blanc := "%23fff"
+	guillemetInterdit := `"`
+	if mode == modeInline {
+		blanc = "currentColor"
+		guillemetInterdit = "'"
 	}
-	sondeFloat(t, "l'anneau : cx", ann[1], c, tolr)
-	sondeFloat(t, "l'anneau : cy", ann[2], c, tolr)
-	sondeFloat(t, "l'anneau : rayon moyen", ann[3], rMoyen, tolr)
-	sondeFloat(t, "l'anneau : épaisseur du trait", ann[4], e, tolr)
 
-	// Les têtes et les becs : des disques pleins. On les compte d'abord, pour qu'un
-	// disque effacé du SVG ne passe pas pour un détail.
-	pts := regexp.MustCompile(`cx='([^']+)' cy='([^']+)' r='([^']+)' fill='%23fff'`).FindAllStringSubmatch(line, -1)
-	if len(pts) != len(disques) {
-		t.Fatalf("le favicon porte %d disques, la géométrie en décrit %d : "+
-			"l'hydre a perdu ou gagné une tête sous la main qui écrit le SVG", len(pts), len(disques))
+	// Les <circle>, un par un, lus par attribut. Pas une grosse expression
+	// rationnelle : un message qui doit dire QUOI corriger ne peut pas reposer
+	// sur cinq groupes numérotés.
+	balises := regexp.MustCompile(`<circle[^>]*>`).FindAllString(svg, -1)
+
+	var anneau string
+	var têtes []string
+	for _, b := range balises {
+		if attribut(b, "stroke") != "" {
+			anneau = b
+			continue
+		}
+		têtes = append(têtes, b)
 	}
-	// ⚠ Comparés EN ENSEMBLE, pas dans l'ordre. La géométrie décrit tête, bec, tête,
-	// bec… ; le SVG, écrit à la main, aligne les trois têtes puis les trois becs. Cet
-	// ordre est une convention d'écriture, pas une propriété de la marque — un filet
-	// qui l'imposait (ma première version) échouait sur six disques parfaitement
-	// justes, et c'est le genre de rouge qu'on apprend à ignorer. Ce qui compte :
-	// chaque disque de la géométrie a son JUMEAU dans le SVG, et un jumeau ne sert
-	// qu'une fois (sinon une tête dupliquée masquerait une tête effacée).
-	rendus := make([]bool, len(pts))
+
+	// 1. L'ANNEAU : sa présence d'abord. Sans lui la marque redevient un disque,
+	// exactement ce que l'hydre remplace.
+	if anneau == "" {
+		ajouter("le SVG ne porte pas d'anneau (un cercle au trait de %s, sans remplissage) : la marque est un anneau, pas un disque", blanc)
+	} else {
+		if r := attribut(anneau, "fill"); r != "none" {
+			ajouter("l'anneau : fill=%q au lieu de « none » — un anneau rempli n'a plus de trou", r)
+		}
+		if r := attribut(anneau, "stroke"); r != blanc {
+			ajouter("l'anneau : stroke=%q, la marque (%s) veut %q", r, mode, blanc)
+		}
+		sonde(&tords, "l'anneau : cx", attribut(anneau, "cx"), c, tolr)
+		sonde(&tords, "l'anneau : cy", attribut(anneau, "cy"), c, tolr)
+		sonde(&tords, "l'anneau : le rayon", attribut(anneau, "r"), rMoyen, tolr)
+		sonde(&tords, "l'anneau : l'épaisseur du trait", attribut(anneau, "stroke-width"), e, tolr)
+	}
+
+	// 2. LES TÊTES ET LES BECS, comptés d'abord : un disque effacé ne doit pas
+	// passer pour un détail.
+	if len(têtes) != len(disques) {
+		ajouter("le SVG porte %d disques pleins, la géométrie en décrit %d : l'hydre a perdu ou gagné une tête", len(têtes), len(disques))
+	}
+
+	// 3. Chaque disque de la géométrie a son JUMEAU, et un jumeau ne sert qu'une
+	// fois (sinon une tête dupliquée masquerait une tête effacée).
+	// ⚠ Comparés EN ENSEMBLE, pas dans l'ordre : la géométrie décrit tête, bec,
+	// tête, bec… ; un SVG aligne les têtes puis les becs. Cet ordre est une
+	// convention d'écriture, pas une propriété de la marque — un filet qui
+	// l'imposait échouait sur six disques parfaitement justes.
+	rendues := make([]bool, len(têtes))
 	for k, d := range disques {
 		trouve := -1
-		for j, p := range pts {
-			if rendus[j] {
+		for j, b := range têtes {
+			if rendues[j] {
 				continue
 			}
-			if proche(p[1], d[0], tolr) && proche(p[2], d[1], tolr) && proche(p[3], d[2], tolr) {
+			if proche(attribut(b, "cx"), d[0], tolr) &&
+				proche(attribut(b, "cy"), d[1], tolr) &&
+				proche(attribut(b, "r"), d[2], tolr) {
 				trouve = j
 				break
 			}
 		}
 		if trouve < 0 {
-			t.Errorf("disque %d de la marque (tête %d, centre %.3f,%.3f rayon %.3f) : aucun jumeau dans le favicon. "+
-				"Ce qu'il y a dans le SVG : %v", k, k/2, d[0], d[1], d[2], pts)
+			ajouter("disque %d de la marque (tête %d, centre %.3f,%.3f rayon %.3f) : aucun jumeau dans le SVG", k, k/2, d[0], d[1], d[2])
 			continue
 		}
-		rendus[trouve] = true
+		rendues[trouve] = true
 	}
 
-	// Le « j » d'avant ne doit plus traîner là : ses trois rectangles.
+	// 4. L'ancien « j » ne doit plus traîner là : il vivait sur trois RECTANGLES.
 	for _, rc := range [][4]float64{{6, 3, 2, 2}, {6, 5, 2, 2}, {4, 7, 2, 2}} {
-		if strings.Contains(line, fmt.Sprintf(`x='%.6g' y='%.6g' width='%.6g' height='%.6g'`, rc[0], rc[1], rc[2], rc[3])) {
-			t.Errorf("le favicon porte encore le rectangle %.0f,%.0f de l'ancien « j »", rc[0], rc[1])
+		for _, g := range []string{`"`, `'`} {
+			if strings.Contains(svg, fmt.Sprintf(`x=%s%.0f%s y=%s%.0f%s width=%s%.0f%s height=%s%.0f%s`,
+				g, rc[0], g, g, rc[1], g, g, rc[2], g, g, rc[3], g)) {
+				ajouter("le SVG porte encore le rectangle %.0f,%.0f de l'ancien « j »", rc[0], rc[1])
+			}
 		}
+	}
+
+	// 5. LE GUILLEMET, selon la destination. Un SVG dans une data:URI vit dans
+	// href="…" et dans la chaîne "…" de sw.js : le guillemet double le casserait
+	// LUI-MÊME. Un SVG inline vit dans un élément et dans une chaîne JS entre
+	// apostrophes : là c'est l'apostrophe qui casse l'accueil.
+	if n := strings.Count(svg, guillemetInterdit); n > 0 {
+		ajouter("le SVG (%s) porte %d fois le caractère %q : il casse sa propre chaîne d'accueil", mode, n, guillemetInterdit)
+	}
+
+	// 6. LA COULEUR et la CHARPENTE, selon la destination.
+	if mode == modeURI {
+		if !strings.Contains(svg, blanc) {
+			ajouter("le SVG (%s) ne nomme pas %q : une data:URI n'a pas de CSS, sa couleur doit y être écrite", mode, blanc)
+		}
+		if strings.Contains(svg, "currentColor") {
+			ajouter("le SVG (%s) emploie currentColor : une data:URI ne connaît ni thème ni CSS, la forme y serait invisible", mode)
+		}
+		if !strings.Contains(svg, `<rect width='12' height='12' rx='2' ry='2' fill='%23000'/>`) {
+			ajouter("le SVG (%s) ne porte pas son carré noir aux coins arrondis : la silhouette de l'icône", mode)
+		}
+		if !strings.HasPrefix(svg, "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'>") ||
+			!strings.HasSuffix(svg, "</svg>") {
+			ajouter("le SVG (%s) n'est pas un document complet : la balise <svg> d'ouverture ou de fermeture manque", mode)
+		}
+	} else {
+		if !strings.Contains(svg, "currentColor") {
+			ajouter("le SVG (%s) n'emploie pas currentColor : posé dans la page, il ne suivrait plus la couleur du thème", mode)
+		}
+		if strings.Contains(svg, "%23") {
+			ajouter("le SVG (%s) porte un %%23 d'URI : posé dans la page, le navigateur lirait ce texte comme une couleur", mode)
+		}
+		// En inline, pas de <svg> (l'accueil en porte déjà un) et pas de fond : le
+		// voile a son propre fond, et le peindre deux fois effacerait le trou.
+		if strings.Contains(svg, "<svg") {
+			ajouter("le SVG (%s) porte sa propre balise <svg> : l'accueil en ouvre déjà une, la marque serait nichée", mode)
+		}
+		if strings.Contains(svg, "<rect") {
+			ajouter("le SVG (%s) peint un fond : posé dans la page, il boucherait le trou de l'anneau", mode)
+		}
+	}
+
+	return tords
+}
+
+// attribut lit la valeur d'un attribut dans une balise, vide s'il est absent.
+//
+// ⚠ DEUX MOTIFS LITTÉRAUX, pas un motif avec rétro-référence. Ma première
+// version écrivait `nom=(['"])(.*?)\1` pour exiger que l'ouvrant et le fermant
+// soient le même guillemet. Le regexp de Go est RE2 : il ne connaît PAS les
+// backréférences, et MustCompile a PANIQUÉ sur « invalid escape sequence: \1 »
+// — un filet qui panique sur son propre motif ressemble à un défaut du dessin.
+// Les deux guillemets possibles sont deux motifs, unis par un `|`.
+func attribut(balise, nom string) string {
+	m := regexp.MustCompile(`\b` + regexp.QuoteMeta(nom) +
+		`=(?:"([^"]*)"|'([^']*)')`).FindStringSubmatch(balise)
+	if m == nil {
+		return ""
+	}
+	if m[1] != "" {
+		return m[1]
+	}
+	return m[2]
+}
+
+// sonde compare un nombre écrit dans le SVG à la valeur de la géométrie, sans
+// exiger sa précision d'écriture, et nomme l'écart : dire « faux » ne suffit pas,
+// il faut dire de combien et quoi vouloir.
+func sonde(tords *[]string, quoi, ecrit string, voulu float64, tolr float64) {
+	got, err := strconv.ParseFloat(ecrit, 64)
+	if err != nil {
+		*tords = append(*tords, fmt.Sprintf("%s : %q n'est pas un nombre", quoi, ecrit))
+		return
+	}
+	if math.Abs(got-voulu) > tolr {
+		*tords = append(*tords, fmt.Sprintf("%s : le SVG écrit %s, la géométrie veut %.4f (écart %.4f, toléré %.4f)",
+			quoi, ecrit, voulu, math.Abs(got-voulu), tolr))
+	}
+}
+
+// TestSVGContreEpreuve : le filet doit refuser un SVG cassé, et pour la raison
+// qu'on nomme. Joué sur le texte RÉEL tordu, pas sur une intention — sinon on
+// déclare une capacité qu'on n'a pas vérifiée.
+func TestSVGContreEpreuve(t *testing.T) {
+	vrai := BrandMarqueSVG()
+	nu := BrandMarqueSVGInline()
+
+	_, rExt, e, disques := marqueDisques()
+	rMoyen := (rExt + (rExt - e)) / 2
+
+	// La tête n°1, reconstituée depuis la géométrie : écrit à la main, « 1.93 »
+	// n'aurait rien trouvé à tordre et la contre-épreuve se serait crue innocente.
+	d0 := disques[0]
+	tete1 := fmt.Sprintf("<circle cx='%s' cy='%s' r='%s' fill='%%23fff'/>", nombre(d0[0]), nombre(d0[1]), nombre(d0[2]))
+
+	tordus := []struct {
+		quoi, svg, mode, attend string
+	}{
+		// L'erreur que la confusion GDI/SVG produit : le rayon EXTÉRIEUR au lieu
+		// du rayon moyen. L'anneau sortirait d'une demi-épaisseur trop épais.
+		{fmt.Sprintf("l'anneau au rayon extérieur %.2f au lieu du rayon moyen %.2f", rExt, rMoyen),
+			strings.Replace(vrai, fmt.Sprintf(`r='%s'`, nombre(rMoyen)), fmt.Sprintf(`r='%s'`, nombre(rExt)), 1), modeURI, "le rayon"},
+		// Une tête effacée : le comptage doit la nommer, pas seulement gronder.
+		{"une tête effacée", strings.Replace(vrai, tete1, "", 1), modeURI, "disques pleins"},
+		// Le guillemet qui casse l'accueil.
+		{"le guillemet double dans une data:URI", strings.Replace(vrai, `<rect width='12'`, `<rect width="12"`, 1), modeURI, "caractère"},
+		// La couleur qui éteint le thème, en inline.
+		{"un blanc figé là où le thème décide", strings.Replace(nu, "currentColor", "%23fff", 1), modeInline, "currentColor"},
+		// Un fond peint en inline : il boucherait le trou.
+		{"un fond peint en inline", `<rect x="0" y="0" width="12" height="12"/>` + nu, modeInline, "fond"},
+		// L'anneau bouché : le trou disparaît, la marque redevient un disque.
+		{"l'anneau bouché (fill=none effacé)", strings.Replace(vrai, `fill='none' stroke=`, `stroke=`, 1), modeURI, "rempli"},
+	}
+
+	for _, td := range tordus {
+		if tords := defautsMarqueSVG(td.svg, td.mode); len(tords) == 0 {
+			t.Errorf("la contre-épreuve « %s » PASSE : le filet ne voit pas ce défaut, il ne protège rien", td.quoi)
+		} else {
+			vu := false
+			for _, tord := range tords {
+				if strings.Contains(tord, td.attend) {
+					vu = true
+					break
+				}
+			}
+			if !vu {
+				t.Errorf("la contre-épreuve « %s » rougit, mais pour une autre raison que %q : %v", td.quoi, td.attend, tords)
+			}
+		}
+	}
+
+	// Et le vrai, dans les deux modes, doit rester vert : sans cette moitié on
+	// pourrait avoir fabriqué un filet qui refuse tout.
+	for _, ok := range []struct {
+		svg, mode string
+	}{{vrai, modeURI}, {nu, modeInline}} {
+		if tords := defautsMarqueSVG(ok.svg, ok.mode); len(tords) != 0 {
+			t.Errorf("le vrai SVG (%s) est refusé : %v", ok.mode, tords)
+		}
+	}
+}
+
+// TestMarqueSVGTraverseLesProduits : les produits de l'interface sont des
+// fichiers COMMITTÉS — go:embed les embarque (web_server.go:22). Relire la source
+// ne suffit donc pas : il faut relire ce qui est réellement servi. Ce filet joue
+// chaque fichier UN À UN et compte les deux glyphes, la marque d'aujourd'hui et
+// celle d'hier. Un fichier sans garde vieillit sans que rien ne bronche — c'est
+// exactement ainsi que les quatre copies du « J » ont survécu.
+func TestMarqueSVGTraverseLesProduits(t *testing.T) {
+	// Le compte ATTENDU est PAR FICHIER, pas global. Mesuré 22/11 à l'épreuve
+	// d'exécution : l'index sert la marque TROIS fois (favicon, voile, ligne
+	// d'activité), le worker et le manifeste une seule fois chacun. Un seul chiffre
+	// pour les trois faisait gronder le worker et laissait passer un index amputé.
+	chemins := []struct {
+		chemin  string
+		dessins int    // combien de fois la marque y est dessinée
+		quoi    string // à quoi elle sert là, dans le message
+	}{
+		{"ui/index.html", 3, "favicon, voile de chargement, ligne d'activité"},
+		{"ui/sw.js", 1, "l'icône des notifications push"},
+		{"ui/manifest.webmanifest", 1, "l'icône d'installation PWA"},
+		{"ui/src/index.tmpl.html", 0, "la source du gabarit"},
+		{"ui/src/sw.js", 0, "la source du worker"},
+		{"ui/src/manifest.webmanifest", 0, "la source du manifeste"},
+		{"ui/src/js/09-stream.js", 0, "la source de la ligne d'activité"},
+	}
+	relus := 0
+	for _, f := range chemins {
+		chemin := f.chemin
+		brut, err := os.ReadFile(chemin)
+		if err != nil {
+			t.Errorf("%s : %v", chemin, err)
+			continue
+		}
+		relus++
+		texte := string(brut)
+
+		if strings.Contains(chemin, "/src/") {
+			// Une SOURCE porte le marqueur, pas le dessin : c'est l'assembleur qui
+			// le pose. Exiger le dessin ici imposerait de l'écrire deux fois.
+			if n := strings.Count(texte, "@@MARQUE"); n == 0 {
+				t.Errorf("%s : aucune trace de @@MARQUE@@ — la marque ne serait plus dessinée là où l'interface l'attend", chemin)
+			}
+			continue
+		}
+
+		_, _, _, disques := marqueDisques()
+		// Les DEUX jeux de guillemets, comptés ENSEMBLE. Mesuré 22/11 au soir, à
+		// l'épreuve d'exécution : la page servie ne montrait QU'UN anneau sur les
+		// TROIS dessinés, parce que l'URI s'écrit en apostrophes et l'inline en
+		// guillemets doubles — la convention que j'ai choisie pour que chacun
+		// survive à sa chaîne d'accueil. Un filet qui ne compte qu'un jeu compte 1
+		// là où il y en a 3, et laisse filer les deux tiers de la marque.
+		anneaux, têtes := 0, 0
+		for _, g := range []string{`"`, "'"} {
+			anneaux += strings.Count(texte, "cx="+g+"6"+g+" cy="+g+"6"+g+" r="+g+nombre(3.7)+g)
+			têtes += strings.Count(texte, "r="+g+nombre(disques[0][2])+g)
+		}
+		if anneaux != f.dessins {
+			t.Errorf("%s : %d anneaux de la marque (%s), %d attendu(s) pour %s — la marque y est absente, périmée ou amputée",
+				chemin, anneaux, nombre(3.7), f.dessins, f.quoi)
+		}
+		// Une tête par dessin, trois têtes par hydre.
+		if têtes != 3*f.dessins {
+			t.Errorf("%s : %d têtes de la marque (%s), %d attendu(s) — l'hydre est amputée",
+				chemin, têtes, nombre(disques[0][2]), 3*f.dessins)
+		}
+		// L'ancien « j » ne doit plus rien peindre. Affirmé sur les PRODUITS, pas
+		// sur les sources : le commentaire d'une source a le droit de le nommer.
+		for _, rc := range [][4]float64{{6, 3, 2, 2}, {6, 5, 2, 2}, {4, 7, 2, 2}} {
+			for _, g := range []string{`"`, `'`} {
+				if strings.Contains(texte, fmt.Sprintf(`x=%s%.0f%s y=%s%.0f%s width=%s%.0f%s height=%s%.0f%s`,
+					g, rc[0], g, g, rc[1], g, g, rc[2], g, g, rc[3], g)) {
+					t.Errorf("%s : porte encore le rectangle %.0f,%.0f de l'ancien « j »", chemin, rc[0], rc[1])
+				}
+			}
+		}
+		// Un marqueur survécu dans un PRODUIT = l'assembleur n'a pas tourné. C'est
+		// la « paire rompue » de l'icône (22/11) dans une autre de ses formes.
+		if n := strings.Count(texte, "@@MARQUE"); n > 0 {
+			t.Errorf("%s : %d marqueur(s) @@MARQUE@@ ont survécu au produit — go generate n'a pas tourné", chemin, n)
+		}
+	}
+	if relus != len(chemins) {
+		t.Errorf("%d fichiers relus sur %d attendus", relus, len(chemins))
 	}
 }
 
@@ -444,31 +718,6 @@ func proche(ecrit string, voulu float64, tolr float64) bool {
 		return false
 	}
 	return math.Abs(got-voulu) <= tolr
-}
-
-// sondeFloat idem, mais nomme l'écart dans le message : sur un fichier écrit à la
-// main, dire « faux » ne suffit pas, il faut dire de combien.
-func sondeFloat(t *testing.T, quoi, ecrit string, voulu float64, tolr float64) {
-	t.Helper()
-	got, err := strconv.ParseFloat(ecrit, 64)
-	if err != nil {
-		t.Errorf("%s : %q n'est pas un nombre", quoi, ecrit)
-		return
-	}
-	if math.Abs(got-voulu) > tolr {
-		t.Errorf("%s : le favicon écrit %s, la géométrie veut %.4f (écart %.4f, toléré %.4f)",
-			quoi, ecrit, voulu, math.Abs(got-voulu), tolr)
-	}
-}
-
-// exiger vérifie qu'un morceau de géométrie figure dans le gabarit. Le message
-// porte la valeur ATTENDUE telle quelle : un filet sur un fichier écrit à la main
-// doit dire quoi taper, pas seulement que ça cloche.
-func exiger(t *testing.T, ligne, motif, quoi string) {
-	t.Helper()
-	if !strings.Contains(ligne, motif) {
-		t.Errorf("%s : le favicon du gabarit ne porte pas %q", quoi, motif)
-	}
 }
 
 // TestIconeNeEstPasLeJ ferme la porte à l'ancien dessin, sans l'interdire ailleurs :

@@ -21,8 +21,8 @@
      dans ce fichier (TestFaviconPartageLaGeometrie). En SVG le trait est CENTRÉ sur
      le tracé — l'inverse de GDI, qui le peint à l'intérieur : d'où le rayon moyen
      ici, le rayon extérieur dans le splash Windows. -->
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><rect width='12' height='12' rx='2' ry='2' fill='%23000'/><circle cx='6' cy='6' r='3.7' fill='none' stroke='%23fff' stroke-width='2'/><circle cx='8.35' cy='1.93' r='1.02' fill='%23fff'/><circle cx='8.35' cy='10.07' r='1.02' fill='%23fff'/><circle cx='1.3' cy='6' r='1.02' fill='%23fff'/><circle cx='9.245' cy='2.447' r='0.62' fill='%23fff'/><circle cx='7.455' cy='10.587' r='0.62' fill='%23fff'/><circle cx='1.3' cy='4.966' r='0.62' fill='%23fff'/></svg>">
-<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAABBUlEQVR42u3SAQkAAAwCQfuX3lI4GNxF0E8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIArU2NbcYhDHOIQhzgQB+JAHIgDcSAOxIE4xCEOcYhDHIgDcSAOxIE4EAfiQBziEIc4xCEOcYgDcSAOxIE4EAfiQBziEIc4xCEOcYgDcSAOxIE4EAfiQByIQxziEIc4xIE4EAfiQByIA3EgDsQhDnGIQxziEIc4EAfiQByIAxciDsSBOBAH4kAc4hCHOMQhDnGIA3EgDsSBOBAH4kAc4hCHOMQhDnGIA3EgDsSBOBAH4kAciEMc4hCHOMQBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADfLBHMhi4TnG6EAAAAAElFTkSuQmCC">
+<link rel="icon" href="data:image/svg+xml,@@MARQUE@@">
+<link rel="apple-touch-icon" href="data:image/png;base64,@@MARQUE_PNG_180@@">
 <!-- Manifeste PWA (installabilité Android/desktop + Web Push). iOS s'appuie sur
      les métas apple-* ci-dessus ; le manifeste ne le gêne pas. Servi à la racine
      (web_server.go en local/tunnel, ajean-app sur app.ajean.link). -->
@@ -518,10 +518,13 @@
     <div id="app-run-body" class="app-run-body"></div>
   </div>
   <!-- Voile de chargement du fil : sans lui, une connexion lente donne un chat
-       VIDE indiscernable d'une conversation vide. Masqué au signal {caught_up}. -->
-  <!-- Loader du fil : la marque « J » d'ajean (même glyphe que le favicon et le logo
-       de compactage) en grand, qui pulse. Pas le mot AJEAN complet. -->
-  <div id="chat-loading" class="show" aria-label="chargement de la conversation" data-i18n="chat.loading_aria" data-i18n-attr="aria-label"><svg id="cl-logo" viewBox="0 0 12 12" aria-hidden="true" fill="currentColor"><rect x="6" y="3" width="2" height="2"/><rect x="6" y="5" width="2" height="2"/><rect x="4" y="7" width="2" height="2"/></svg></div>
+  VIDE indiscernable d'une conversation vide. Masqué au signal {caught_up}. -->
+  <!-- Loader du fil : LA MARQUE, en grand, qui pulse. Son dessin ne vit pas ici :
+  @@MARQUE_INLINE@@ vient de sys_brand_icon.go, le même code que l'icône du .exe et
+  le splash Windows. Mesuré le 22/11 au soir, quatre fichiers de l'interface
+  portaient chacun leur copie écrite à la main du « J » d'avant, et l'humain le
+  voyait encore à l'écran. La couleur vient du CSS (currentColor → var(--accent)). -->
+  <div id="chat-loading" class="show" aria-label="chargement de la conversation" data-i18n="chat.loading_aria" data-i18n-attr="aria-label"><svg id="cl-logo" viewBox="0 0 12 12" aria-hidden="true">@@MARQUE_INLINE@@</svg></div>
   <!-- Accueil : affiché UNIQUEMENT quand le fil est réellement vide (et une fois
        le replay terminé, sinon il clignoterait au chargement de chaque page).
        Le logo est cloné depuis #brand au démarrage — une seule source de vérité

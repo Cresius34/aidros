@@ -494,10 +494,13 @@ button:disabled{opacity:.5;cursor:not-allowed}
    génération, la bulle de points redondante du fil est masquée (ce point-ci sert
    d'indicateur) — sauf en compactage, qui porte son propre libellé. */
 .genstatus{display:flex;align-items:center;gap:8px;margin-top:-8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--dim)}
-/* Logo AJEAN (le J du favicon : la barre + le carré du pied), en accent, SANS
-   animation — simple marque à côté des mesures. */
+/* La ligne d'activité du fil : LA MARQUE, en accent, SANS animation — simple
+   marque à côté des mesures. Son dessin vient de sys_brand_icon.go (voir
+   @@MARQUE_INLINE@@ de 09-stream.js). La règle `.jlogo rect{fill:currentColor}`
+   qui suivait est RETIRÉE : la marque n'a plus un rect, elle a sept cercles qui
+   portent chacun leur couleur, et une règle pour des formes disparues est une
+   règle qui endort. La couleur vient de la ligne ci-dessous, par currentColor. */
 .genstatus .jlogo{width:16px;height:16px;flex:none;color:var(--accent)}
-.genstatus .jlogo rect{fill:currentColor}
 #chat.genon .msg.typing:not(.compacting){display:none}
 /* Compactage : MÊME barre, texte « compactage… » en accent, logo dont l'opacité
    baisse puis remonte (fondu, pas de zoom) pour montrer que ça travaille. */
@@ -545,11 +548,17 @@ button:disabled{opacity:.5;cursor:not-allowed}
 #ce-logo svg{height:20px;width:auto;display:block;shape-rendering:crispEdges;fill:currentColor}
 #ce-logo .ce-word{display:inline-flex;color:var(--accent)}
 #ce-title{font-size:14px;color:var(--dim);letter-spacing:.03em}
-/* Voile de chargement : la marque « J » (favicon) en GRAND qui pulse (même pulsation
-   que le logo de compactage, @keyframes jpulse). Remplace l'ancien texte + points.
-   #cl-logo EST le SVG (viewBox 0 0 12 12). */
-#cl-logo{width:52px;height:52px;display:block;color:var(--accent);fill:currentColor;
-  shape-rendering:crispEdges;animation:jpulse 1.1s ease-in-out infinite}
+/* Voile de chargement : LA MARQUE en grand qui pulse (même pulsation que le logo
+   de compactage, @keyframes jpulse). Remplace l'ancien texte + points.
+   ⚠ PAS de fill:currentColor ici : le SVG vient de marqueSVGInline, qui porte sa
+   propre couleur par cercle. Un fill hérité du parent RECOUVRIRAIT le
+   fill='none' de l'anneau — l'anneau se remplirait et son trou disparaîtrait,
+   ce qui est exactement la marque qu'on ne veut plus voir. La couleur sort du
+   CSS par currentColor (porté par chaque cercle), pas par l'héritage d'un fill.
+   Idem pour shape-rendering:crispEdges : il mitraille un anneau, il ne l'aide
+   pas (mesuré le 22/11 sur l'icône, où le tracé se fait au supersampling). */
+#cl-logo{width:52px;height:52px;display:block;color:var(--accent);
+  animation:jpulse 1.1s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){#cl-logo{animation:none;opacity:.7}}
 .cl-dots{display:inline-flex;gap:5px;align-items:center}
 .cl-dots span{width:7px;height:7px;border-radius:50%;background:var(--dim);animation:typingdot 1.2s infinite ease-in-out}

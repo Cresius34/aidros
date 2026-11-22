@@ -12,10 +12,15 @@ package aidros
 //     data:image/svg+xml, avec ses propres formes — il ne lit pas ce fichier ;
 //   · l'apple-touch-icon (index.tmpl.html:16) est un AUTRE dessin encore : un PNG
 //     180x180 en base64, relu DIFFÉRENT de cmd/aidros/icon.png du dépôt.
-// Donc changer la marque, c'est TROIS éditions — ce fichier, le SVG du gabarit,
+// Donc changer la marque, c'était TROIS éditions — ce fichier, le SVG du gabarit,
 // le base64 du gabarit — plus le .syso régénéré (voir plus bas). Un commentaire
 // qui promet l'unicité pendant que trois endroits dessinent chacun leur compte
 // est pire que pas de commentaire : il endort.
+//
+// ➜ FERMÉ le 22/11 au soir : les deux derniers ne sont plus des éditions, ce sont
+// des PRODUITS. tools/assemble-ui y pose @@MARQUE@@, @@MARQUE_INLINE@@ et
+// @@MARQUE_PNG_180@@, tous trois dessinés ici. Voir la carte plus bas, à
+// marqueDisques.
 //
 // ⚠ LE MAILLON QUI SAUTE, mesuré le même jour. La chaîne est :
 //
@@ -43,10 +48,13 @@ package aidros
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 	"math"
+	"strconv"
+	"strings"
 )
 
 const trayIconSize = 32
@@ -128,9 +136,19 @@ var (
 // lisent :
 //
 //	marqueDisques ──┬─▶ marqueMotif   (prédicat, avec supersampling : l'icône)
-//	                └─▶ le splash GDI (disques pleins + un anneau au trait épais)
+//	                ├─▶ le splash GDI (disques pleins + un anneau au trait épais)
+//	                ├─▶ marqueSVG / marqueSVGInline → tools/assemble-ui → l'UI
+//	                └─▶ BrandIconPNG(180) → le même assembleur → apple-touch-icon
 //
-// Une seule géométrie, deux draweurs. C'est ce qui remplace l'ancienne promesse
+// ⭐ LE SIXIÈME DESSINATEUR ÉTAIT LE SVG, IL NE DESSINE PLUS. Le 22/11, la
+// géométrie était partagée par Go et GDI, et le SVG du gabarit était seulement
+// SURVEILLÉ par un filet (TestFaviconPartageLaGeometrie). Un filet sur une copie
+// ne l'empêche pas d'être périmée, il le dit APRÈS : le 22/11 au soir l'humain
+// voyait encore le « J » sur l'écran de chargement, et il y en avait quatre autres
+// (la ligne d'activité du fil, le manifeste PWA, l'icône des notifications push,
+// apple-touch-icon). Les six lisent maintenant le dessin du même code.
+//
+// Une seule géométrie, quatre draweurs. C'est ce qui remplace l'ancienne promesse
 // « RÉPLIQUE EXACTE du favicon » qui, elle, était fausse (voir l'en-tête).
 const (
 	marqueCentre    = 6.0  // le centre, en unités de la grille 12
@@ -272,6 +290,100 @@ func encodePNG(img *image.RGBA) []byte {
 // BrandIconPNG rend l'icône de marque (le carré noir, l'hydre-ouroboros blanc) en
 // PNG de n pixels. Exporté pour le générateur d'icône du .exe (tools/gen-icon).
 func BrandIconPNG(n int) []byte { return encodePNG(brandIconImage(n, brandBlack, brandWhite)) }
+
+// ─── la marque en SVG ─────────────────────────────────────────────────────────
+//
+// ⭐ LE CINQUIÈME DESSINATEUR, ET CE QUI L'A FAIT TOMBER. Le 22/11, la géométrie
+// était partagée par Go (l'icône) et GDI (le splash), et surveillée chez le
+// cinquième — le SVG du favicon, écrit À LA MAIN dans le gabarit. Un filet le
+// relisait chiffre par chiffre : c'était un garde, pas un dessinateur. Et le
+// 22/11 au soir, l'humain voyait encore le « J » sur l'écran de chargement.
+//
+// Relu, le « J » n'était pas un mais QUATRE, tous écrits à la main, tous hors de
+// portée du filet :
+//
+//	· le voile de chargement du fil    (index.tmpl.html, #cl-logo)  ← ce que l'humain voit
+//	· la ligne d'activité du fil       (js/09-stream.js, .jlogo)
+//	· l'icône d'installation PWA       (ui/manifest.webmanifest)
+//	· l'icône des notifications push   (ui/sw.js)
+//
+// Les quatre portent le MÊME glyphe, recopié quatre fois. Un filet qui surveille
+// une copie ne l'empêche pas d'être périmée : il le dit APRÈS. ➜ La correction
+// n'est pas de dessiner quatre fois juste, c'est de dessiner UNE fois. Ces quatre
+// endroits lisent donc le SVG rendu ICI, par le même code que l'icône et le splash.
+//
+// ⚠ DEUX conventions de trait, mesurées, et c'est ce qui rend le SVG délicat :
+// GDI trace sa bordure À L'INTÉRIEUR du rectangle (voir marqueDisques), SVG centre
+// son trait SUR le tracé. Le cercle du SVG est donc au RAYON MOYEN, avec un trait
+// de l'épaisseur de l'anneau : ses deux bords tombent sur marqueRayonInt et
+// marqueRayonExt, comme en Go. Écrire « rayon extérieur » ici donnerait un anneau
+// d'une demi-épaisseur trop épais, dans le seul monde qui ne le dira pas.
+//
+// ⚠ DEUX conventions de GUILLEMET, et ce n'est pas du goût : c'est l'endroit où
+// chaque SVG atterrit qui les impose.
+//
+//	· marqueSVG va DANS une data:URI, elle-même dans href="…" ou dans la chaîne "…"
+//	  de sw.js : il emploie donc EXCLUSIVEMENT l'apostrophe, le guillemet double le
+//	  casserait lui-même ;
+//	· marqueSVGInline va DANS le contenu d'un élément (le voile de chargement) ou
+//	  dans une chaîne JS entre apostrophes (la ligne d'activité) : là c'est
+//	  l'apostrophe qui casserait la chaîne d'accueil, il emploie donc le double.
+//
+// Un filet (TestLesDeuxSVGSeLogentLeurAccueil) les joue dans les deux sens.
+//
+// Le fichier de test rejoue ces deux règles, et sa contre-épreuve les fait rougir.
+
+// nombre rend un float sans zéros superflus : 3.70 → « 3.7 », 6.00 → « 6 ». Un
+// fichier d'interface se lit à l'œil ; « 3.700000 » ferait du SVG du bruit.
+func nombre(v float64) string { return strconv.FormatFloat(v, 'f', -1, 64) }
+
+// marqueSVGInline rend la marque en formes SVG NUES, sans balise <svg> et sans
+// fond : c'est ce qui va DANS un <svg> déjà ouvert par l'interface, qui porte sa
+// taille, sa classe et sa couleur. La couleur est currentColor : le CSS du
+// voisin (var(--accent)) décide, et c'est lui qui fait le vert/rouge des thèmes.
+func marqueSVGInline() string {
+	c, rExt, e, disques := marqueDisques()
+	rInt := rExt - e
+	var b strings.Builder
+	// l'anneau, au rayon MOYEN (le trait SVG est centré, l'inverse de GDI)
+	fmt.Fprintf(&b, "<circle cx=%q cy=%q r=%q fill=%q stroke=%q stroke-width=%q/>",
+		nombre(c), nombre(c), nombre((rExt+rInt)/2), "none", "currentColor", nombre(e))
+	for _, d := range disques {
+		fmt.Fprintf(&b, "<circle cx=%q cy=%q r=%q fill=%q/>",
+			nombre(d[0]), nombre(d[1]), nombre(d[2]), "currentColor")
+	}
+	return b.String()
+}
+
+// marqueSVG rend la marque en SVG COMPLET posé sur son carré noir, en couleurs
+// %23 hexadécimales : c'est le format d'une data:URI, là où le CSS n'existe pas
+// (favicon, manifeste, notification). Le noir et le blanc y sont FIGÉS, parce
+// qu'une data:URI ne connaît ni thème ni currentColor.
+func marqueSVG() string {
+	c, rExt, e, disques := marqueDisques()
+	rInt := rExt - e
+	var b strings.Builder
+	b.WriteString(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'>`)
+	// le carré aux coins arrondis : la silhouette de l'icône
+	b.WriteString(`<rect width='12' height='12' rx='2' ry='2' fill='%23000'/>`)
+	fmt.Fprintf(&b, "<circle cx='%s' cy='%s' r='%s' fill='none' stroke='%%23fff' stroke-width='%s'/>",
+		nombre(c), nombre(c), nombre((rExt+rInt)/2), nombre(e))
+	for _, d := range disques {
+		fmt.Fprintf(&b, "<circle cx='%s' cy='%s' r='%s' fill='%%23fff'/>",
+			nombre(d[0]), nombre(d[1]), nombre(d[2]))
+	}
+	b.WriteString(`</svg>`)
+	return b.String()
+}
+
+// BrandMarqueSVG et BrandMarqueSVGInline sont les deux portes du fichier, pour le
+// générateur d'interface (tools/assemble-ui) qui les glisse dans les quatre
+// dessins de l'UI. Exportées parce qu'un outil est un autre paquet : c'est le
+// même contrat que BrandIconPNG, déjà exportée pour tools/gen-icon.
+func BrandMarqueSVG() string { return marqueSVG() }
+
+// BrandMarqueSVGInline rend la marque sans fond ni balise <svg> (voir marqueSVGInline).
+func BrandMarqueSVGInline() string { return marqueSVGInline() }
 
 // brandTemplatePNG rend la variante « template » attendue par macOS : seule la
 // couche alpha compte, le système colore la forme selon le thème de la barre de

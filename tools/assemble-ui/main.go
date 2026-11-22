@@ -10,15 +10,27 @@
 //
 // Les marqueurs @@CSS@@ / @@JS@@ du template sont remplacés avec LEUR fin de
 // ligne (LF ou CRLF) ; chaque source apporte ses propres fins de ligne.
+//
+// ⭐ @@MARQUE@@ et @@MARQUE_INLINE@@ viennent du CODE GO, pas d'un fichier : la
+// marque (l'hydre-ouroboros) se dessine une seule fois, dans internal/aidros
+// (sys_brand_icon.go), et ce générateur la pose là où l'interface en a besoin —
+// le favicon, le voile de chargement, la ligne d'activité, le manifeste PWA,
+// l'icône des notifications push. Mesuré le 22/11 au soir, ces cinq endroits
+// portaient QUATRE copies écrites à la main du « J » d'avant, et l'humain le
+// voyait encore à l'écran. Un filet qui surveille une copie ne l'empêche pas
+// d'être périmée, il le dit APRÈS. Dessiner une fois règle les cinq à la fois.
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/nathaninline/ajean/internal/aidros"
 )
 
 func main() {
@@ -82,6 +94,48 @@ func run(uiDir string) error {
 			return fmt.Errorf("marqueur %s introuvable dans index.tmpl.html", marker)
 		}
 		html = re.ReplaceAllStringFunc(html, func(string) string { return content })
+	}
+
+	// La marque, dessinée par le code Go du paquet (voir l'en-tête de ce fichier).
+	// Ces deux marqueurs sont EN LIGNE — dans un href, dans une chaîne JS — et non
+	// seuls sur leur ligne comme le CSS et le JS : d'où un remplacement littéral,
+	// qui ne se pose pas la question d'un éventuel `$1`.
+	marque := aidros.BrandMarqueSVG()
+	marqueNu := aidros.BrandMarqueSVGInline()
+	// apple-touch-icon : iOS n'accepte pas le SVG pour l'icône d'accueil, il lui
+	// faut un PNG. BrandIconPNG le dessine — le SIXIÈME dessin de la marque était
+	// un PNG en base64 relu DIFFÉRENT de cmd/aidros/icon.png du dépôt (mesuré
+	// 22/11, l'en-tête de sys_brand_icon.go le racontait). Il sort donc du même
+	// code, à 180 px comme l'exige iOS.
+	marquePNG180 := base64.StdEncoding.EncodeToString(aidros.BrandIconPNG(180))
+	for _, m := range []struct{ marqueur, valeur string }{
+		{"@@MARQUE@@", marque},
+		{"@@MARQUE_INLINE@@", marqueNu},
+		{"@@MARQUE_PNG_180@@", marquePNG180},
+	} {
+		if !strings.Contains(html, m.marqueur) {
+			return fmt.Errorf("marqueur %s introuvable dans index.tmpl.html : la marque ne serait plus dessinée là où l'interface l'attend", m.marqueur)
+		}
+		html = strings.ReplaceAll(html, m.marqueur, m.valeur)
+	}
+
+	// Le manifeste PWA et le service worker portent la marque eux aussi — l'icône
+	// d'installation, l'icône des notifications push. Comme le reste des sources ils
+	// vivent sous ui/src/ avec @@MARQUE@@ ; leurs copies sous ui/ sont le produit,
+	// go:embed les embarque (web_server.go:22). Leurs commentaires sont GARDÉS :
+	// ce sont des fichiers qu'on lit à la main, pas la page publiée.
+	for _, nom := range []string{"manifest.webmanifest", "sw.js"} {
+		brut, err := os.ReadFile(filepath.Join(srcDir, nom))
+		if err != nil {
+			return err
+		}
+		if n := strings.Count(string(brut), "@@MARQUE@@"); n == 0 {
+			return fmt.Errorf("%s : aucun @@MARQUE@@ — la marque a disparu de cette source, et l'écrire sans elle produirait un fichier qui la nomme sans la dessiner", nom)
+		}
+		if err := os.WriteFile(filepath.Join(uiDir, nom),
+			[]byte(strings.ReplaceAll(string(brut), "@@MARQUE@@", marque)), 0o644); err != nil {
+			return err
+		}
 	}
 
 	dst := filepath.Join(uiDir, "index.html")
