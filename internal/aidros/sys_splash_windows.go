@@ -2,15 +2,25 @@
 
 package aidros
 
-// sys_splash_windows.go — écran de démarrage « Lancement de AJEAN… ».
+// sys_splash_windows.go — écran de démarrage « Lancement en cours… ».
 //
-// Petite fenêtre sans bordure, à coins arrondis, aux couleurs de la marque
-// (fond bleu #1f6feb, logo « j » blanc, texte blanc), affichée le temps que le
-// serveur monte et que le navigateur s'ouvre. Rendu GDI (pur syscall, aucun
-// CGO). Elle tourne sur son propre thread avec sa boucle de messages ; close()
-// lui envoie WM_CLOSE.
+// Petite fenêtre sans bordure, à coins arrondis, aux couleurs de la marque (fond
+// NOIR colBrand, logo blanc, texte blanc), affichée le temps que le serveur monte
+// et que le navigateur s'ouvre. Rendu GDI (pur syscall, aucun CGO). Elle tourne sur
+// son propre thread avec sa boucle de messages ; close() lui envoie WM_CLOSE.
+//
+// ⚠ Son en-tête promettait un « fond bleu #1f6feb » et un « logo « j » » : relus,
+// colBrand vaut 0x00000000 (NOIR) depuis longtemps et le logo est l'hydre-ouroboros
+// depuis le 22/11. Deux commentaires faux corrigés en passant, parce que je mettais
+// le logo à jour dans ce fichier.
+//
+// ⚠ CE QUI RESTE À DIRE, connu et non traité (règle : une modification à la fois) :
+// le TEXTE de cette fenêtre appelle encore le produit « AJEAN » (drawText, plus bas),
+// alors que le produit s'appelle Aidros depuis le 21/11. Le nom que l'utilisateur
+// voit au démarrage est donc le vieil orthographe — signalé, pas corrigé ici.
 
 import (
+	"math"
 	"runtime"
 	"sync"
 	"syscall"
@@ -53,6 +63,11 @@ var (
 	pSetTextColor       = g32s.NewProc("SetTextColor")
 	pSetBkMode          = g32s.NewProc("SetBkMode")
 	pCreateRoundRectRgn = g32s.NewProc("CreateRoundRectRgn")
+	// Les deux primitives du dessin de la marque. Ajoutées avec l'hydre-ouroboros :
+	// le « j » se peignait avec FillRect (des rectangles), un anneau se peint avec
+	// Ellipse et un trait épais. Voir paintSplash.
+	pCreatePen = g32s.NewProc("CreatePen")
+	pEllipse   = g32s.NewProc("Ellipse")
 
 	pGetModuleHandleW = k32s.NewProc("GetModuleHandleW")
 
@@ -220,21 +235,61 @@ func paintSplash(hdc uintptr) {
 	pFillRect.Call(hdc, uintptr(unsafe.Pointer(&full)), bg)
 	pDeleteObject.Call(bg)
 
-	// Logo « j » blanc — mêmes rectangles que l'icône et le favicon
-	// (glyphRects, sys_brand_icon.go), mis à l'échelle.
+	// Logo de la marque — l'hydre-ouroboros, DESSINÉE DEPUIS LA MÊME GÉOMÉTRIE que
+	// l'icône (marqueDisques, sys_brand_icon.go). Le « j » se peignait en rectangles
+	// parce que le splash ne savait peindre que des rectangles ; un anneau demande
+	// Ellipse et un trait épais, et c'est tout ce qu'il fallait de plus.
+	//
+	// ⚠ Les trois règles GDI qui font que ça tombe juste, mesurées à la doc GDI et
+	// non devinées :
+	//   · Ellipse trace sa bordure À L'INTÉRIEUR du rectangle qu'on lui donne : un
+	//     rectangle au rayon extérieur + un stylo de l'épaisseur de l'anneau =
+	//     exactement nos deux bords. C'est pour ça que marqueDisques rend le rayon
+	//     EXTÉRIEUR et l'épaisseur, et non le rayon moyen ;
+	//   · Ellipse REMPLIT avant de border, et le pinceau par défaut d'un DC est
+	//     WHITE_BRUSH : sans pinceau sélectionné, le trou de l'anneau se remplit en
+	//     blanc et l'anneau devient invisible. On sélectionne donc un pinceau à la
+	//     couleur du FOND — le trou redevient du fond, l'anneau reste blanc ;
+	//   · le bord DROIT et le bord BAS d'un rectangle GDI ne sont pas peints. Sans
+	//     le +1 ci-dessous, chaque disque et l'anneau perdaient une colonne de pixels
+	//     à droite et en bas : l'hydre serait partie en biais vers le haut.
 	white, _, _ := pCreateSolidBrush.Call(colWhite)
 	const logo = 58
 	ox, oy := int32(40), int32((splashH-logo)/2)
 	scale := float64(logo) / 12
-	for _, rc := range glyphRects {
-		r := rect{
-			left:   ox + int32(rc[0]*scale),
-			top:    oy + int32(rc[1]*scale),
-			right:  ox + int32((rc[0]+rc[2])*scale),
-			bottom: oy + int32((rc[1]+rc[3])*scale),
-		}
-		pFillRect.Call(hdc, uintptr(unsafe.Pointer(&r)), white)
+	// disque en pixels écran depuis un centre et un rayon en unités de la grille 12
+	disque := func(cx, cy, r float64) rect {
+		x0 := ox + int32(math.Round((cx-r)*scale))
+		y0 := oy + int32(math.Round((cy-r)*scale))
+		x1 := ox + int32(math.Round((cx+r)*scale)) + 1
+		y1 := oy + int32(math.Round((cy+r)*scale)) + 1
+		return rect{x0, y0, x1, y1}
 	}
+	c, rExt, e, disques := marqueDisques()
+	// 1. l'anneau : un trait épais, et un trou de la couleur du fond
+	const psSolid = 0
+	fond, _, _ := pCreateSolidBrush.Call(colBrand)
+	penAnneau, _, _ := pCreatePen.Call(psSolid, uintptr(math.Round(e*scale)), colWhite)
+	pSelectObject.Call(hdc, fond)
+	pSelectObject.Call(hdc, penAnneau)
+	// ⚠ Go refuse &disque(...) : on ne prend pas l'adresse du résultat d'un appel.
+	// D'où la variable — et elle sert aussi au second appel, dans la boucle.
+	rAnneau := disque(c, c, rExt)
+	pEllipse.Call(hdc, uintptr(unsafe.Pointer(&rAnneau)))
+	// 2. les têtes et leurs becs : des disques PLEINS, sans bordure (psNull).
+	//    Sans bordure, seul le remplissage compte : pas de double trait là où une
+	//    tête touche l'anneau.
+	const psNull = 5
+	penPlein, _, _ := pCreatePen.Call(psNull, 0, colWhite)
+	pSelectObject.Call(hdc, white)
+	pSelectObject.Call(hdc, penPlein)
+	for _, d := range disques {
+		r := disque(d[0], d[1], d[2])
+		pEllipse.Call(hdc, uintptr(unsafe.Pointer(&r)))
+	}
+	pDeleteObject.Call(fond)
+	pDeleteObject.Call(penAnneau)
+	pDeleteObject.Call(penPlein)
 	pDeleteObject.Call(white)
 
 	// Textes (blanc, fond transparent).
