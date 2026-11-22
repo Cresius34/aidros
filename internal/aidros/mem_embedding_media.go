@@ -34,6 +34,18 @@ func embeddingMedia(root, text string, cfg embeddingConfig) (embeddingInput, str
 	active := "," + cfg.Modalities + ","
 	hash := sha256.New()
 	seen := map[string]bool{}
+	// La racine est résolue UNE FOIS, pour la même raison que le lien du média
+	// plus bas : sous macOS, /tmp et /var sont des liens vers /private/var, donc
+	// EvalSymlinks transforme la racine du projet en /private/var/…. Comparer le
+	// média résolu à une racine RESTÉE NON résolue le déclarait « hors du projet
+	// mémoire » alors qu'il y était, image comprise. (Mesuré sur le runner macOS
+	// du 21/11 : TestEmbeddingMediaContainmentAndContentInvalidation, ligne 103.)
+	// Un lien ne peut pas remonter plus haut que la racine elle-même : la garde
+	// contre l'évasion reste entière, c'est la même comparaison, à la même échelle.
+	racine := root
+	if r, err := filepath.EvalSymlinks(root); err == nil {
+		racine = r
+	}
 	for _, match := range memoryMediaLink.FindAllStringSubmatch(text, -1) {
 		path := strings.TrimSpace(match[1])
 		if strings.HasPrefix(path, "<") {
@@ -74,7 +86,7 @@ func embeddingMedia(root, text string, cfg embeddingConfig) (embeddingInput, str
 		if err != nil {
 			return input, "", fmt.Errorf("média local introuvable : %s", filepath.Base(path))
 		}
-		if !pathWithin(root, real) {
+		if !pathWithin(racine, real) {
 			return input, "", errors.New("lien média hors du projet mémoire")
 		}
 		if seen[real] {

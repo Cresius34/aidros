@@ -396,6 +396,17 @@ func canSymlink(t *testing.T) bool {
 }
 
 func TestMoeMigrate(t *testing.T) {
+	// Le moteur MoE n'existe PAS sur toutes les plates-formes : ses trois fichiers
+	// sont cloisonnés par des contraintes de build — `linux`, `windows`, et
+	// `!linux && !windows` pour backend_moe_other.go, qui ne sait que répondre
+	// « moteur MoE disponible uniquement sous Linux et Windows ». Sur macOS,
+	// moeMigrate est donc CETTE réponse, et la tester ici ne juge pas le code :
+	// ça juge la plate-forme. La garde reproduit les deux étiquettes de build ;
+	// si elles changent, changer ceci. (Mesuré sur le runner macOS du 21/11 :
+	// t.Fatal sur le message de backend_moe_other.go:21.)
+	if runtime.GOOS != "linux" && runtime.GOOS != "windows" {
+		t.Skip("moteur MoE absent sur cette plate-forme : rien à migrer à tester ici")
+	}
 	if runtime.GOOS == "windows" && !canSymlink(t) {
 		t.Skip("liens symboliques interdits sur ce poste : reprise de migration non testable ici")
 	}

@@ -130,3 +130,53 @@ func TestEmbeddingMediaContainmentAndContentInvalidation(t *testing.T) {
 		t.Fatal("GGUF accepted multimodal input")
 	}
 }
+
+// TestEmbeddingMediaRacineSousLienSymbole joue le cas macOS, celui qui faisait
+// rougir le runner du 21/11 (ligne 103 : « lien média hors du projet mémoire »).
+//
+// Sous macOS, /tmp et /var sont des LIENS vers /private/var : t.TempDir() y
+// pose donc la racine du projet sous un chemin qui se résout ailleurs. L'image
+// est bien dans le projet, mais elle se résout en /private/var/… pendant que la
+// racine, elle, restait /var/… : la comparaison les déclarait étrangères.
+//
+// mediaFace fabrique ce geste sur CHAQUE système (lien symbolique hors Windows,
+// nom court 8.3 sous Windows, où le lien exige un droit particulier) : le test
+// ne doit pas sauter en silence, sinon rien ne prouve le correctif.
+func TestEmbeddingMediaRacineSousLienSymbole(t *testing.T) {
+	home := testHome(t)
+	reel := filepath.Join(home, "reel")
+	racine := filepath.Join(reel, "memory")
+	if err := os.MkdirAll(racine, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	face, pourquoi := mediaFace(reel)
+	if face == "" {
+		t.Skipf("aucun moyen d'obtenir un chemin qui se résout ailleurs : %s", pourquoi)
+	}
+	// La racine est vue PAR LE LIEN : elle-même ne se résout pas où elle est.
+	root := filepath.Join(face, "memory")
+	if r, err := filepath.EvalSymlinks(root); err != nil {
+		t.Fatalf("la racine par le lien ne se résout pas : %v", err)
+	} else if r == root {
+		t.Fatalf("la racine par le lien se résout EN ELLE-MÊME (%s) : le cas n'est pas joué", r)
+	}
+	media := filepath.Join(root, "capture.png")
+	if err := os.WriteFile(media, []byte("vue"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	note := "# Capture\n![vue](capture.png)\n"
+	if err := os.WriteFile(filepath.Join(root, "note.md"), []byte(note), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := normalizeEmbeddingConfig(embeddingConfig{Provider: "transformers", Modalities: "text,image"})
+	input, hash, err := embeddingMedia(root, note, cfg)
+	if err != nil {
+		t.Fatalf("média d'un projet sous lien refusé : %v", err)
+	}
+	if len(input.Image) != 1 || !strings.Contains(input.Text, "<|image|>") {
+		t.Fatalf("média non retenu : %+v", input)
+	}
+	if hash == "" {
+		t.Fatal("pas d'empreinte : l'invalidation par contenu ne pourrait pas se faire")
+	}
+}
