@@ -101,6 +101,10 @@ fr: {
   "sidebar.svc_log_copy_button": "copier",
   "sidebar.svc_log_refresh_title": "rafraîchir",
   "sidebar.paths_title": "Emplacements",
+  // Le lien du dépôt, dans la ligne sous le logo (build portable). Demande du
+  // 22/11 : ce que l'humain voyait là, c'était le nom du dossier — il voulait un
+  // accès au dépôt. L'URL vient de updateRepo côté Go, seul ce texte est ici.
+  "sidebar.repo_link": "Dépôt GitHub ici",
   "device.title": "Appareil",
   "config.title": "Configuration",
   "presets.title": "Presets",
@@ -1676,6 +1680,7 @@ en: {
   "sidebar.svc_log_copy_button": "copy",
   "sidebar.svc_log_refresh_title": "refresh",
   "sidebar.paths_title": "Locations",
+  "sidebar.repo_link": "GitHub repo here",
   "device.title": "Device",
   "config.title": "Configuration",
   "presets.title": "Presets",

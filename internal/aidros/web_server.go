@@ -578,8 +578,23 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 		//
 		// La balise garde son style : uiBadgeMarker est <div id="memory-test-build"
 		// style=, et le garde de livraison lit cette signature, pas le mot.
-		badge := fmt.Sprintf(`<div id="memory-test-build" style="font-size:11px;line-height:1.4;padding:4px 0;word-break:break-all"><span>:%s · %s</span></div>`,
-			parallelUIPort(), parallelHomeLabel())
+		//
+		// Le lien du dépôt y entre le 22/11, sur la demande de l'humain qui montrait
+		// cette ligne du doigt. Il est bâti depuis updateRepo (sys_update.go:54), la
+		// SOURCE UNIQUE de l'emplacement amont — déjà utilisée pour la mise à jour.
+		// Écrire « https://github.com/Cresius34/aidros » en dur ici ferait deux
+		// vérités : un jour l'une suivrait l'autre pas, et le 404 de /api/update nous
+		// a déjà appris ce que coûte une URL de dépôt périmée dans le marbre d'un exe.
+		//
+		// Le libellé n'est PAS ici : il porte data-i18n, donc le moteur de traduction
+		// le remplace à chaque changement de langue. Le texte écrit dans le HTML est
+		// l'ANGLAIS, la langue par défaut (00b-i18n.js:20, currentLang replie sur en).
+		//
+		// L'adresse et le dossier d'installation restent : cette ligne est le SEUL
+		// endroit de l'écran qui les nomme, et c'est ce qui distingue deux instances
+		// portables de la même machine. Le lien s'y ajoute, il ne les remplace pas.
+		badge := fmt.Sprintf(`<div id="memory-test-build" style="font-size:11px;line-height:1.4;padding:4px 0;word-break:break-all"><span>:%s · %s · <a href="https://github.com/%s" target="_blank" rel="noopener" data-i18n="sidebar.repo_link">GitHub repo here</a></span></div>`,
+			parallelUIPort(), parallelHomeLabel(), updateRepo)
 		b = []byte(strings.Replace(html, `<div id="memory-test-build" hidden></div>`, badge, 1))
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
