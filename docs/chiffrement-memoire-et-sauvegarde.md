@@ -1,5 +1,12 @@
 # Chiffrement de la mémoire + sauvegarde ajean.link
 
+> ⚠ **L'état a changé le 22 novembre 2026.** La **partie chiffrement** de ce plan
+> est en service (`MEM_ENCRYPTED`, `mem_io.go`, `mem_migrate.go`). La **partie
+> sauvegarde sur relais** — la section 6 et tout ce qui nomme `ajean.link` —
+> n'est **plus dans le dépôt** : le code est sorti le 22/11 et se relit dans la
+> branche `link-relique`. Les sections 6 et 7 se lisent donc comme un plan non
+> repris, plus comme une description de l'existant.
+
 Plan d'implémentation de référence. À lire avant d'écrire du code. Deux
 nouveautés qui partagent la même fondation cryptographique :
 

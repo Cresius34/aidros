@@ -344,9 +344,10 @@ utiliser votre modèle sur votre réseau : URL de base, votre clé API, terminé
 Scripts, IDE, autres clients de discussion, et l'autre Aidros du réseau.
 
 L'accès distant par un relais (pour quand on est sorti et qu'on ne peut pas
-ouvrir de port) est une autre affaire, et relève du projet amont plus que
-d'Aidros. Il n'est pas proposé ici pour l'instant ; le code est conservé, et sera
-repris.
+ouvrir de port) ne fait plus partie d'Aidros : ce code est sorti du dépôt le
+22 novembre 2026 et se relit dans la branche `link-relique`. Tout ce qui reste —
+`aidros network on`, l'endpoint compatible OpenAI, le pont Aidros↔Aidros — reste
+sur votre réseau.
 
 ---
 
@@ -435,12 +436,12 @@ La machine
 À poser avec `aidros edit`, ou dans les réglages. Les clés qui comptent le plus :
 `MODEL`, `BIN`, `CTX`, `NGL`, `KV`, `PORT`, `HOST`, `REASONING_EFFORT`,
 `COMPACT`, `COMPACT_MAX`, `COMPACT_FRAC`, `MEM_MODE`, `MEM_ENCRYPTED`,
-`BACKUP_AUTO`, `MACHINES`, `CUDA_VISIBLE_DEVICES`. Un preset MoE ajoute
+`MACHINES`, `CUDA_VISIBLE_DEVICES`. Un preset MoE ajoute
 `ENGINE=moe`, `MOE_RUNTIME`, `MOE_MODEL`, `MOE_BACKEND`, `MOE_KV`, `MOE_SPEC`,
 `MOE_VISION`, `MOE_VRAM_RESERVE`, `MOE_HELPER`.
 
 Certaines clés sont **par machine** et survivent à un changement de preset
-(`MEM_MODE`, `HOST`, `MEM_ENCRYPTED`, `BACKUP_AUTO`, `COMPACT`, `COMPACT_MAX`,
+(`MEM_MODE`, `HOST`, `MEM_ENCRYPTED`, `COMPACT`, `COMPACT_MAX`,
 `COMPACT_FRAC`, `MACHINES`, `CUDA_VISIBLE_DEVICES`) — la liste est
 `preservedKeys` dans `backend_presets.go`. Un preset qui en nomme une
 explicitement gagne quand même : `CUDA_VISIBLE_DEVICES` et `HOST` ne sont gardés

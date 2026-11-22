@@ -329,18 +329,19 @@ endpoint reachable on the LAN. Nothing leaves your network.
 model over your network: base URL, your API key, done. Scripts, IDEs, other chat
 clients, and the other Aidros on the network.
 
-Remote access through a relay (for when you are out and cannot open a port) is a
-separate matter, and belongs to the upstream project rather than to Aidros. It
-is not currently offered here; the code for it is kept, and will be looked at
-again.
+Remote access through a relay (for when you are out and cannot open a port) is
+no longer part of Aidros: that code left the repository on 22 November 2026 and
+can be read again in the `link-relique` branch. Everything else here —
+`aidros network on`, the OpenAI-compatible endpoint, the Aidros↔Aidros bridge —
+stays on your network.
 
 ---
 
 ## Your data
 
-Everything lives under **`$AJEAN_HOME`**: `/etc/ajean` on Linux,
+Everything lives under **`$AJEAN_HOME`**: `/etc/aidros` on Linux,
 `%ProgramData%\Aidros` on Windows (an older install under `ajean` is still
-found and used), `/etc/ajean` or `~/Library/Application Support/Aidros` on
+found and used), `/etc/aidros` or `~/Library/Application Support/Aidros` on
 macOS. `aidros where` shows the exact paths.
 
 | | |
@@ -419,13 +420,13 @@ Machine
 
 Set with `aidros edit`, or in the settings. The keys that matter most: `MODEL`,
 `BIN`, `CTX`, `NGL`, `KV`, `PORT`, `HOST`, `REASONING_EFFORT`, `COMPACT`,
-`COMPACT_MAX`, `COMPACT_FRAC`, `MEM_MODE`, `MEM_ENCRYPTED`, `BACKUP_AUTO`,
+`COMPACT_MAX`, `COMPACT_FRAC`, `MEM_MODE`, `MEM_ENCRYPTED`,
 `MACHINES`, `CUDA_VISIBLE_DEVICES`. A MoE preset adds `ENGINE=moe`,
 `MOE_RUNTIME`, `MOE_MODEL`, `MOE_BACKEND`, `MOE_KV`, `MOE_SPEC`, `MOE_VISION`,
 `MOE_VRAM_RESERVE`, `MOE_HELPER`.
 
 Some keys are **per machine** and survive a preset switch (`MEM_MODE`, `HOST`,
-`MEM_ENCRYPTED`, `BACKUP_AUTO`, `COMPACT`, `COMPACT_MAX`, `COMPACT_FRAC`,
+`MEM_ENCRYPTED`, `COMPACT`, `COMPACT_MAX`, `COMPACT_FRAC`,
 `MACHINES`, `CUDA_VISIBLE_DEVICES`) — the list is `preservedKeys` in
 `backend_presets.go`. A preset that explicitly sets one of them still wins:
 `CUDA_VISIBLE_DEVICES` and `HOST` are only kept if the incoming preset does not
