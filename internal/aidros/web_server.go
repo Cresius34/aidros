@@ -590,11 +590,24 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 		// le remplace à chaque changement de langue. Le texte écrit dans le HTML est
 		// l'ANGLAIS, la langue par défaut (00b-i18n.js:20, currentLang replie sur en).
 		//
-		// L'adresse et le dossier d'installation restent : cette ligne est le SEUL
-		// endroit de l'écran qui les nomme, et c'est ce qui distingue deux instances
-		// portables de la même machine. Le lien s'y ajoute, il ne les remplace pas.
-		badge := fmt.Sprintf(`<div id="memory-test-build" style="font-size:11px;line-height:1.4;padding:4px 0;word-break:break-all"><span>:%s · %s · <a href="https://github.com/%s" target="_blank" rel="noopener" data-i18n="sidebar.repo_link">GitHub repo here</a></span></div>`,
-			parallelUIPort(), parallelHomeLabel(), updateRepo)
+		// ⭐ Le port et le dossier d'installation en SORTENT le 22/11, sur ordre de
+		// l'humain après avoir vu le lien : « ne garde que le dépôt github ici, pas ce
+		// qui précède ». Je les avais ajoutés la veille comme signature de l'instance,
+		// l'humain les retire — c'est son écran. Ce qui est vérifié pour que rien ne
+		// soit PERDU pour autant, et non seulement effacé :
+		//   · le PORT est dans le <title> de la page (« Aidros 1.0.0 · 18090 », ligne
+		//     567 ci-dessus) — donc dans l'onglet du navigateur, où l'on regarde ;
+		//   · le DOSSIER est dans « Emplacements », section du même panneau, remplie
+		//     depuis /api/paths qui rend home, database, exe, installed et sept autres
+		//     (05-status.js:207) ;
+		//   · et l'URL d'ouverture du navigateur porte le port (parallelOpenURL).
+		// Le badge ne devient donc pas un endroit où une information meurt : il devient
+		// une ligne qui ne dit qu'une chose.
+		//
+		// word-break:break-all tombe avec le chemin : c'était pour le dé, pas pour un
+		// libellé de trois mots.
+		badge := fmt.Sprintf(`<div id="memory-test-build" style="font-size:11px;line-height:1.4;padding:4px 0"><a href="https://github.com/%s" target="_blank" rel="noopener" data-i18n="sidebar.repo_link">GitHub repo here</a></div>`,
+			updateRepo)
 		b = []byte(strings.Replace(html, `<div id="memory-test-build" hidden></div>`, badge, 1))
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

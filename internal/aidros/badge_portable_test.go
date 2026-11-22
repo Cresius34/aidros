@@ -89,12 +89,26 @@ func TestBadgePortableSansDoublon(t *testing.T) {
 		t.Errorf("le badge répète le millésime (%q) alors que « #ver » l'affiche déjà : %s", displayVersion(), badge)
 	}
 
-	// 3. Ce que le badge dit, lui seul le dit : l'interface et l'instance.
-	if !strings.Contains(badge, "18099") {
-		t.Errorf("le badge ne nomme pas l'interface d'écoute : %s", badge)
+	// 3. ⭐ Le port et le dossier d'installation n'y sont PLUS, depuis l'ordre du
+	// 22/11 : « ne garde que le dépôt github ici, pas ce qui précède ». Je les
+	// avais ajoutés la veille comme signature de l'instance ; l'humain les retire,
+	// c'est son écran. Ce filet tient DONC l'ordre, et pas seulement le doublon :
+	// sans lui, les deux reviendraient ligne à ligne sans qu'aucun filet bronche.
+	//
+	// Retirer n'est pas jeter. Ce que le badge disait n'est PAS perdu, et c'est
+	// vérifié ailleurs dans cette page et hors d'elle :
+	//   · le PORT est dans le <title> — vu au test 4 ci-dessous, qui l'y exige ;
+	//   · le DOSSIER est dans « Emplacements », section du même panneau, remplie
+	//     depuis /api/paths (handlePaths, sys_paths.go:126 : home, database, exe,
+	//     installed et six autres) ;
+	//   · et l'URL que le navigateur reçoit à l'ouverture porte le port
+	//     (parallelOpenURL, gardé par url_ouverture_test.go).
+	// Le port forcé ci-dessus reste donc utile : c'est CONTRE lui que ce test joue.
+	if strings.Contains(badge, "18099") {
+		t.Errorf("le badge porte encore l'interface d'écoute, retirée sur ordre : %s", badge)
 	}
-	if !strings.Contains(badge, "mon-poste") {
-		t.Errorf("le badge ne nomme pas l'instance : %s", badge)
+	if strings.Contains(badge, "mon-poste") {
+		t.Errorf("le badge porte encore le dossier d'installation, retiré sur ordre : %s", badge)
 	}
 
 	// 4. Le millésime reste exposable dans la page, mais à sa place : le <title>.
@@ -217,9 +231,10 @@ func TestBadgePortableLieLeDepot(t *testing.T) {
 		t.Errorf("le lien ne porte pas sa clé de traduction : %s", badge)
 	}
 
-	// 5a. L'interface d'écoute et l'instance sont toujours nommées.
-	if !strings.Contains(badge, "18098") || !strings.Contains(badge, "poste-lien") {
-		t.Errorf("le lien a évincé l'interface ou l'instance : %s", badge)
+	// 5a. Le badge ne dit QUE le lien : ni le port, ni le dossier, retirés sur
+	// l'ordre du 22/11 (le port forcé ci-dessus sert à jouer contre lui).
+	if strings.Contains(badge, "18098") || strings.Contains(badge, "poste-lien") {
+		t.Errorf("le badge porte encore l'interface ou le dossier, retirés sur ordre : %s", badge)
 	}
 
 	// 5b. Le point d'entrée normal ne connaît toujours pas ce badge.

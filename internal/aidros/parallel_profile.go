@@ -121,34 +121,23 @@ func displayVersion() string {
 func parallelBuild() bool                   { return BuildFlavor == "embedding-test" }
 func parallelHome(executable string) string { return filepath.Join(filepath.Dir(executable), "data") }
 
-// parallelHomeLabel : de quoi dire « QUI est cette instance », en court.
+// parallelHomeLabel est MORTHE le 22/11, et retirée avec, pas seulement son
+// affichage. Ajoutée la veille pour que le badge nomme l'installation (le port
+// et le dossier), elle n'a plus un seul appelant depuis que l'humain a demandé
+// de ne garder que le lien du dépôt : « ne garde que le dépôt github ici, pas ce
+// qui précède ». Vérifié au juge — « git grep parallelHomeLabel » ne rend plus
+// que sa propre définition — donc ce n'est pas un routage perdu que je viens de
+// casser, c'est bien le routage que l'humain a retiré : du code mort.
 //
-// Le nom du dossier de données ne distingue RIEN : tout build portable pose son
-// home à côté de son exécutable (parallelHome), donc s'appelle « data » chez
-// l'une et chez l'autre. Ce qui les sépare, c'est le dossier qui LES SÉPARE —
-// celui de l'exécutable. C'est aussi ce que l'humain tape, et ce que le lanceur
-// de l'autre poste regarde.
+// L'information n'est pas perdue pour autant, et c'est ce qui autorise le
+// retrait : le PORT est dans le <title> de la page et dans l'URL d'ouverture du
+// navigateur, le DOSSIER dans « Emplacements » via /api/paths (handlePaths,
+// sys_paths.go:126, qui rend home, database, exe, installed et six autres).
+// Les rejouer si l'écran redevient avare : un commit du 22/11, 3a92bea.
 //
-// Best-effort : un badge muet sur ce point vaut mieux qu'une page absente.
-func parallelHomeLabel() string {
-	home := os.Getenv("AJEAN_HOME")
-	if home == "" {
-		if exe, err := os.Executable(); err == nil {
-			home = parallelHome(exe)
-		}
-	}
-	if home == "" {
-		return ""
-	}
-	// On nomme le PARENT du home : « data » ne dit rien, « ajean-memory-test » dit
-	// tout. Un home posé à la racine d'un disque rend « C: », court et lisible.
-	if parent := filepath.Dir(strings.TrimRight(home, `\/`)); parent != "" {
-		if nom := filepath.Base(parent); nom != "" && nom != "." && nom != string(filepath.Separator) {
-			return nom
-		}
-	}
-	return filepath.Base(home)
-}
+// Le nom du dossier de données ne distinguait d'ailleurs RIEN : tout build
+// portable pose son home à côté de son exécutable (parallelHome), donc « data »
+// chez l'une comme chez l'autre. C'est le dossier qui les séparait qui parlait.
 
 func initParallelProfile() error {
 	exe, err := os.Executable()
