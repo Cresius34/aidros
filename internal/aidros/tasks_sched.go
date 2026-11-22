@@ -2,7 +2,7 @@ package aidros
 
 // tasks_sched.go — la boucle de planification. Une seule goroutine, un tick par
 // minute, dans le process qui possède la conversation et l'UI (ajean-ui /
-// `ajean link`). Voir StartTaskScheduler, câblée dans newWebMux (web_server.go).
+// `aidros link`). Voir StartTaskScheduler, câblée dans newWebMux (web_server.go).
 
 import (
 	"sync"

@@ -36,9 +36,9 @@ func TestPresetFingerprintIgnoresCosmetics(t *testing.T) {
 
 // TestSwitchToPresetGardeLesReglagesMachine : basculer de preset ne doit pas
 // effacer les réglages qui décrivent la MACHINE et non le modèle. Le cas vécu :
-// `ajean gpu 1` écrit CUDA_VISIBLE_DEVICES dans config.env, la bascule de preset
+// `aidros gpu 1` écrit CUDA_VISIBLE_DEVICES dans config.env, la bascule de preset
 // suivante l'écrasait, llama.cpp revoyait les deux cartes et réétalait le modèle
-// sur la petite — pendant que `ajean gpu` réaffichait « auto ».
+// sur la petite — pendant que `aidros gpu` réaffichait « auto ».
 func TestSwitchToPresetGardeLesReglagesMachine(t *testing.T) {
 	home := testHome(t)
 	write := func(p, body string) {

@@ -5,7 +5,7 @@ package aidros
 // Ce test ne cree PAS de testHome : il lit la VRAIE config de la machine, celle
 // du preset en service, et fait exactement ce que fait l'encart « Appareil »
 // (handleBackendDevices -> listDevicesCached -> sampleVramGPUs). But : separer la
-// regression GPU de celle du moteur, sans lancer deuxieme instance d'AJEAN (une
+// regression GPU de celle du moteur, sans lancer deuxieme instance d'Aidros (une
 // seconde instance se battrait pour la conversation et le lien, voir cmdApp).
 //
 // Le 15/11, a la fusion 0.20.1 : il appelait prebuiltResolveBin(), une fonction

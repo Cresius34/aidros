@@ -297,7 +297,7 @@ func hasZeroMemory(devs []map[string]any) bool {
 	return false
 }
 
-// handleBackendDevices renvoie les cartes vues par le moteur d'AJEAN. Le
+// handleBackendDevices renvoie les cartes vues par le moteur d'Aidros. Le
 // binaire n'est jamais fourni par la requête : c'est toujours celui du moteur
 // installé.
 func handleBackendDevices(w http.ResponseWriter, r *http.Request) {

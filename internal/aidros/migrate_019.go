@@ -116,7 +116,7 @@ func presetContent019(s service019) string {
 
 // retire019Unit arrête et désactive l'unité système d'un service 0.19. Au mieux :
 // sans les droits, elle reste en place et retire019Units (appelée par
-// « ajean install », en administrateur) la reprendra.
+// « aidros install », en administrateur) la reprendra.
 var retire019Unit = func(id string) error {
 	name := "ajean-svc-" + id
 	run := func(bin string, args ...string) error { return exec.Command(bin, args...).Run() }
@@ -274,7 +274,7 @@ func migrateFrom019() {
 			// ce preset lançait une unité (EXTERNAL_SERVICE) que la 0.19 a
 			// retirée au profit de son service.
 			if err := revive018Preset(s); err != nil {
-				fmt.Fprintf(os.Stderr, "[ajean] reprise du preset %s : %v\n", s.Preset, err)
+				fmt.Fprintf(os.Stderr, "[aidros] reprise du preset %s : %v\n", s.Preset, err)
 			}
 			if s.ID == chatID {
 				chatPreset = s.Preset
@@ -293,7 +293,7 @@ func migrateFrom019() {
 		}
 		id, err := SavePreset("", name, presetContent019(s))
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[ajean] reprise du service 0.19 %s : %v\n", s.ID, err)
+			fmt.Fprintf(os.Stderr, "[aidros] reprise du service 0.19 %s : %v\n", s.ID, err)
 			continue
 		}
 		have[id], names[strings.ToLower(name)] = true, true
@@ -303,7 +303,7 @@ func migrateFrom019() {
 		}
 	}
 	if left := retire019Units(); len(left) > 0 {
-		fmt.Fprintf(os.Stderr, "[ajean] unités de la 0.19 encore actives (droits insuffisants) : %s. Lancez « ajean install » en administrateur pour les retirer.\n", strings.Join(left, ", "))
+		fmt.Fprintf(os.Stderr, "[aidros] unités de la 0.19 encore actives (droits insuffisants) : %s. Lancez « aidros install » en administrateur pour les retirer.\n", strings.Join(left, ", "))
 	}
 	// Configuration active : le preset du modèle que le chat utilisait en 0.19,
 	// sinon celui qui était actif avant elle.
@@ -315,9 +315,9 @@ func migrateFrom019() {
 	}
 	if target != "" {
 		if err := applyPresetFile(filepath.Join(presetsDir(), target+".env")); err != nil {
-			fmt.Fprintf(os.Stderr, "[ajean] reprise du preset actif %s : %v\n", target, err)
+			fmt.Fprintf(os.Stderr, "[aidros] reprise du preset actif %s : %v\n", target, err)
 		}
 	}
 	_ = putStr(bkState, migrated019Key, "1")
-	fmt.Fprintf(os.Stderr, "[ajean] installation 0.19 reprise : %d service(s) converti(s) en preset\n", created)
+	fmt.Fprintf(os.Stderr, "[aidros] installation 0.19 reprise : %d service(s) converti(s) en preset\n", created)
 }

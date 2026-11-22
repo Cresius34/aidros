@@ -303,7 +303,7 @@ type Caps struct {
 	// ComputerUse = pilotage d'un navigateur de la machine hôte (outils cu_*).
 	// Requiert aussi Agent (mêmes actions réelles que bash). Voir computer_use.go.
 	ComputerUse bool
-	// Terminal = chat en ligne de commande (ajean chat) : outils réduits à
+	// Terminal = chat en ligne de commande (aidros chat) : outils réduits à
 	// bash/write/edit dans le dossier courant, prompt court façon pi, sans
 	// mémoire, projets, tâches ni web. Voir cli_chat.go.
 	Terminal bool
@@ -500,7 +500,7 @@ func EnabledTools(caps Caps) []Tool {
 		// agent — le compactage n'injecte les ids rappelables que là (voir
 		// compactSummaryUserMsg). Voir chat_recall.go.
 		tools = append(tools, recallTool(), recallSearchTool())
-		// Le canal Ajean↔Ajean : parler à UNE AUTRE IA du réseau local, par-dessus
+		// Le canal Aidros↔Aidros : parler à UNE AUTRE IA du réseau local, par-dessus
 		// le pont. Annoncé seulement si l'installation est portable ET qu'au moins
 		// un voisin est déclaré — proposer un outil sans destinataire ferait croire
 		// au modèle qu'il a un interlocuteur qu'il n'a pas.
@@ -2181,7 +2181,7 @@ func runChat(ctx context.Context, messages []Message, temperature float64, caps 
 			// l'utilisateur — vu le 2026-11-01 : l'humain a du demander « c'est toi ou
 			// l'utilisateur qui a parle ? ». Meme regle que le canal Ajean-Ajean.
 			var rb strings.Builder
-			rb.WriteString("[Ajean — message de l'application, pas de l'utilisateur] ")
+			rb.WriteString("[Aidros — message de l'application, pas de l'utilisateur] ")
 			rb.WriteString("[appel d'outil refusé par le moteur] ")
 			for i, nm := range rejectedCalls {
 				if i > 0 {

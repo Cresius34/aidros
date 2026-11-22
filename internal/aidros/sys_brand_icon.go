@@ -76,7 +76,7 @@ var (
 //	· trois têtes, ce sont nos trois moteurs : le MoE, les embeddings, l'image.
 //	  L'hydre repousse ce qu'on lui coupe ; éteindre un moteur n'éteint pas
 //	  l'application ;
-//	· et le « j » ne disait plus rien : c'était l'initiale d'AJEAN. Le fichier le
+//	· et le « j » ne disait plus rien : c'était l'initiale d'Aidros. Le fichier le
 //	  disait lui-même, en toutes lettres : « carré à coins arrondis NOIR + « j »
 //	  blanc ». Depuis le renommage en Aidros (21/11), plus rien dans l'icône ne
 //	  pointait vers le nom du produit. Le « j » tenait sur trois rectangles,

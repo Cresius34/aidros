@@ -168,6 +168,23 @@ func TestStrataDeviceTool(t *testing.T) {
 // Un AJEAN_HOME neuf n'a pas de clé de pilotage : requireWebAuth laisse passer.
 func TestDevicesRouteOnMux(t *testing.T) {
 	t.Setenv("AJEAN_HOME", t.TempDir())
+	// newWebMux() appelle engineAutoInstall() : sur un home neuf, le moteur livré
+	// manque, donc il le TELECHARGE (≈ 20 Mo, depuis engineDownloadBase). Sans de
+	// quoi ce test dépendrait de la machine qui le joue : une fois le moteur posé,
+	// engineBin() n'est plus vide, et le second appel ci-dessous (corps `{}`, aucun
+	// bin demandé) ne rend plus l'invitation « choisissez un moteur » mais la liste
+	// des cartes RÉELLES de la machine — « Vulkan0 / AMD Radeon AI PRO R9700 » ici,
+	// « MTL0 / Apple Paravirtual device » sur un runner macOS. Le test rougit là où
+	// le téléchargement a réussi, et c'est une course : l'installation est une
+	// goroutine. En 2026-11-22, la suite complète rougissait sur le job macOS du CI
+	// avec la carte du runner dans la réponse, et 19,79 s passaient dans ce test.
+	//
+	// Une base de téléchargement qui refuse rend le résultat déterministe : un
+	// échec d'installation ne rend JAMAIS engineBin() non vide, donc l'invitation
+	// est rendue sur toutes les machines, GPU ou pas, réseau ou pas.
+	base := engineDownloadBase
+	engineDownloadBase = httptest.NewServer(http.NotFoundHandler()).URL
+	t.Cleanup(func() { engineDownloadBase = base })
 	bin := fakeStrataEngine(t, strataDeviceSample)
 
 	srv := httptest.NewServer(newWebMux())

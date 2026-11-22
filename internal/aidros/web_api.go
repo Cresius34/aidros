@@ -24,7 +24,7 @@ import (
 var procBoot = time.Now().UnixMilli()
 
 func handlePing(w http.ResponseWriter, r *http.Request) {
-	sendJSON(w, 200, map[string]any{"ok": true, "service": "ajean", "version": displayVersion()})
+	sendJSON(w, 200, map[string]any{"ok": true, "service": "aidros", "version": displayVersion()})
 }
 
 // handleStatus reports service state cross-platform via serviceIsActive
@@ -54,7 +54,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		state = "active"
 		health = true
 
-		// Moteur tiers lancé par ajean (EXTERNAL_SERVICE) : « prêt » seulement
+		// Moteur tiers lancé par aidros (EXTERNAL_SERVICE) : « prêt » seulement
 		// quand son API répond, sinon l'UI annonçait prêt pendant les 1-2 min de
 		// chargement du modèle.
 		if cfg := ReadConfig(); externalServiceOf(cfg) != "" {
@@ -194,7 +194,7 @@ func modelLoadError() string {
 			"Clique sur « Mettre à jour les flags » pour corriger."
 	case "format de quantification non reconnu par ce moteur",
 		"type/architecture de modèle inconnu de ce moteur":
-		return "Modèle incompatible avec le moteur llama.cpp " + enginePin() + " livré avec AJEAN : " + reason +
+		return "Modèle incompatible avec le moteur llama.cpp " + enginePin() + " livré avec Aidros : " + reason +
 			". Un modèle qui exige un fork de llama.cpp n'est pas pris en charge."
 	default:
 		if detail != "" {
@@ -1121,7 +1121,7 @@ func handleMCPTimeoutsSave(w http.ResponseWriter, r *http.Request) {
 func handleMem(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimSpace(r.URL.Query().Get("name"))
 	if name == "" {
-		sendJSON(w, 200, map[string]any{"name": "", "content": "# nouvelle page\n\nNote ici ce que ajean doit retenir entre les sessions.\n"})
+		sendJSON(w, 200, map[string]any{"name": "", "content": "# nouvelle page\n\nNote ici ce que aidros doit retenir entre les sessions.\n"})
 		return
 	}
 	var c string
@@ -1585,7 +1585,7 @@ type chatReq struct {
 	Internet *bool `json:"internet"`
 	// Surcharge par requête du computer use (outils cu_*).
 	Computer *bool `json:"computer"`
-	// Fast = mode rapide : le tour tourne comme « ajean chat » (prompt court,
+	// Fast = mode rapide : le tour tourne comme « aidros chat » (prompt court,
 	// bash/write/edit seulement, ni mémoire, ni projet, ni web). Voir capsFromBody.
 	Fast bool `json:"fast"`
 	// Raw = mode « Modèle de base » : modèle nu, sans agent, outils, mémoire ni

@@ -221,7 +221,7 @@ func TestPeerChannelRejectsWrongKey(t *testing.T) {
 	}
 }
 
-// Deux Ajean sur le même PC : le piège classique est de prêter le pont à
+// Deux Aidros sur le même PC : le piège classique est de prêter le pont à
 // lui-même. Chaque appel se renverrait à lui-même jusqu'à saturer les sockets ;
 // le pont doit le dire au lieu de mourir lentement.
 func TestBridgeRefusesToLendToItself(t *testing.T) {
@@ -520,7 +520,7 @@ func TestPeerAddNormalizesAndRejects(t *testing.T) {
 
 // TestPeerArgsNormalizeAccepteDrapeaux : la syntaxe à drapeaux est celle que tout
 // le monde recopie. Mesuré le 2026-10-28 : la machine voisine avait reçu
-// « ajean peer add "ajean-principale" "http://…" --key <clé> » ; notre usage est
+// « aidros peer add "ajean-principale" "http://…" --key <clé> » ; notre usage est
 // positionnel, « --key » n'y existe pas, et argAt(args, 2) rangeait la chaîne
 // « --key » COMME LA CLÉ. Le pont d'en face répondait 401 à vie, sans que l'outil
 // le dise jamais. Ces cas sont la non-régression.

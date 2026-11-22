@@ -19,7 +19,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// ajean update — met à jour le binaire depuis les releases GitHub du projet.
+// aidros update — met à jour le binaire depuis les releases GitHub du projet.
 // Périmètre minimal : compare la version, télécharge l'asset correspondant à
 // l'OS/arch courant, remplace le binaire en place, puis affiche quoi redémarrer.
 // AUCUN redémarrage de service automatique (choix volontaire, plus sûr).
@@ -155,7 +155,7 @@ var (
 const updCacheTTL = 30 * time.Minute
 
 // checkForUpdate interroge GitHub (au plus une fois par updCacheTTL) et compare à
-// la version courante. Réutilisé par `ajean update` (CLI) et par l'endpoint web
+// la version courante. Réutilisé par `aidros update` (CLI) et par l'endpoint web
 // /api/update. Un résultat frais en cache est renvoyé sans appel réseau ; en cas
 // d'erreur (réseau/quota), on sert le dernier résultat connu plutôt qu'une erreur
 // visible à l'écran.
@@ -200,7 +200,7 @@ func checkForUpdate() (updateInfo, error) {
 // l'OS/arch courant. Renvoie la nouvelle version. Ne redémarre AUCUN service
 // (voir printRestartHint / le message renvoyé à l'UI).
 // updateMu empêche deux mises à jour simultanées (double clic, UI locale ET
-// app.ajean.link, bouton pendant un `ajean update`…). Elles écrivaient dans le
+// app.ajean.link, bouton pendant un `aidros update`…). Elles écrivaient dans le
 // MÊME fichier temporaire : le binaire obtenu mélangeait les deux téléchargements
 // et la vérification échouait sur « somme SHA-256 invalide ».
 var updateMu sync.Mutex
@@ -238,7 +238,7 @@ func applyUpdate() (string, error) {
 	// Contrôle des droits AVANT de télécharger : sans ça, l'échec survient sur le
 	// os.Create du fichier temporaire et l'utilisateur reçoit un « open
 	// /usr/local/bin/.ajean-update.tmp: permission denied » incompréhensible,
-	// notamment depuis le bouton de l'UI web (ajean web lancé sans sudo).
+	// notamment depuis le bouton de l'UI web (aidros web lancé sans sudo).
 	if err := checkUpdateWritable(exe); err != nil {
 		return "", err
 	}
@@ -304,9 +304,9 @@ func updatePermissionError(exe string) error {
 		// Windows renvoie le MÊME code (5, accès refusé) pour « droits
 		// insuffisants » et pour « fichier utilisé par un processus » : on nomme
 		// les deux causes au lieu d'affirmer la mauvaise.
-		return fmt.Errorf("impossible de remplacer %s : soit un autre AJEAN utilise ce fichier (ferme l'application et arrête le service, puis réessaie), soit les droits manquent (relance AJEAN en administrateur)", exe)
+		return fmt.Errorf("impossible de remplacer %s : soit un autre Aidros utilise ce fichier (ferme l'application et arrête le service, puis réessaie), soit les droits manquent (relance Aidros en administrateur)", exe)
 	}
-	return fmt.Errorf("droits insuffisants pour remplacer %s (le binaire appartient à root) — lance la mise à jour en ligne de commande : sudo ajean update", exe)
+	return fmt.Errorf("droits insuffisants pour remplacer %s (le binaire appartient à root) — lance la mise à jour en ligne de commande : sudo aidros update", exe)
 }
 
 // checkUpdateWritable vérifie qu'on peut écrire dans le dossier du binaire, en
@@ -340,13 +340,13 @@ func cmdUpdate(args []string) error {
 		return fmt.Errorf("impossible de contacter GitHub : %w", err)
 	}
 	if !info.Available {
-		fmt.Printf("ajean est déjà à jour (%s).\n", Version)
+		fmt.Printf("aidros est déjà à jour (%s).\n", Version)
 		return nil
 	}
 	fmt.Printf("nouvelle version disponible : %s  (actuelle : %s)\n", info.Latest, Version)
 	fmt.Printf("  %s\n", info.URL)
 	if checkOnly {
-		fmt.Println("lance 'ajean update' pour l'installer.")
+		fmt.Println("lance 'aidros update' pour l'installer.")
 		return nil
 	}
 	fmt.Printf("téléchargement de %s…\n", updateAssetName())
@@ -354,7 +354,7 @@ func cmdUpdate(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("✓ ajean mis à jour en %s\n", newVer)
+	fmt.Printf("✓ aidros mis à jour en %s\n", newVer)
 	printRestartHint()
 	return nil
 }
@@ -589,7 +589,7 @@ func restartAfterUpdate() (bool, string) {
 		// voyant « installé ✓ ». Le restart bloquant est fiable : systemd tue tout le
 		// cgroup (ce process ET le client systemctl) d'un coup, le job de restart est
 		// déjà enregistré côté PID 1 et aboutit. C'est la MÊME invocation que le switch
-		// de preset et « ajean ui restart », qui eux marchaient déjà.
+		// de preset et « aidros ui restart », qui eux marchaient déjà.
 		bin, args := "systemctl", []string{"restart", uiServiceName()}
 		if os.Geteuid() != 0 {
 			bin, args = "sudo", append([]string{"-n", "systemctl"}, args...)
@@ -601,7 +601,7 @@ func restartAfterUpdate() (bool, string) {
 
 func restartHintText() string {
 	if runtime.GOOS == "windows" {
-		return "Redémarre AJEAN (quitte puis relance) pour appliquer la mise à jour."
+		return "Redémarre Aidros (quitte puis relance) pour appliquer la mise à jour."
 	}
 	return "Redémarre pour appliquer : sudo systemctl restart " + uiServiceName() +
 		" (ajoute " + serviceName() + " si la mise à jour touche le moteur)."

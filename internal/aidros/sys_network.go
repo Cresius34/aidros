@@ -11,19 +11,19 @@ import (
 //
 // Le moteur écoute à l'adresse HOST. Sous Windows, l'installation pose
 // HOST=127.0.0.1 : le chat du navigateur marche (il passe par le serveur web
-// d'AJEAN, sur la même machine), mais l'endpoint OpenAI :8080/v1 est INVISIBLE
+// d'Aidros, sur la même machine), mais l'endpoint OpenAI :8080/v1 est INVISIBLE
 // depuis le reste du réseau. Or c'est très exactement ce que les gens viennent
 // chercher : brancher un logiciel tiers sur le modèle qui tourne dans le salon.
 //
 // Deux choses manquaient, et pas une seule :
 //  1. HOST n'était réglable NULLE PART dans l'interface — il fallait connaître
-//     « ajean edit » et savoir quoi y écrire.
+//     « aidros edit » et savoir quoi y écrire.
 //  2. Même à 0.0.0.0, le pare-feu Windows bloque les connexions entrantes tant
 //     qu'aucune règle n'autorise le port. AJEAN n'en posait aucune.
 //
 // D'où un seul interrupteur qui fait les deux, et qui DIT ce qu'il n'a pas pu
 // faire (poser une règle de pare-feu exige les droits administrateur, que
-// l'installation d'AJEAN ne réclame pas).
+// l'installation d'Aidros ne réclame pas).
 
 // firewallInert coupe tout pilotage du pare-feu. Positionné par les tests : une
 // suite qui laisse une règle entrante derrière elle est un effet de bord
@@ -55,7 +55,7 @@ func lanExposed() bool {
 	return h != hostLocalOnly && h != "::1" && !strings.EqualFold(h, "localhost")
 }
 
-// netStatus est ce que l'interface affiche, et ce que renvoie `ajean network`.
+// netStatus est ce que l'interface affiche, et ce que renvoie `aidros network`.
 type netStatus struct {
 	Exposed  bool   `json:"exposed"`  // le moteur écoute-t-il sur le réseau
 	Host     string `json:"host"`     // adresse d'écoute effective
@@ -103,7 +103,7 @@ func setLANExposure(on bool) (netStatus, error) {
 	return networkStatus(), nil
 }
 
-// cmdNetwork : `ajean network [on|off|status]`.
+// cmdNetwork : `aidros network [on|off|status]`.
 func cmdNetwork(args []string) error {
 	sub := "status"
 	if len(args) > 0 {
@@ -121,7 +121,7 @@ func cmdNetwork(args []string) error {
 			fmt.Printf("%s le moteur n'écoutera plus que sur cette machine\n", green("[ok]"))
 		}
 		printNetHint(st)
-		fmt.Printf("%s redémarre le moteur pour appliquer : %s\n", dim("[info]"), bold("ajean restart"))
+		fmt.Printf("%s redémarre le moteur pour appliquer : %s\n", dim("[info]"), bold("aidros restart"))
 		return nil
 	case "status", "":
 		st := networkStatus()
@@ -136,7 +136,7 @@ func cmdNetwork(args []string) error {
 		case "ferme":
 			fmt.Printf("  pare-feu : %s\n", yellow("aucune règle pour ce port"))
 		default:
-			fmt.Printf("  pare-feu : %s\n", dim("non géré par AJEAN sur cette plateforme"))
+			fmt.Printf("  pare-feu : %s\n", dim("non géré par Aidros sur cette plateforme"))
 		}
 		if st.Exposed {
 			fmt.Printf("  endpoint OpenAI : %s\n", bold(st.URL))
@@ -144,7 +144,7 @@ func cmdNetwork(args []string) error {
 		printNetHint(st)
 		return nil
 	}
-	return fmt.Errorf("usage: ajean network [on|off|status]")
+	return fmt.Errorf("usage: aidros network [on|off|status]")
 }
 
 func printNetHint(st netStatus) {

@@ -17,7 +17,7 @@ func TestMemSearchCoverageBeatsFrequency(t *testing.T) {
 	if err := MemAdd("business-alice.md", "# Business Alice\n"+strings.Repeat("Alice veut un business. ", 40)); err != nil {
 		t.Fatal(err)
 	}
-	if err := MemAdd("guide-ajean.md", "# Guide AJEAN\n"+strings.Repeat("projet de Alice. ", 30)); err != nil {
+	if err := MemAdd("guide-ajean.md", "# Guide Aidros\n"+strings.Repeat("projet de Alice. ", 30)); err != nil {
 		t.Fatal(err)
 	}
 	// La petite page cible : matche les DEUX termes de la requête.

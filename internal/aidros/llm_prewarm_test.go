@@ -261,7 +261,7 @@ func TestPrewarmPrefixEmptyForRawModel(t *testing.T) {
 
 // La requête envoyée doit être minimale (un seul jeton) et porter le préfixe.
 func TestPrewarmPayload(t *testing.T) {
-	ep := chatEndpoint{URL: "http://127.0.0.1:1/v1/chat/completions", Model: "ajean"}
+	ep := chatEndpoint{URL: "http://127.0.0.1:1/v1/chat/completions", Model: "aidros"}
 	tools := []Tool{bashTool()}
 	p := prewarmPayload(ep, "SYSTEM", tools)
 	if p["max_tokens"] != 1 {

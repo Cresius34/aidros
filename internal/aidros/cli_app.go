@@ -6,7 +6,7 @@ package aidros
 // lieu d'afficher l'aide dans une console qui se ferme, AJEAN démarre son UI web,
 // l'ouvre dans le navigateur ET pose une icône dans la zone de notification
 // Windows (voir sys_tray_windows.go) : on voit que AJEAN tourne et on le pilote
-// (« Ouvrir AJEAN » / « Quitter »).
+// (« Ouvrir Aidros » / « Quitter »).
 
 import (
 	"bytes"
@@ -46,24 +46,24 @@ func cmdApp(args []string) error {
 		// usage réel le 2026-10-16 : un `python -m http.server` laissé par
 		// l'aperçu d'un IDE ; la fenêtre montrait un listing de dossier).
 		if ajeanAnswersOn(appPort) {
-			// Une autre instance d'AJEAN sert déjà. Si sa fenêtre est ouverte, on
+			// Une autre instance d'Aidros sert déjà. Si sa fenêtre est ouverte, on
 			// la ramène au premier plan : en ouvrir une autre donnait deux
 			// fenêtres AJEAN côte à côte. Sinon on ouvre la sienne. Pas d'icône
 			// de zone de notification ici, la sienne existe déjà.
 			if focusAppWindow() {
-				fmt.Println("AJEAN est déjà lancé — fenêtre ramenée au premier plan")
+				fmt.Println("Aidros est déjà lancé — fenêtre ramenée au premier plan")
 				return nil
 			}
-			fmt.Printf("AJEAN est déjà lancé — ouverture de %s\n", url)
+			fmt.Printf("Aidros est déjà lancé — ouverture de %s\n", url)
 			return openAppWindow(url)
 		}
 		qui := "un autre logiciel"
 		if pid, name := pidOnPort(appPort); pid != 0 {
 			qui = fmt.Sprintf("%s (PID %d)", name, pid)
 		}
-		fmt.Fprintln(os.Stderr, "AJEAN : port", appPort, "déjà utilisé par", qui)
-		notifyUser("AJEAN ne peut pas démarrer",
-			fmt.Sprintf("Le port %d est déjà utilisé par %s.\n\nAJEAN ne peut pas ouvrir son interface tant que ce processus tourne.\nFerme-le, puis relance AJEAN.", appPort, qui))
+		fmt.Fprintln(os.Stderr, "Aidros : port", appPort, "déjà utilisé par", qui)
+		notifyUser("Aidros ne peut pas démarrer",
+			fmt.Sprintf("Le port %d est déjà utilisé par %s.\n\nAidros ne peut pas ouvrir son interface tant que ce processus tourne.\nFerme-le, puis relance Aidros.", appPort, qui))
 		return fmt.Errorf("port %d déjà utilisé par %s", appPort, qui)
 	}
 
@@ -96,7 +96,7 @@ func cmdApp(args []string) error {
 		// (ou une fenêtre AJEAN est restée ouverte après un arrêt : on la reprend)
 		waitServerReady(url)
 	} else {
-		sp := showSplash("Lancement d'AJEAN en cours…")
+		sp := showSplash("Lancement d'Aidros en cours…")
 		waitServerReady(url)
 		_ = openAppWindow(url)
 		time.Sleep(900 * time.Millisecond) // laisse le navigateur s'afficher par-dessus le splash
@@ -121,12 +121,12 @@ func waitServerReady(url string) {
 	}
 }
 
-// ajeanAnswersOn : est-ce bien un AJEAN qui répond sur ce port ?
+// ajeanAnswersOn : est-ce bien un Aidros qui répond sur ce port ?
 //
 // On le sonde au lieu de le déduire — n'importe quel logiciel peut occuper 8090,
 // et lui ouvrir la fenêtre à sa place est pire que d'échouer franchement.
 //
-// /api/ping est le discriminant : il répond {"ok":true,"service":"ajean",…}.
+// /api/ping est le discriminant : il répond {"ok":true,"service":"aidros",…}.
 func ajeanAnswersOn(port int) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 400*time.Millisecond)
 	defer cancel()
@@ -142,13 +142,13 @@ func ajeanAnswersOn(port int) bool {
 	defer resp.Body.Close()
 	// Instance protégée par une clé de pilotage : elle refuse le ping (le serveur
 	// ne garde que l'empreinte de la clé, on n'a rien à présenter), mais son refus
-	// porte la signature d'AJEAN (requireWebAuth).
+	// porte la signature d'Aidros (requireWebAuth).
 	if resp.StatusCode == http.StatusUnauthorized {
-		return strings.Contains(resp.Header.Get("WWW-Authenticate"), `realm="ajean"`)
+		return strings.Contains(resp.Header.Get("WWW-Authenticate"), `realm="aidros"`)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return false
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
-	return err == nil && bytes.Contains(body, []byte(`"service":"ajean"`))
+	return err == nil && bytes.Contains(body, []byte(`"service":"aidros"`))
 }

@@ -87,7 +87,7 @@ func moeRunInstaller(family, quant string, env moeEnv, pre string) error {
 		"--data-dir", moeDataDir(),
 		"--gpu", strconv.Itoa(env.Main),
 	}
-	// Le mode « peu de RAM » est décidé et appliqué par ajean (MOE_MMAP, voir
+	// Le mode « peu de RAM » est décidé et appliqué par aidros (MOE_MMAP, voir
 	// moeBuildConfig) : l'installeur tourne en mode normal, sans réserver sa
 	// propre variante (qui ne voit pas un experts.bin déjà présent).
 	args = append(args, "--low-ram", "off")
@@ -98,13 +98,13 @@ func moeRunInstaller(family, quant string, env moeEnv, pre string) error {
 // moeVenvPython : le Python de l'environnement du moteur, dans ses sources.
 func moeVenvPython(srcDir string) string { return filepath.Join(srcDir, ".venv", "bin", "python") }
 
-// moeWriteLauncher : le lanceur moeHome()/ajean-moe (sh) que ajean serve exécute.
+// moeWriteLauncher : le lanceur moeHome()/ajean-moe (sh) que aidros serve exécute.
 // Renvoie (programme, args) — le sh passe ses args à server.py via "$@", et args
 // est SANS le programme (c'est serveMoe qui le pose en tête, comme pour
 // llama-server).
 func moeWriteLauncher(srcDir, py string) (string, []string, error) {
 	p := filepath.Join(moeHome(), "ajean-moe")
-	body := "#!/bin/sh\n# AJEAN MoE : serveur du moteur MoE d'AJEAN (lancé par ajean serve)\n" +
+	body := "#!/bin/sh\n# Aidros MoE : serveur du moteur MoE d'Aidros (lancé par aidros serve)\n" +
 		"cd '" + srcDir + "' && exec '" + py + "' '" + filepath.Join(srcDir, "serve", "server.py") + "' --engine strata \"$@\"\n"
 	if err := os.WriteFile(p+".new", []byte(body), 0o755); err != nil {
 		return "", nil, err

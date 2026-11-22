@@ -17,7 +17,7 @@ import (
 
 const extKeyService = "EXTERNAL_SERVICE"
 
-// stateExtService : dans bkState, le service externe qu'ajean a démarré en
+// stateExtService : dans bkState, le service externe qu'aidros a démarré en
 // dernier (pour l'arrêter à la bascule suivante, même après un redémarrage).
 const stateExtService = "ext_service"
 

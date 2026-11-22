@@ -8,9 +8,9 @@ import (
 // issue #95, suite : un preset distant (API externe) n'a aucun
 // moteur LOCAL. La v0.16.4 a corrigé le chemin du service (cmdServe sort
 // proprement, plus de boucle systemd au boot) mais pas preflightEngine, qui
-// garde `ajean start` et `ajean restart`.
+// garde `aidros start` et `aidros restart`.
 
-// 1) `ajean start`/`restart` sur un preset distant ne doit pas réclamer BIN/MODEL.
+// 1) `aidros start`/`restart` sur un preset distant ne doit pas réclamer BIN/MODEL.
 func TestPreflightAcceptsRemotePresets(t *testing.T) {
 	for _, tc := range []struct{ name, body string }{
 		{"externe (nanogpt)", "EXTERNAL=1\nEXTERNAL_URL=https://api.nanogpt.com/v1\nEXTERNAL_MODEL=gpt-4o-mini\n"},

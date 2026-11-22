@@ -45,7 +45,7 @@ type lineEditor struct {
 func newLineEditor(out io.Writer, keys <-chan key) *lineEditor {
 	e := &lineEditor{out: out, keys: keys, prompt: accent("› "), cont: "  ", histMax: 500}
 	if dir, err := os.UserConfigDir(); err == nil {
-		e.histFile = filepath.Join(dir, "ajean", "chat_history")
+		e.histFile = filepath.Join(dir, "aidros", "chat_history")
 		e.loadHistory()
 	}
 	return e

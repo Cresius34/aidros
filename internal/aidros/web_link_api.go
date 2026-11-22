@@ -3,7 +3,7 @@ package aidros
 // web_link_api.go — API locale pilotant l'accès distant (ajean.link) depuis l'UI
 // web de AJEAN, pour éviter le terminal. Le panneau « Accès distant » ouvre une
 // popup app.ajean.link/connect.html qui gère compte + paiement puis renvoie une
-// clé de liaison (jl_…) ; l'UI la POSTe ici, et AJEAN fait le `ajean link` tout
+// clé de liaison (jl_…) ; l'UI la POSTe ici, et AJEAN fait le `aidros link` tout
 // seul (écrit le token + (re)démarre le service).
 //
 // Ces routes ne sont accessibles qu'en LOCAL : à travers le tunnel du relais,
@@ -80,7 +80,7 @@ func handleLinkStart(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleLinkDisconnect (POST /api/link/disconnect) : arrête le service et oublie
-// la clé (équivalent `ajean link stop` + `ajean link logout`).
+// la clé (équivalent `aidros link stop` + `aidros link logout`).
 func handleLinkDisconnect(w http.ResponseWriter, r *http.Request) {
 	// On OUBLIE le jeton d'abord : c'est l'action qui compte, et elle doit réussir
 	// même si le (re)démarrage qui suit tue ce process en route.
@@ -107,7 +107,7 @@ func handleLinkDisconnect(w http.ResponseWriter, r *http.Request) {
 // handleLinkPairCode (POST /api/link/paircode) : génère un code d'appairage frais
 // (usage unique, TTL 10 min) + l'empreinte E2E, à saisir UNE fois dans le portail
 // distant lors de la première connexion (confirmation de la boîte noire). Évite le
-// détour par `ajean link code` en terminal.
+// détour par `aidros link code` en terminal.
 func handleLinkPairCode(w http.ResponseWriter, r *http.Request) {
 	code, err := newPairCode()
 	if err != nil {

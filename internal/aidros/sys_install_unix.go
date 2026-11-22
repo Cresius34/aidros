@@ -25,7 +25,7 @@ import (
 
 func cmdInstall(args []string) error {
 	if os.Geteuid() != 0 {
-		return fmt.Errorf("ajean install doit être exécuté en root (sudo ajean install)")
+		return fmt.Errorf("aidros install doit être exécuté en root (sudo aidros install)")
 	}
 	// Unités des modèles laissées par la 0.19 : on a ici les droits pour les arrêter.
 	retire019Units()
@@ -73,7 +73,7 @@ func cmdInstall(args []string) error {
 	if err := os.MkdirAll("/etc/default", 0o755); err != nil {
 		return err
 	}
-	defaults := fmt.Sprintf("# Généré par ajean install — racine des données\nAJEAN_HOME=%s\n", ajeanHome)
+	defaults := fmt.Sprintf("# Généré par aidros install — racine des données\nAJEAN_HOME=%s\n", ajeanHome)
 	if err := os.WriteFile("/etc/default/ajean", []byte(defaults), 0o644); err != nil {
 		return err
 	}
@@ -91,16 +91,16 @@ func cmdInstall(args []string) error {
 	fmt.Println()
 	fmt.Printf("%s installation terminée.\n", green("[ok]"))
 	fmt.Printf("\nProchaines étapes :\n")
-	fmt.Printf("  1. démarre l'interface : %s   (http://localhost:8090)\n", bold("sudo ajean ui start"))
+	fmt.Printf("  1. démarre l'interface : %s   (http://localhost:8090)\n", bold("sudo aidros ui start"))
 	fmt.Printf("  2. choisis un modèle dans l'interface (le moteur llama.cpp s'installe seul)\n")
-	fmt.Printf("  3. vérifie :             %s\n", bold("ajean test"))
+	fmt.Printf("  3. vérifie :             %s\n", bold("aidros test"))
 	return nil
 }
 
 // linkInstalledExe pose /usr/local/bin/ajean sur le binaire courant.
 //
 // Garde-fou (issue #5) : si on tourne DÉJÀ depuis la cible — l'utilisateur a
-// posé le binaire là puis lancé `sudo ajean install` — il ne faut surtout pas
+// posé le binaire là puis lancé `sudo aidros install` — il ne faut surtout pas
 // Remove+Symlink sur soi-même : ça effacerait le vrai binaire et créerait un
 // lien vers lui-même (« Too many levels of symbolic links »). On compare les
 // chemins réels, résolus.
@@ -162,7 +162,7 @@ func restoreconInstalledExe() {
 
 func cmdUninstall(args []string) error {
 	if os.Geteuid() != 0 {
-		return fmt.Errorf("ajean uninstall doit être exécuté en root")
+		return fmt.Errorf("aidros uninstall doit être exécuté en root")
 	}
 	uninstallServices()
 	for _, p := range []string{"/etc/default/ajean", installedExePath()} {

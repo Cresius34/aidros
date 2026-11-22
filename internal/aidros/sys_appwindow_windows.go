@@ -44,7 +44,7 @@ var (
 
 const (
 	appWindowClass = "Chrome_WidgetWin_1" // fenêtres de Chromium (Edge, Chrome, Brave)
-	appWindowTitle = "AJEAN"              // <title> de l'interface : une fenêtre --app n'affiche que lui
+	appWindowTitle = "Aidros"             // <title> de l'interface : une fenêtre --app n'affiche que lui
 
 	wmGetIcon       = 0x007F
 	wmSetIcon       = 0x0080
@@ -180,7 +180,7 @@ func applyAppWindowIcon(hwnd uintptr) (prevBig, prevSmall uintptr) {
 	return prevBig, prevSmall
 }
 
-// keepAppWindowIcon garde l'icône d'AJEAN sur sa fenêtre tant que l'application
+// keepAppWindowIcon garde l'icône d'Aidros sur sa fenêtre tant que l'application
 // tourne. Lancé une fois par cmdApp.
 func keepAppWindowIcon() {
 	for {
@@ -191,7 +191,7 @@ func keepAppWindowIcon() {
 	}
 }
 
-// cmdWindowIcon (« ajean window-icon [secondes] », absent de l'aide) : banc
+// cmdWindowIcon (« aidros window-icon [secondes] », absent de l'aide) : banc
 // d'essai de l'icône de fenêtre. Pose l'icône sur la ou les fenêtres AJEAN
 // ouvertes, attend, puis remet les icônes d'origine : celles qu'on a créées
 // disparaissent avec ce process, on ne laisse donc pas la fenêtre sans icône.
@@ -204,7 +204,7 @@ func cmdWindowIcon(args []string) error {
 	}
 	wins := appWindows()
 	if len(wins) == 0 {
-		return fmt.Errorf("aucune fenêtre AJEAN ouverte")
+		return fmt.Errorf("aucune fenêtre Aidros ouverte")
 	}
 	type prev struct{ hwnd, big, small uintptr }
 	var saved []prev

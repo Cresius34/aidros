@@ -1,6 +1,6 @@
 package aidros
 
-// parallel_bridge.go — le pont Ajean↔Ajean (niveau 0).
+// parallel_bridge.go — le pont Aidros↔Aidros (niveau 0).
 //
 // But : deux machines, chacune sous Ajean, se parlent. Celle qui prête son
 // cerveau expose une surface OpenAI sur le réseau local ; l'autre la déclare en
@@ -167,7 +167,7 @@ func parallelBridgeHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, "/v1/") {
 			sendJSON(w, http.StatusNotFound, map[string]any{
-				"ok": false, "error": "pont Ajean : surface OpenAI uniquement (/v1/*)",
+				"ok": false, "error": "pont Aidros : surface OpenAI uniquement (/v1/*)",
 			})
 			return
 		}
@@ -225,7 +225,7 @@ func parallelBridgeHandler() http.Handler {
 			if bridgePointsToItself(ep) {
 				sendJSON(w, http.StatusConflict, map[string]any{
 					"ok":    false,
-					"error": fmt.Sprintf("le preset prêté (%s) pointe sur ce pont-ci : boucle sans fin. Deux Ajean sur le même PC doivent prêter un moteur à l'autre, pas se prêter eux-mêmes.", ep.URL),
+					"error": fmt.Sprintf("le preset prêté (%s) pointe sur ce pont-ci : boucle sans fin. Deux Aidros sur le même PC doivent prêter un moteur à l'autre, pas se prêter eux-mêmes.", ep.URL),
 				})
 				return
 			}
@@ -395,7 +395,7 @@ func bridgeIdentityNote() string {
 		host = "cette machine"
 	}
 	return fmt.Sprintf(
-		"Tu réponds par le pont Ajean↔Ajean de la machine « %s » (Ajean %s), sur le réseau local. "+
+		"Tu réponds par le pont Aidros↔Aidros de la machine « %s » (Aidros %s), sur le réseau local. "+
 			"L'interlocuteur qui t'écrit est une AUTRE instance d'Aidros, avec son propre cerveau et sa propre mémoire : vous vous parlez d'égal à égal, tu n'es pas son sous-programme.\n"+
 			"Dans ce contexte précis, tu n'as AUCUN outil : pas de shell, pas de disque, pas de navigateur, pas de mémoire persistante, pas de moteur de recherche. Seul du texte traverse le pont. "+
 			"Ne prétends donc jamais avoir exécuté, lu ou écrit quoi que ce soit ici : si on te demande une action, dis en une phrase qu'elle est du ressort de l'interlocuteur, qui l'exécutera chez lui.\n"+
@@ -452,7 +452,7 @@ func bridgeRemoteHandler(ep chatEndpoint) http.Handler {
 		default:
 			sendJSON(w, http.StatusNotFound, map[string]any{
 				"ok":    false,
-				"error": "pont Ajean : le modèle prêté est une API distante, qui n'expose que /v1/models et /v1/chat/completions",
+				"error": "pont Aidros : le modèle prêté est une API distante, qui n'expose que /v1/models et /v1/chat/completions",
 			})
 			return
 		}
@@ -491,7 +491,7 @@ func bridgeRemoteModels(w http.ResponseWriter, r *http.Request, ep chatEndpoint)
 		}
 	}
 	// L'endpoint ne expose pas /v1/models (ou n'y répond pas) : on annonce quand
-	// même le modèle prêté, sinon l'autre Ajean croirait à un pont vide.
+	// même le modèle prêté, sinon l'autre Aidros croirait à un pont vide.
 	sendJSON(w, http.StatusOK, map[string]any{
 		"object": "list",
 		"data":   []map[string]string{{"id": ep.Model, "object": "model"}},
@@ -587,7 +587,7 @@ func startParallelBridge() error {
 	parallelBridgeLn = ln
 	go func() {
 		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			fmt.Fprintf(os.Stderr, "[pont ajean] %v\n", err)
+			fmt.Fprintf(os.Stderr, "[pont aidros] %v\n", err)
 		}
 	}()
 	n, _ := strconv.Atoi(port)
@@ -598,12 +598,12 @@ func startParallelBridge() error {
 		// fait pas semblant d'avoir ouvert.
 		if err := firewallOpen(n); err != nil {
 			fw = "ferme"
-			fmt.Printf("[pont ajean] %s\n", firewallManualHint(n))
+			fmt.Printf("[pont aidros] %s\n", firewallManualHint(n))
 		} else {
 			fw = "ouvert"
 		}
 	}
-	fmt.Printf("[pont ajean] surface OpenAI sur http://%s/v1 (pare-feu : %s)\n", net.JoinHostPort(parallelBridgeHost(), port), fw)
+	fmt.Printf("[pont aidros] surface OpenAI sur http://%s/v1 (pare-feu : %s)\n", net.JoinHostPort(parallelBridgeHost(), port), fw)
 	return nil
 }
 
@@ -630,7 +630,7 @@ func parallelBridgeReconcile() {
 	if parallelBridgeEnabled() {
 		if !parallelBridgeRunning() {
 			if err := startParallelBridge(); err != nil {
-				fmt.Fprintf(os.Stderr, "[pont ajean] réveil refusé : %v\n", err)
+				fmt.Fprintf(os.Stderr, "[pont aidros] réveil refusé : %v\n", err)
 			}
 		}
 		return
@@ -641,7 +641,7 @@ func parallelBridgeReconcile() {
 }
 
 // parallelBridgeWatch rattache l'état écouté au réglage enregistré. Sans lui,
-// `ajean bridge on` lancé à côté de l'instance en cours écrirait une demande
+// `aidros bridge on` lancé à côté de l'instance en cours écrirait une demande
 // que personne n'exécuterait avant le prochain redémarrage : bbolt est ouvert à
 // chaque opération, donc la commande voisine écrit bien, mais seule l'instance
 // qui tient l'interface peut ouvrir le port. Cette boucle la réveille.
@@ -747,7 +747,7 @@ func probeLocalEngineModel() string {
 	return ""
 }
 
-// parallelBridgeStatus : ce que voient la carte UI, `ajean bridge status` et
+// parallelBridgeStatus : ce que voient la carte UI, `aidros bridge status` et
 // l'API. `serving` dit d'OÙ vient le cerveau prêté — c'est ce qui permet de
 // annoncer honnêtement « modèle distant » au lieu d'un faux « aucun modèle ».
 func parallelBridgeStatus() map[string]any {
@@ -898,7 +898,7 @@ func handleParallelBridge(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// cmdParallelBridge : `ajean bridge status|on|off [port]|serve [port]`. Le
+// cmdParallelBridge : `aidros bridge status|on|off [port]|serve [port]`. Le
 // drapeau est écrit dans la base : l'instance en cours le prend à chaud par
 // /api/bridge, ou au prochain démarrage. Une seconde instance, elle, ne peut pas
 // hériter du réglage de l'autre — chaque dossier a sa base.
@@ -926,7 +926,7 @@ func cmdParallelBridge(args []string) error {
 			if err := setParallelBridgeControlOn(true); err != nil {
 				return err
 			}
-			fmt.Printf("%s un Ajean voisin peut basculer le preset et l'agent de ce poste.\n", green("[ok]"))
+			fmt.Printf("%s un Aidros voisin peut basculer le preset et l'agent de ce poste.\n", green("[ok]"))
 			fmt.Printf("%s rappel : basculer un preset arrête le moteur en place et redémarre\n", yellow("[!]"))
 			fmt.Printf("             l'application — le pont de ce poste se coupe quelques secondes.\n")
 			return nil
@@ -937,7 +937,7 @@ func cmdParallelBridge(args []string) error {
 			fmt.Printf("%s le pilotage est coupé : le voisin ne reçoit plus que le modèle nu\n", green("[ok]"))
 			return nil
 		default:
-			return fmt.Errorf("usage : ajean bridge control [on|off]")
+			return fmt.Errorf("usage : aidros bridge control [on|off]")
 		}
 	}
 	// `bridge agent on|off` : l'autorisation de déclencher un tour d'agent local
@@ -966,7 +966,7 @@ func cmdParallelBridge(args []string) error {
 			fmt.Printf("%s le canal ne prête plus que le modèle nu (complétions), rien ne s'exécute ici\n", green("[ok]"))
 			return nil
 		default:
-			return fmt.Errorf("usage : ajean bridge agent [on|off]")
+			return fmt.Errorf("usage : aidros bridge agent [on|off]")
 		}
 	}
 	port := ""
@@ -976,7 +976,7 @@ func cmdParallelBridge(args []string) error {
 	switch sub {
 	case "status", "etat":
 		st := parallelBridgeStatus()
-		fmt.Printf("pont Ajean   : demandé=%v  actif=%v  à l'écoute=%v (ici=%v)\n", st["requested"], st["enabled"], st["listening"], st["running"])
+		fmt.Printf("pont Aidros   : demandé=%v  actif=%v  à l'écoute=%v (ici=%v)\n", st["requested"], st["enabled"], st["listening"], st["running"])
 		fmt.Printf("écoute       : http://%s/v1\n", net.JoinHostPort(parallelBridgeHost(), parallelBridgePort()))
 		// Ce que le voisin a le DROIT de faire ici. La distinction s'affiche parce
 		// qu'elle change tout au diagnostic : avec l'agent, le voisin peut lire ses
@@ -985,7 +985,7 @@ func cmdParallelBridge(args []string) error {
 			fmt.Printf("canal        : %s un tour d'agent local est autorisé (outils, shell, disque, mémoire)\n", green("agent"))
 		} else {
 			fmt.Printf("canal        : %s — le voisin ne reçoit que le modèle nu. Ouvrir l'agent : %s\n",
-				yellow("prêt du modèle seul"), bold("ajean bridge agent on"))
+				yellow("prêt du modèle seul"), bold("aidros bridge agent on"))
 			if parallelBridgeAgentOn() && !agentEnabled() {
 				fmt.Printf("             (l'autorisation du pont est prise, mais le mode agent de cette machine est éteint)\n")
 			}
@@ -997,14 +997,14 @@ func cmdParallelBridge(args []string) error {
 			fmt.Printf("pilotage     : %s le voisin peut basculer ce preset et cet agent\n", green("ouvert"))
 		} else {
 			fmt.Printf("pilotage     : %s. L'ouvrir : %s\n",
-				yellow("coupé — /v1/presets et /v1/mode répondent 403"), bold("ajean bridge control on"))
+				yellow("coupé — /v1/presets et /v1/mode répondent 403"), bold("aidros bridge control on"))
 		}
 		if ep, ok := st["engine_serving"].(string); ok {
 			fmt.Printf("moteur prêté : 127.0.0.1:%s\n", ep)
 		}
 		if !st["has_key"].(bool) {
 			fmt.Printf("%s aucune clé API machine : le pont refuserait tout client, il ne démarrera pas\n", yellow("[!]"))
-			fmt.Printf("             → ajean set-api-key <une-longue-cle>\n")
+			fmt.Printf("             → aidros set-api-key <une-longue-cle>\n")
 		}
 		// Le pare-feu est la cause n°1 d'un pont « ouvert » que la machine
 		// d'à côté n'atteint pas. Le dire ici évite une heure de diagnostics.
@@ -1018,7 +1018,7 @@ func cmdParallelBridge(args []string) error {
 			}
 		}
 		for _, u := range parallelBridgeLanURLs() {
-			fmt.Printf("coller chez l'autre Ajean : %s\n", u)
+			fmt.Printf("coller chez l'autre Aidros : %s\n", u)
 		}
 		if m := discoverEngineModel(); m != "" {
 			fmt.Printf("modèle       : %s\n", m)
@@ -1040,7 +1040,7 @@ func cmdParallelBridge(args []string) error {
 			return err
 		}
 		if readAPIKey() == "" {
-			fmt.Printf("%s sans clé API machine il ne démarrera pas : ajean set-api-key\n", yellow("[!]"))
+			fmt.Printf("%s sans clé API machine il ne démarrera pas : aidros set-api-key\n", yellow("[!]"))
 		}
 		// Cette commande écrit la demande ; elle ne tient pas l'écoute. Un
 		// process CLI qui ouvrirait le port mourrait avec lui, et la machine
@@ -1052,7 +1052,7 @@ func cmdParallelBridge(args []string) error {
 			fmt.Printf("       l'instance en cours l'appliquera d'elle-même en quelques secondes.\n")
 		} else {
 			fmt.Printf("       aucune instance de ce dossier n'est en cours : tiens le pont toi-même avec\n")
-			fmt.Printf("       %s\n", bold("ajean bridge serve"))
+			fmt.Printf("       %s\n", bold("aidros bridge serve"))
 		}
 		return nil
 	case "off", "couper":
@@ -1071,7 +1071,7 @@ func cmdParallelBridge(args []string) error {
 	case "serve", "ecouter", "écoute":
 		return parallelBridgeServe()
 	default:
-		return fmt.Errorf("usage : ajean bridge [status|on [port]|off|serve [port]]")
+		return fmt.Errorf("usage : aidros bridge [status|on [port]|off|serve [port]]")
 	}
 }
 
@@ -1081,7 +1081,7 @@ func cmdParallelBridge(args []string) error {
 func parallelBridgeServe() error {
 	fmt.Printf("données : %s\n", AjeanHome())
 	if readAPIKey() == "" {
-		return errors.New("le pont exige une clé API machine : ajean set-api-key <clé>")
+		return errors.New("le pont exige une clé API machine : aidros set-api-key <clé>")
 	}
 	if err := setParallelBridgeRequested(true); err != nil {
 		return err
@@ -1094,11 +1094,11 @@ func parallelBridgeServe() error {
 	// rien (et parfois télécharger des dizaines de go).
 	if usesRemoteEndpoint(ReadConfig()) {
 		ep := resolveChatEndpoint()
-		fmt.Printf("[pont ajean] modèle prêté : preset distant (%s), modèle %s\n", ep.URL, ep.Model)
+		fmt.Printf("[pont aidros] modèle prêté : preset distant (%s), modèle %s\n", ep.URL, ep.Model)
 	} else if m := probeLocalEngineModel(); m != "" {
-		fmt.Printf("[pont ajean] moteur déjà en service sur 127.0.0.1:%s (%s)\n", parallelLocalEnginePort(), m)
+		fmt.Printf("[pont aidros] moteur déjà en service sur 127.0.0.1:%s (%s)\n", parallelLocalEnginePort(), m)
 	} else {
-		fmt.Printf("[pont ajean] moteur absent : démarrage sur 127.0.0.1:%s …\n", parallelLocalEnginePort())
+		fmt.Printf("[pont aidros] moteur absent : démarrage sur 127.0.0.1:%s …\n", parallelLocalEnginePort())
 		if err := parallelServiceAction("start"); err != nil {
 			return fmt.Errorf("moteur introuvable : %w", err)
 		}
@@ -1109,7 +1109,7 @@ func parallelBridgeServe() error {
 	if err := startParallelBridge(); err != nil {
 		return err
 	}
-	fmt.Printf("[pont ajean] à l'écoute. Coller chez l'autre Ajean (preset externe) :\n")
+	fmt.Printf("[pont aidros] à l'écoute. Coller chez l'autre Aidros (preset externe) :\n")
 	for _, u := range parallelBridgeLanURLs() {
 		fmt.Printf("    %s\n", u)
 	}
@@ -1124,7 +1124,7 @@ func parallelBridgeServe() error {
 	_ = stopParallelBridge()
 	_ = setParallelBridgeRequested(false)
 	_ = parallelServiceAction("stop")
-	fmt.Printf("\n[pont ajean] coupé.\n")
+	fmt.Printf("\n[pont aidros] coupé.\n")
 	return nil
 }
 

@@ -343,7 +343,7 @@ func TestMoeSetEffort(t *testing.T) {
 
 func TestMoeNeutralVersion(t *testing.T) {
 	got := moeNeutral("serve: engine 0.1.44.1 ready")
-	if !strings.Contains(got, "AJEAN MoE "+moeVersion) || strings.Contains(got, "0.1.44") {
+	if !strings.Contains(got, "Aidros MoE "+moeVersion) || strings.Contains(got, "0.1.44") {
 		t.Errorf("%q", got)
 	}
 }

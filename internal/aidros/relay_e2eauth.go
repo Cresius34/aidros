@@ -9,7 +9,7 @@ package aidros
 // Modèle : l'utilisateur a une identité X25519 dérivée de façon déterministe de son
 // mot de passe (exportKey OPAQUE → racine R → uPriv) — le relais ne connaît pas R,
 // donc ne peut PAS reproduire cette identité. La clé publique uPub est APPAIRÉE une
-// fois à l'agent via un code affiché par « ajean link » (canal hors-bande : le log du
+// fois à l'agent via un code affiché par « aidros link » (canal hors-bande : le log du
 // serveur, que le relais ne voit pas ; le code voyage scellé vers l'agent). Ensuite,
 // chaque requête est chiffrée avec K = SHA256(ECDH(uPriv, agentPriv) || "authchan"),
 // liée à uPub+horodatage (AAD) et protégée contre le rejeu. Seul le vrai utilisateur
@@ -92,7 +92,7 @@ func authorizeUser(uPubHex string) error {
 
 // ---- Codes d'appairage : à la demande, usage unique, TTL 10 min --------------
 //
-// Générés par « ajean link code » (ou affichés par « ajean link »), ils sont
+// Générés par « aidros link code » (ou affichés par « aidros link »), ils sont
 // partagés avec le service d'interface (autre process) via la base — sinon les
 // deux ne s'accorderaient pas. Stockés HACHÉS (SHA-256) : la base ne révèle
 // aucun code. Chaque code expire au bout de 10 min et est consommé (retiré) au

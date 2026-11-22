@@ -70,8 +70,8 @@ func unitState(svc string) (active, sub string) {
 //
 // ⚠️ « activating » n'est PAS un succès : avec Restart=on-failure, un moteur qui
 // meurt au démarrage repasse en boucle par activating (SubState auto-restart).
-// L'ancien test l'acceptait, et `ajean start` répondait « [ok] activating » sur
-// un service qui ne démarrerait jamais — d'où des rapports « ajean start dit ok
+// L'ancien test l'acceptait, et `aidros start` répondait « [ok] activating » sur
+// un service qui ne démarrerait jamais — d'où des rapports « aidros start dit ok
 // mais ajean test ne répond pas ». On distingue donc le SubState, et on laisse
 // au moteur le temps de charger un gros modèle (il reste en activating, mais
 // PAS en auto-restart).
@@ -91,7 +91,7 @@ func checkStarted(svc string) error {
 	if state == "activating" && sub != "auto-restart" {
 		// Chargement en cours (un gros .gguf prend des minutes) : légitime.
 		fmt.Printf("%s %s: démarrage en cours (chargement du modèle) — %s pour suivre\n",
-			green("[ok]"), svc, bold("ajean logs"))
+			green("[ok]"), svc, bold("aidros logs"))
 		return nil
 	}
 	what := state
@@ -103,7 +103,7 @@ func checkStarted(svc string) error {
 	logs, _ := exec.Command("journalctl", "-u", svc, "-n", "20", "--no-pager").Output()
 	fmt.Print(string(logs))
 	fmt.Println("------------------------------------------------")
-	fmt.Printf("→ ajean logs   pour plus de détails\n→ ajean edit   pour corriger la configuration (BIN, MODEL…)\n")
+	fmt.Printf("→ aidros logs   pour plus de détails\n→ aidros edit   pour corriger la configuration (BIN, MODEL…)\n")
 	return fmt.Errorf("service %s non démarré", svc)
 }
 

@@ -9,7 +9,7 @@ import (
 // TestMoeSourceHashStable : l'empreinte des sources est déterministe et
 // insensible à l'ordre du système de fichiers (tri sur le chemin POSIX), comme
 // la source_hash() de setup.py dont elle doit être l'égale pour que le moteur
-// compilé par ajean soit vu « local à jour » (src/vision_src) et non recompilé.
+// compilé par aidros soit vu « local à jour » (src/vision_src) et non recompilé.
 func TestMoeSourceHashStable(t *testing.T) {
 	dir := t.TempDir()
 	write := func(rel, content string) {

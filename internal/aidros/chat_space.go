@@ -76,7 +76,7 @@ func spaceExempt(path string) bool {
 
 func spaceRefusal(ctx context.Context, d string) string {
 	if isJeanSpace(ctx) {
-		return fmt.Sprintf("[refusé] %s appartient aux projets AJEAN, pas au mode Jean. Travaille dans ton propre espace (%s, scripts dans %s).", d, jeanWorkspace(), jeanScriptsDir())
+		return fmt.Sprintf("[refusé] %s appartient aux projets Aidros, pas au mode Jean. Travaille dans ton propre espace (%s, scripts dans %s).", d, jeanWorkspace(), jeanScriptsDir())
 	}
 	return fmt.Sprintf("[refusé] %s appartient au mode Jean, pas à ce projet.", d)
 }

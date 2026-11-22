@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-// Le pont Ajean↔Ajean prête un cerveau, pas la machine. Ces tests verrouillent
+// Le pont Aidros↔Aidros prête un cerveau, pas la machine. Ces tests verrouillent
 // ce qui ne doit jamais glisser : éteint par défaut, clé exigée, surface réduite
 // à /v1/*, et des ports qui se suivent au lieu d'être gravés.
 
@@ -504,7 +504,7 @@ func TestParallelConnectRefusesOwnBridge(t *testing.T) {
 		"http://127.0.0.1:" + parallelEnginePort() + "/v1",
 		"http://127.0.0.1:18081/v1",
 	} {
-		if err := connectParallelChat(context.Background(), u, ""); err == nil || !strings.Contains(err.Error(), "autre Ajean") {
+		if err := connectParallelChat(context.Background(), u, ""); err == nil || !strings.Contains(err.Error(), "autre Aidros") {
 			t.Fatalf("%s : %v", u, err)
 		}
 	}
@@ -517,7 +517,7 @@ func TestParallelConnectRefusesOwnBridge(t *testing.T) {
 	}))
 	defer fake.Close()
 	if err := connectParallelChat(context.Background(), fake.URL+"/v1", ""); err != nil {
-		t.Fatalf("autre Ajean refusé : %v", err)
+		t.Fatalf("autre Aidros refusé : %v", err)
 	}
 	if ReadConfig()[extKeyModel] != "cerveau-d-ailleurs" {
 		t.Fatalf("preset non enregistré : %+v", ReadConfig())

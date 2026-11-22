@@ -1,6 +1,6 @@
 package aidros
 
-// cli_chat.go : « ajean chat », le chat en terminal. Volontairement simple et
+// cli_chat.go : « aidros chat », le chat en terminal. Volontairement simple et
 // rapide, dans l'esprit de pi : une conversation locale (rien n'est partagé avec
 // l'interface web), trois outils (bash, write, edit) qui agissent dans le dossier
 // courant, pas de mémoire ni de projets. L'interface reste « en ligne » : le
@@ -10,7 +10,7 @@ package aidros
 //	ajean chat                    session interactive
 //	ajean chat "question"         session interactive, premier message envoyé
 //	ajean chat -p "question"      une réponse puis sortie (scripts)
-//	echo texte | ajean chat "…"   idem, l'entrée standard est ajoutée au message
+//	echo texte | aidros chat "…"   idem, l'entrée standard est ajoutée au message
 
 import (
 	"context"
@@ -38,7 +38,7 @@ func terminalSystemPrompt(caps Caps) string {
 	if caps.Web {
 		where = "running on this machine, in fast mode"
 	}
-	b.WriteString("You are Jean, the assistant of AJEAN, " + where + ".")
+	b.WriteString("You are Jean, the assistant of Aidros, " + where + ".")
 	if caps.Agent {
 		cwd := agentWorkspace()
 		b.WriteString(fmt.Sprintf("\n\nWorking directory: %s (%s/%s). The shell is %s: use its syntax. Relative paths in bash, write and edit resolve in the working directory.\n",
@@ -80,7 +80,7 @@ func (s *chatSession) history() []Message {
 	return append(out, s.msgs...)
 }
 
-// cmdChat : point d'entrée de « ajean chat ».
+// cmdChat : point d'entrée de « aidros chat ».
 func cmdChat(args []string) error {
 	var system, first string
 	printMode, tools := false, true
@@ -107,7 +107,7 @@ func cmdChat(args []string) error {
 	first = strings.TrimSpace(strings.Join(rest, " "))
 	// Entrée redirigée (echo … | ajean chat) : son contenu rejoint le message et
 	// on passe en réponse unique, faute de clavier pour la suite.
-	// Sortie redirigée (ajean chat "…" > fichier) : pas d'interface, juste la réponse.
+	// Sortie redirigée (aidros chat "…" > fichier) : pas d'interface, juste la réponse.
 	if !stdoutIsTerminal() && first != "" {
 		printMode = true
 	}
@@ -122,7 +122,7 @@ func cmdChat(args []string) error {
 		}
 		printMode = true
 	}
-	// Les outils agissent dans le dossier d'où « ajean chat » est lancé, comme
+	// Les outils agissent dans le dossier d'où « aidros chat » est lancé, comme
 	// un outil de ligne de commande (et non dans le workspace de l'app web).
 	if cwd, err := os.Getwd(); err == nil {
 		_ = os.Setenv(workspaceEnv, cwd)
@@ -136,19 +136,19 @@ func cmdChat(args []string) error {
 	}
 	if printMode {
 		if first == "" {
-			return fmt.Errorf("rien à envoyer : ajean chat -p \"ta question\"")
+			return fmt.Errorf("rien à envoyer : aidros chat -p \"ta question\"")
 		}
 		return s.printOnce(first)
 	}
 	return s.interactive(first)
 }
 
-const chatUsage = `ajean chat : discuter avec le modèle depuis le terminal
+const chatUsage = `aidros chat : discuter avec le modèle depuis le terminal
 
-  ajean chat                     session interactive
-  ajean chat "question"          session interactive, premier message envoyé
-  ajean chat -p "question"       une seule réponse puis sortie (scripts)
-  echo texte | ajean chat "…"    l'entrée standard est ajoutée au message
+  aidros chat                     session interactive
+  aidros chat "question"          session interactive, premier message envoyé
+  aidros chat -p "question"       une seule réponse puis sortie (scripts)
+  echo texte | aidros chat "…"    l'entrée standard est ajoutée au message
 
 Options :
   -s, --system "texte"   prompt système personnalisé
@@ -191,7 +191,7 @@ func waitEngineQuiet() error {
 	if msg := modelLoadError(); msg != "" {
 		return errors.New(msg)
 	}
-	return fmt.Errorf("moteur injoignable sur :%d (ajean start pour le lancer)", LLMPort())
+	return fmt.Errorf("moteur injoignable sur :%d (aidros start pour le lancer)", LLMPort())
 }
 
 func (s *chatSession) interactive(first string) error {
@@ -270,7 +270,7 @@ func (s *chatSession) interactive(first string) error {
 func (s *chatSession) banner() {
 	out := s.ui.out
 	model := chatModelName()
-	fmt.Fprintf(out, "\n %s %s\n", col("1;36", "ajean"), dim("v"+Version))
+	fmt.Fprintf(out, "\n %s %s\n", col("1;36", "aidros"), dim("v"+Version))
 	info := model
 	if s.ctxMax > 0 {
 		info += dim(" · contexte " + fmtCtxWindow(s.ctxMax))
@@ -332,7 +332,7 @@ func (s *chatSession) ensureEngine() bool {
 		yes := k.kind == keyEnter || (k.kind == keyRune && strings.ContainsRune("oOyY", k.r))
 		fmt.Fprint(ui.out, "\n")
 		if !yes {
-			fmt.Fprint(ui.out, dim("Lance-le avec « ajean start », puis relance « ajean chat ».")+"\n")
+			fmt.Fprint(ui.out, dim("Lance-le avec « aidros start », puis relance « aidros chat ».")+"\n")
 			return false
 		}
 		var err error
@@ -674,7 +674,7 @@ func (s *chatSession) dropLastExchange() bool {
 
 func (s *chatSession) transcript() string {
 	var b strings.Builder
-	b.WriteString("# Conversation AJEAN (" + time.Now().Format("2006-01-02 15:04") + ")\n\n")
+	b.WriteString("# Conversation Aidros (" + time.Now().Format("2006-01-02 15:04") + ")\n\n")
 	for _, m := range s.msgs {
 		switch m.Role {
 		case "user":

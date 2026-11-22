@@ -1,6 +1,6 @@
 package aidros
 
-// Windows uses verified upstream CUDA/HIP releases. The Linux AJEAN MoE path
+// Windows uses verified upstream CUDA/HIP releases. The Linux Aidros MoE path
 // keeps its measured settings. Python, DLLs and sources stay inside this data root.
 import (
 	"context"
@@ -208,7 +208,7 @@ func moeStrataPreflight(c map[string]string) (string, map[string]any, error) {
 	// est déjà sur le disque ». Précédent de la même forme : les verrous Gyro-S
 	// devenus avertissements le 26/10.
 	if meta["version"] != strataVersion {
-		fmt.Fprintf(os.Stderr, "[ajean] attention : moteur MoE %v, application épinglée %s — le preset demarre quand meme\n", meta["version"], strataVersion)
+		fmt.Fprintf(os.Stderr, "[aidros] attention : moteur MoE %v, application épinglée %s — le preset demarre quand meme\n", meta["version"], strataVersion)
 	}
 	if c["MOE_BACKEND"] == "hip" && meta["backend"] != "hip" {
 		return "", nil, errors.New("le preset HIP ne référence pas un moteur HIP")
@@ -518,7 +518,7 @@ func serveStrataMoe(c map[string]string) error {
 	py := strataPath(c["MOE_PYTHON"])
 	args := []string{py, "-u", "-m", "serve.server", "--engine", "strata", "--config", run, "--host", "127.0.0.1", "--port", fmt.Sprint(final["port"])}
 	_ = putBytes(bkState, engineCmdlineKey, []byte(engineCmdline(args)))
-	fmt.Fprintf(os.Stderr, "[ajean serve] Strata %s · %s · port %v\n", strataVersion, c["MOE_BACKEND"], final["port"])
+	fmt.Fprintf(os.Stderr, "[aidros serve] Strata %s · %s · port %v\n", strataVersion, c["MOE_BACKEND"], final["port"])
 	return execServer(py, args)
 }
 

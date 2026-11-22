@@ -12,7 +12,7 @@ package aidros
 // TaskDialog est la boîte actuelle (titre en grand, texte, boutons). Elle vit
 // dans la version 6 de comctl32, que Windows ne charge que pour un programme
 // qui la réclame par un manifeste. Plutôt que d'en embarquer un (il changerait
-// le comportement de toutes les fenêtres d'AJEAN), on active ce contexte le
+// le comportement de toutes les fenêtres d'Aidros), on active ce contexte le
 // temps de l'appel, à partir de celui que shell32.dll fournit, et on demande le
 // rendu net pour ce seul fil d'exécution. Au moindre échec, l'appelant retombe
 // sur MessageBoxW.
@@ -113,7 +113,7 @@ func taskDialog(text, title string, flags uintptr) (int, bool) {
 	if flags&mbYesNo != 0 {
 		buttons = tdcbfYes | tdcbfNo
 	}
-	// L'icône d'AJEAN si le .exe en porte une, sinon l'icône « information ».
+	// L'icône d'Aidros si le .exe en porte une, sinon l'icône « information ».
 	hInst, _, _ := pGetModuleHandleW.Call(0)
 	icon := appIconResource
 	if hInst == 0 {
@@ -128,7 +128,7 @@ func taskDialog(text, title string, flags uintptr) (int, bool) {
 	return int(pressed), true
 }
 
-// cmdDialogTest (« ajean dialog-test », absent de l'aide) : affiche la question
+// cmdDialogTest (« aidros dialog-test », absent de l'aide) : affiche la question
 // de mise à jour telle que la pose l'installeur, pour vérifier son rendu.
 func cmdDialogTest(args []string) error {
 	r := messageBox("Mettre à jour Aidros en version "+Version+" ?\n\n"+

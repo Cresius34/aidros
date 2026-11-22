@@ -1,9 +1,9 @@
 package aidros
 
 // backend_moe.go : moteur MoE spécialisé de la famille Qwen3.8-Flash-Next,
-// installé et piloté par ajean « en un clic ».
+// installé et piloté par aidros « en un clic ».
 //
-// Version FIGÉE : ajean livre une version testée (sources + moteur Linux compilé
+// Version FIGÉE : aidros livre une version testée (sources + moteur Linux compilé
 // par nous) depuis SA propre release GitHub, vérifiée par SHA-256 ; on ne monte
 // de version qu'après l'avoir validée sur le serveur de test. Périmètre de cette
 // première version : Linux x86_64 + NVIDIA, une ou deux cartes.
@@ -14,11 +14,11 @@ package aidros
 //     imposant NOTRE binaire (--prebuilt) ; il télécharge le modèle depuis
 //     Hugging Face à des révisions figées et le prépare ;
 //  2. ajean écrit un preset ENGINE=moe et l'active ;
-//  3. `ajean serve` (unité ajean-engine) lance le serveur du moteur au lieu de
+//  3. `aidros serve` (unité ajean-engine) lance le serveur du moteur au lieu de
 //     llama-server, avec les réglages validés sur notre matériel (serveMoe).
 //
 // Le serveur expose les mêmes points d'entrée que llama-server (/health,
-// /props, /slots, /metrics, /v1/*) : le reste d'ajean le voit comme un moteur
+// /props, /slots, /metrics, /v1/*) : le reste d'aidros le voit comme un moteur
 // local ordinaire.
 
 import (
@@ -39,7 +39,7 @@ import (
 	"strings"
 )
 
-// Version du moteur AJEAN MoE et paquets correspondants. Le moteur est compilé
+// Version du moteur Aidros MoE et paquets correspondants. Le moteur est compilé
 // par nous (CUDA 12.8, mode portable AVX2, sm_75/80/86/89/120 : RTX 20 à 50),
 // avec les experts de la carte d'appoint gardés hors RAM (voir moeDropFits) et,
 // depuis la 1.1, calculés par elle à la lecture des prompts.
@@ -54,7 +54,7 @@ const (
 
 // moeEngineAssetName : le paquet de moteur attendu sur cette plateforme. Sous
 // Windows l'asset de la release n'existe pas : le binaire est compilé localement
-// (sources + patch remote-drop) et posé par ajean dans moeSrcDir()/engine-cuda12/.
+// (sources + patch remote-drop) et posé par aidros dans moeSrcDir()/engine-cuda12/.
 func moeEngineAssetName() string {
 	if runtime.GOOS == "windows" {
 		return "ajean-moe-engine-" + moeVersion + "-windows-x64-cuda12.zip"
@@ -784,8 +784,8 @@ var (
 
 // moeNeutral retire le nom du moteur amont d'une ligne de journal.
 func moeNeutral(line string) string {
-	// le binaire annonce sa version d'origine (« engine 0.1.44.1 ») : c'est celle d'AJEAN MoE
-	line = reUpstreamVersion.ReplaceAllString(line, "AJEAN MoE "+moeVersion)
+	// le binaire annonce sa version d'origine (« engine 0.1.44.1 ») : c'est celle d'Aidros MoE
+	line = reUpstreamVersion.ReplaceAllString(line, "Aidros MoE "+moeVersion)
 	return reUpstreamName.ReplaceAllString(line, "moteur")
 }
 
@@ -815,7 +815,7 @@ func moeFindConfig(quant string) (string, error) {
 }
 
 // ---------------------------------------------------------------------------
-// Lancement (ajean serve)
+// Lancement (aidros serve)
 // ---------------------------------------------------------------------------
 
 // moeTuning : réglages validés sur le serveur de test (2026-10-05), ajoutés
@@ -1103,7 +1103,7 @@ func moeCudaDevices(cfg map[string]string) string {
 
 // moePreflight : ce sans quoi le moteur MoE ne peut pas démarrer (sa config
 // d'installeur, lisible, et l'environnement Python à côté). Partagé par serveMoe
-// et par le pré-vol de `ajean start` / `ajean restart`, qui exigeait BIN et
+// et par le pré-vol de `aidros start` / `aidros restart`, qui exigeait BIN et
 // MODEL : un preset MoE n'a ni l'un ni l'autre et était refusé.
 func moePreflight(cfg map[string]string) (string, map[string]any, error) {
 	if isStrataMoe(cfg) {
@@ -1127,7 +1127,7 @@ func moePreflight(cfg map[string]string) (string, map[string]any, error) {
 	return path, base, nil
 }
 
-// serveMoe : la branche moteur MoE de `ajean serve`. Écrit la config finale à
+// serveMoe : la branche moteur MoE de `aidros serve`. Écrit la config finale à
 // côté de celle de l'installeur puis remplace le process par le serveur du moteur
 // (comme llama-server : systemd supervise directement le moteur).
 func serveMoe(cfg map[string]string) error {
@@ -1135,14 +1135,14 @@ func serveMoe(cfg map[string]string) error {
 		return serveStrataMoe(cfg)
 	}
 	if err := moeMigrate(cfg); err != nil {
-		fmt.Fprintf(os.Stderr, "[ajean serve] passage à AJEAN MoE %s impossible (%v) : la version installée reste utilisée\n", moeVersion, err)
+		fmt.Fprintf(os.Stderr, "[aidros serve] passage à Aidros MoE %s impossible (%v) : la version installée reste utilisée\n", moeVersion, err)
 	}
 	path, base, err := moePreflight(cfg)
 	if err != nil {
 		return err
 	}
 	if err := moeEnsureEngine(); err != nil {
-		fmt.Fprintf(os.Stderr, "[ajean serve] moteur %s non installé (%v) : l'ancien reste en place\n", moeEngineAsset, err)
+		fmt.Fprintf(os.Stderr, "[aidros serve] moteur %s non installé (%v) : l'ancien reste en place\n", moeEngineAsset, err)
 	}
 	final, err := moeBuildConfig(base, cfg, readAPIKey())
 	if err != nil {
@@ -1150,7 +1150,7 @@ func serveMoe(cfg map[string]string) error {
 	}
 	srcDir := filepath.Dir(path)
 	py := moeVenvPython(srcDir)
-	// Tout ce qu'ajean lance porte le nom du moteur MoE d'AJEAN : binaires,
+	// Tout ce qu'aidros lance porte le nom du moteur MoE d'Aidros : binaires,
 	// lanceur, config et journal (les noms d'origine restent dans le dossier
 	// d'installation, qu'ils ne quittent pas).
 	tag := moeConfigTag(path)
@@ -1186,7 +1186,7 @@ func serveMoe(cfg map[string]string) error {
 	largs = append(largs, "--config", out, "--port", port)
 	full := append([]string{prog}, largs...)
 	_ = os.Chdir(srcDir)
-	fmt.Fprintf(os.Stderr, "[ajean serve] AJEAN MoE %s  config=%s  port=%s  gpu=%s\n", moeVersion, filepath.Base(out), port, os.Getenv("CUDA_VISIBLE_DEVICES"))
+	fmt.Fprintf(os.Stderr, "[aidros serve] Aidros MoE %s  config=%s  port=%s  gpu=%s\n", moeVersion, filepath.Base(out), port, os.Getenv("CUDA_VISIBLE_DEVICES"))
 	_ = putBytes(bkState, engineCmdlineKey, []byte(engineCmdline(full)))
 	return execServer(prog, full)
 }
@@ -1261,7 +1261,7 @@ func moeMigrate(cfg map[string]string) error {
 		return err
 	}
 	cfg["MOE_CONFIG"] = newPath
-	fmt.Fprintf(os.Stderr, "[ajean serve] AJEAN MoE %s : installation reprise depuis %s\n", moeVersion, filepath.Base(oldDir))
+	fmt.Fprintf(os.Stderr, "[aidros serve] Aidros MoE %s : installation reprise depuis %s\n", moeVersion, filepath.Base(oldDir))
 	return nil
 }
 

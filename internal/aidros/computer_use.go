@@ -395,7 +395,7 @@ func floatArg(args map[string]any, key string) (float64, bool) {
 	return 0, false
 }
 
-// ─── CLI : ajean computer [on|off|status] ────────────────────────────────────
+// ─── CLI : aidros computer [on|off|status] ────────────────────────────────────
 
 func cmdComputer(args []string) error {
 	sub := ""
@@ -436,7 +436,7 @@ func cmdComputer(args []string) error {
 		}
 		fmt.Println()
 	default:
-		return fmt.Errorf("usage: ajean computer [on|off|status]")
+		return fmt.Errorf("usage: aidros computer [on|off|status]")
 	}
 	return nil
 }

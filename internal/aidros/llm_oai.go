@@ -260,11 +260,11 @@ func cmdOAI(args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("[ajean oai] front TLS (test, auto-signé) https://%s:%d/v1 → llama :%d\n", host, port, LLMPort())
+		fmt.Printf("[aidros oai] front TLS (test, auto-signé) https://%s:%d/v1 → llama :%d\n", host, port, LLMPort())
 		return runOAIFront(ln, tlsCfg)
 	default:
-		fmt.Println("usage: ajean oai serve [port] [host]   (front TLS de test → llama /v1)")
-		fmt.Println("  en prod, le front TLS est servi automatiquement dans le tunnel (ajean link)")
+		fmt.Println("usage: aidros oai serve [port] [host]   (front TLS de test → llama /v1)")
+		fmt.Println("  en prod, le front TLS est servi automatiquement dans le tunnel (aidros link)")
 		fmt.Println("  quand AJEAN_LINK_ALLOW_OAI=1 ; cert Let's Encrypt via TLS-ALPN-01.")
 		return nil
 	}

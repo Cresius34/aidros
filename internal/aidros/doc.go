@@ -11,7 +11,7 @@
 //	chat_*        chat CLI + conversation serveur partagée, compaction, mémoire,
 //	              outils de l'agent (dont accès internet)
 //	llm_*         client llama-server (complétions, endpoint OpenAI, bench, test)
-//	engine_*      le moteur llama.cpp livré avec AJEAN : version épinglée
+//	engine_*      le moteur llama.cpp livré avec Aidros : version épinglée
 //	              (LLAMA_CPP_VERSION + llama_cpp_assets.json), installation
 //	              vérifiée, sonde des variantes, erreurs du journal
 //	backend_*     GPU, serve (ExecStart), modèles et téléchargements, catalogue,
@@ -31,8 +31,8 @@
 // supprimer un symbole jugé inutilisé, vérifier `grep` sur les fichiers _darwin.
 //
 // DEUX SERVICES à l'exécution, un seul binaire :
-//   - ajean-engine (« ajean serve ») exec llama-server ;
-//   - ajean-ui (« ajean web ») sert l'UI locale, le tunnel du relais et
+//   - ajean-engine (« aidros serve ») exec llama-server ;
+//   - ajean-ui (« aidros web ») sert l'UI locale, le tunnel du relais et
 //     l'endpoint OpenAI depuis un SEUL process — condition d'une conversation
 //     unique, celle-ci vivant en mémoire (voir chat_conversation.go).
 //

@@ -643,7 +643,7 @@ func hintMissingBuildDep(p buildPlan, cfgLog string) {
 		fmt.Printf("            Relance l'installeur du CUDA Toolkit (installation personnalisée) en cochant « CUDA → Visual Studio Integration »\n")
 		fmt.Printf("            (Visual Studio avec le workload C++ doit déjà être installé), ou copie les fichiers de\n")
 		fmt.Printf("            <toolkit>\\extras\\visual_studio_integration\\MSBuildExtensions vers\n")
-		fmt.Printf("            <VS>\\MSBuild\\Microsoft\\VC\\<version>\\BuildCustomizations, puis relance %s.\n", bold("ajean llamacpp install"))
+		fmt.Printf("            <VS>\\MSBuild\\Microsoft\\VC\\<version>\\BuildCustomizations, puis relance %s.\n", bold("aidros llamacpp install"))
 	}
 	// Linux/CUDA : nvcc trouvé mais en-têtes/cudart introuvables = le toolkit
 	// complet n'est pas installé (seul le paquet nvcc l'est). On passe déjà
@@ -651,7 +651,7 @@ func hintMissingBuildDep(p buildPlan, cfgLog string) {
 	// c'est qu'il manque pour de bon.
 	if p.backend == "cuda" && strings.Contains(log, "CUDA Toolkit not found") {
 		fmt.Printf("\n%s nvcc est présent mais le CUDA Toolkit complet (en-têtes + cudart) est introuvable.\n", yellow("[dépendance]"))
-		fmt.Printf("            Installe le toolkit NVIDIA officiel (il se pose dans /usr/local/cuda), puis relance %s.\n", bold("ajean llamacpp install"))
+		fmt.Printf("            Installe le toolkit NVIDIA officiel (il se pose dans /usr/local/cuda), puis relance %s.\n", bold("aidros llamacpp install"))
 	}
 	// nvcc casse sur le programme de test de CMake : cause fréquente = GPU trop
 	// ancien pour le toolkit (CUDA 13 a supprimé Maxwell/Pascal/Volta). Normalement
@@ -667,15 +667,15 @@ func hintMissingBuildDep(p buildPlan, cfgLog string) {
 		fmt.Printf("\n%s nvcc %séchoue à compiler le programme de test de CMake.\n", yellow("[CUDA]"), ver)
 		fmt.Printf("            Cause la plus fréquente : ton GPU est plus ancien que ce que ce CUDA supporte.\n")
 		fmt.Printf("            CUDA 13 a supprimé Maxwell (GTX 900), Pascal (GTX 10xx) et Volta ; ils exigent un CUDA 12.x.\n")
-		fmt.Printf("            Installe le CUDA Toolkit 12.x (par ex. 12.8) puis relance %s.\n", bold("ajean llamacpp install"))
+		fmt.Printf("            Installe le CUDA Toolkit 12.x (par ex. 12.8) puis relance %s.\n", bold("aidros llamacpp install"))
 	}
 	if p.backend == "vulkan" && strings.Contains(log, "SPIRV-Headers") {
 		fmt.Printf("\n%s dépendance manquante pour le backend %s : les en-têtes SPIR-V (paquet « SPIRV-Headers ») sont introuvables.\n",
 			yellow("[dépendance]"), green("Vulkan"))
 		if cmd := pkgInstallHint("spirv-headers"); cmd != "" {
-			fmt.Printf("            installe-les puis relance %s : %s\n", bold("ajean llamacpp install"), bold(cmd))
+			fmt.Printf("            installe-les puis relance %s : %s\n", bold("aidros llamacpp install"), bold(cmd))
 		} else {
-			fmt.Printf("            installe le paquet de développement « SPIRV-Headers » de ta distribution, puis relance %s.\n", bold("ajean llamacpp install"))
+			fmt.Printf("            installe le paquet de développement « SPIRV-Headers » de ta distribution, puis relance %s.\n", bold("aidros llamacpp install"))
 		}
 	}
 }
@@ -1473,11 +1473,11 @@ func cpuPlanHints(p buildPlan) []string {
 	lines := []string{"carte graphique détectée (" + gpu + ") mais aucun outil pour la compiler : le moteur tournera sur le CPU, beaucoup plus lentement."}
 	switch {
 	case nvidia:
-		lines = append(lines, "installe le CUDA Toolkit NVIDIA (developer.nvidia.com/cuda-downloads), puis relance « ajean llamacpp install ».")
+		lines = append(lines, "installe le CUDA Toolkit NVIDIA (developer.nvidia.com/cuda-downloads), puis relance « aidros llamacpp install ».")
 	case runtime.GOOS == "windows":
 		lines = append(lines,
 			"le plus simple : Vulkan. Installe le Vulkan SDK (winget install KhronosGroup.VulkanSDK),",
-			"ouvre un NOUVEAU terminal, puis relance « ajean llamacpp install --backend=vulkan ».")
+			"ouvre un NOUVEAU terminal, puis relance « aidros llamacpp install --backend=vulkan ».")
 	default:
 		pkgs := "les paquets glslc et les en-têtes Vulkan de ta distribution"
 		if hasTool("apt-get") {
@@ -1487,7 +1487,7 @@ func cpuPlanHints(p buildPlan) []string {
 		} else if hasTool("pacman") {
 			pkgs = "« sudo pacman -S shaderc vulkan-headers vulkan-icd-loader »"
 		}
-		lines = append(lines, "le plus simple : Vulkan. Installe "+pkgs+", puis relance « ajean llamacpp install --backend=vulkan ».")
+		lines = append(lines, "le plus simple : Vulkan. Installe "+pkgs+", puis relance « aidros llamacpp install --backend=vulkan ».")
 	}
 	return lines
 }

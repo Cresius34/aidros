@@ -280,7 +280,7 @@ func (c *Conversation) ExportMarkdown(o exportOpts) string {
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "# Conversation AJEAN\n\nExportée le %s par AJEAN %s.\n",
+	fmt.Fprintf(&b, "# Conversation Aidros\n\nExportée le %s par Aidros %s.\n",
 		time.Now().Format("02/01/2006 à 15:04"), Version)
 	// Un export tronqué ou allégé doit le DIRE : relu six mois plus tard, un fil
 	// sans ses raisonnements ne doit pas passer pour le fil complet.
@@ -294,7 +294,7 @@ func (c *Conversation) ExportMarkdown(o exportOpts) string {
 	openBubble := false
 	head := func() {
 		if !openBubble {
-			b.WriteString("\n## AJEAN\n")
+			b.WriteString("\n## Aidros\n")
 			openBubble = true
 		}
 	}
@@ -449,12 +449,12 @@ func cmdExport(args []string) error {
 			o.Turns = n
 		default:
 			if strings.HasPrefix(a, "-") && a != "-" {
-				return fmt.Errorf("option inconnue : %s (voir « ajean help »)", a)
+				return fmt.Errorf("option inconnue : %s (voir « aidros help »)", a)
 			}
 			out = a
 		}
 	}
-	// Une extension explicite l'emporte sur le drapeau : `ajean export fil.json`
+	// Une extension explicite l'emporte sur le drapeau : `aidros export fil.json`
 	// qui produirait du Markdown serait un piège.
 	if strings.HasSuffix(strings.ToLower(out), ".json") {
 		o.Format = "json"

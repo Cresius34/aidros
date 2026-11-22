@@ -11,7 +11,7 @@ import (
 // parallelEnginePortDef : le port historique du moteur sur ce build. Il n'est
 // plus une constante gravée dans le marbre : deux installations côte à côte sur
 // la même machine doivent pouvoir avancer chacune de leur côté (l'étude du pont
-// Ajean↔Ajean butait là — tout était en dur, donc une seconde instance était
+// Aidros↔Aidros butait là — tout était en dur, donc une seconde instance était
 // impossible). Le réglage se lit dans la base, la clé reste « PORT » comme
 // partout ailleurs.
 const parallelEnginePortDef = "18080"

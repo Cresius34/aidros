@@ -2,7 +2,7 @@
 
 package aidros
 
-// Lier le Chrome du computer use à la vie d'AJEAN (voir sys_childbind_windows.go) :
+// Lier le Chrome du computer use à la vie d'Aidros (voir sys_childbind_windows.go) :
 // le noyau lui envoie SIGKILL quand AJEAN meurt, même tué brutalement. Ses
 // sous-processus suivent la mort du processus principal de Chrome.
 

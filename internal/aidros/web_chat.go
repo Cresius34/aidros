@@ -37,7 +37,7 @@ func capsFromBody(body chatReq) Caps {
 	if body.Computer != nil {
 		caps.ComputerUse = caps.ComputerUse && *body.Computer
 	}
-	// Mode rapide : même moteur que « ajean chat ». Il ne fait que retirer
+	// Mode rapide : même moteur que « aidros chat ». Il ne fait que retirer
 	// (mémoire, web, computer use), donc reste une restriction.
 	if body.Fast {
 		caps.Terminal, caps.Web = true, true

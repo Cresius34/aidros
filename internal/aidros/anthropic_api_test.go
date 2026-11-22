@@ -24,7 +24,7 @@ func TestAntToOpenAINormalise(t *testing.T) {
 	if err := json.Unmarshal([]byte(raw), &in); err != nil {
 		t.Fatal(err)
 	}
-	out := antToOpenAI(in, "ajean")
+	out := antToOpenAI(in, "aidros")
 	msgs := out["messages"].([]oaMsg)
 	roles := []string{}
 	for _, m := range msgs {
@@ -45,7 +45,7 @@ func TestAntToOpenAINormalise(t *testing.T) {
 	if tools := out["tools"].([]map[string]any); len(tools) != 1 {
 		t.Fatalf("outil serveur non filtré : %d", len(tools))
 	}
-	if out["tool_choice"] != "required" || out["model"] != "ajean" {
+	if out["tool_choice"] != "required" || out["model"] != "aidros" {
 		t.Fatalf("tool_choice/model = %v %v", out["tool_choice"], out["model"])
 	}
 }

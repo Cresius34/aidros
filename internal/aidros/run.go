@@ -60,7 +60,7 @@ func Main() {
 	// lance l'expérience « application » (UI web + navigateur + icône tray) plutôt
 	// que d'afficher l'aide. Le binaire étant compilé en sous-système GUI, il n'y a
 	// AUCUNE console à ce stade (donc plus de fenêtre noire). Lancé depuis un shell,
-	// `ajean` sans argument garde son comportement d'aide.
+	// `aidros` sans argument garde son comportement d'aide.
 	if noArgs && !haveConsole {
 		mustExit(cmdApp(args))
 		return
@@ -134,9 +134,9 @@ func Main() {
 		mustExit(cmdEngine(args))
 	case "llamacpp":
 		// Avant la 0.20 : install / update / uninstall d'un llama.cpp au choix.
-		// Le moteur est désormais livré avec AJEAN ; on renvoie vers « engine ».
-		fmt.Fprintf(os.Stderr, "%s « ajean llamacpp » n'existe plus : le moteur llama.cpp est livré avec Aidros et s'installe seul. Voir %s.\n\n",
-			yellow("[info]"), bold("ajean engine"))
+		// Le moteur est désormais livré avec Aidros ; on renvoie vers « engine ».
+		fmt.Fprintf(os.Stderr, "%s « aidros llamacpp » n'existe plus : le moteur llama.cpp est livré avec Aidros et s'installe seul. Voir %s.\n\n",
+			yellow("[info]"), bold("aidros engine"))
 		mustExit(cmdEngine(nil))
 	case "update":
 		mustExit(cmdUpdate(args))
@@ -221,7 +221,7 @@ Installation:
 
 Env:
   AJEAN_HOME   racine des données (défaut : /etc/aidros, %%ProgramData%%\Aidros sous Windows ;
-               le nom « ajean » d'avant reste lu s'il existe déjà — ne pas perdre sa mémoire)
+               le nom « aidros » d'avant reste lu s'il existe déjà — ne pas perdre sa mémoire)
   EDITOR       éditeur pour 'aidros edit' (défaut : nano, notepad sous Windows)
 `, Version)
 }

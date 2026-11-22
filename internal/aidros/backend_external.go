@@ -87,7 +87,7 @@ func resolveChatEndpoint() chatEndpoint {
 	}
 	return chatEndpoint{
 		URL:      fmt.Sprintf("http://localhost:%d/v1/chat/completions", LLMPort()),
-		Model:    "ajean",
+		Model:    "aidros",
 		Key:      readAPIKey(),
 		External: false,
 	}

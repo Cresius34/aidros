@@ -46,5 +46,5 @@ func moeWriteLauncher(srcDir, py string) (string, []string, error) {
 }
 
 // moeAlias : lien vers un binaire du moteur, pour que le process porte le nom
-// du moteur d'AJEAN. Rien à nommer ici : le chemin d'origine.
+// du moteur d'Aidros. Rien à nommer ici : le chemin d'origine.
 func moeAlias(target, name string) string { return target }

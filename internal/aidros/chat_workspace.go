@@ -63,7 +63,7 @@ func workspaceCandidates() []string {
 	}
 	c = append(c, workspaceDir())
 	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		c = append(c, filepath.Join(home, "ajean", "workspace"))
+		c = append(c, filepath.Join(home, "aidros", "workspace"))
 	}
 	c = append(c, filepath.Join(os.TempDir(), "ajean-workspace"))
 	return c

@@ -12,7 +12,7 @@ import "strings"
 // engineErrPrefixes : débuts de ligne qui signalent une erreur du moteur (liste
 // reprise d'Ollama, llm/status.go).
 var engineErrPrefixes = []string{
-	"[err] ", // l'échec d'« ajean serve » lui-même (modèle introuvable, moteur non installable…)
+	"[err] ", // l'échec d'« aidros serve » lui-même (modèle introuvable, moteur non installable…)
 	"error:",
 	"CUDA error",
 	"ROCm error",
@@ -59,12 +59,18 @@ func engineErrorFromLog(log string) string {
 			msg = strings.TrimSpace(msg[i+3:])
 		}
 		// Un nouveau démarrage du moteur efface les erreurs du précédent.
-		if strings.HasPrefix(msg, "[ajean serve] ") && strings.Contains(msg, "model=") {
+		// Les DEUX préfixes sont admis, et c'est un contrat de LECTURE : le journal
+		// survit au remplacement du binaire. Une machine qui a tourné hier sous
+		// « [ajean serve] » a ses lignes de relance écrites sous ce nom-là ; n'en
+		// reconnaître qu'un seul laisse l'UI afficher l'erreur d'un moteur arrêté
+		// depuis, pendant que le nouveau tourne — rien ne se plaint, l'erreur est
+		// fausse. Écrire ne connaît que le nouveau.
+		if moteurRelanceLigne(msg) {
 			hits = hits[:0]
 			continue
 		}
 		if isEngineErrLine(msg) {
-			msg = strings.TrimSpace(strings.TrimPrefix(msg, "[err]")) // marque d'« ajean serve », sans intérêt à l'écran
+			msg = strings.TrimSpace(strings.TrimPrefix(msg, "[err]")) // marque d'« aidros serve », sans intérêt à l'écran
 			if len(msg) > 300 {
 				msg = msg[:300] + "…"
 			}
@@ -77,6 +83,17 @@ func engineErrorFromLog(log string) string {
 		hits = hits[len(hits)-3:]
 	}
 	return strings.Join(hits, "\n")
+}
+
+// moteurRelanceLigne : la ligne qui annonce un NOUVEAU démarrage du moteur
+// (« [aidros serve] … model=… », ou son nom d'hier « [ajean serve] … »). Elle
+// porte les deux noms pour la même raison que les en-têtes du pont : le fichier
+// où on la cherche a pu être écrit par le binaire d'avant.
+func moteurRelanceLigne(msg string) bool {
+	if !strings.Contains(msg, "model=") {
+		return false
+	}
+	return strings.HasPrefix(msg, "[aidros serve] ") || strings.HasPrefix(msg, "[ajean serve] ")
 }
 
 func isEngineErrLine(msg string) bool {

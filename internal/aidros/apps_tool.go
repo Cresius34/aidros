@@ -111,13 +111,13 @@ func appGuide() string {
 	if runtime.GOOS == "windows" {
 		py, ps = "python", "PowerShell (.ps1) or python"
 	}
-	return `# AJEAN apps: how to build one
+	return `# Aidros apps: how to build one
 
-An app = 3 parts (html, css, js) + optional scripts. It opens full screen inside AJEAN, in a sandboxed frame with NO network, NO cookies, NO localStorage, NO popups. Everything goes through the bridge window.ajean (promises).
+An app = 3 parts (html, css, js) + optional scripts. It opens full screen inside Aidros, in a sandboxed frame with NO network, NO cookies, NO localStorage, NO popups. Everything goes through the bridge window.ajean (promises).
 
 ## Parts
 - html: the BODY content only. Forbidden: <script>, <meta>, <base>, <iframe>, on…= attributes (onclick…). Put styles in css; style="" and el.style are allowed for dynamic values.
-- css: your styles. A small kit is already loaded (system font, light/dark follows AJEAN's theme, CSS vars --bg --fg --muted --line --accent --card, classes .btn .btn.primary .card .row .muted, inputs/tables styled). Keep it monochrome and sober, no borders everywhere.
+- css: your styles. A small kit is already loaded (system font, light/dark follows Aidros's theme, CSS vars --bg --fg --muted --line --accent --card, classes .btn .btn.primary .card .row .muted, inputs/tables styled). Keep it monochrome and sober, no borders everywhere.
 - js: plain modern JS (no import, no external library, no CDN). Wire events with addEventListener. Handle <form> submit in JS (e.preventDefault()).
 - UI text in the user's language, short and serious. Must work on a phone (fluid layout, inputs 16px, touch targets 44px).
 
@@ -131,12 +131,12 @@ An app = 3 parts (html, css, js) + optional scripts. It opens full screen inside
   - Big data (images, documents) goes through files, NEVER as base64 inside scripts.run input or stdout: write the files, pass their names in the input, let the script write its result file, then read/download/share it.
 - ajean.storage.get(key) / set(key, value) / delete(key) / list(prefix): small JSON memory kept between openings (1 MB max). Not encrypted: no secrets.
 - ajean.ai.complete({system, prompt} or {system, messages:[{role, content}]}, max_tokens) → {text}. Asks the active model, without tools. Slow on local models: show a loading state.
-- ajean.ui.notify(text): small message shown by AJEAN.
+- ajean.ui.notify(text): small message shown by Aidros.
 - ajean.ui.openUrl(url): opens an http(s) link in a new tab after the user confirms. Plain <a href> links and <a download> do NOT work (sandbox): use openUrl and files.download.
 - ajean.app → {id, name, version}
 
 ## Browser capabilities inside an app
-- Photos: <input type="file" accept="image/*" capture="environment"> opens the camera on a phone and works everywhere: use it as the main way. Live camera (navigator.mediaDevices.getUserMedia) is allowed but only when AJEAN is opened in https (app.ajean.link), not on a local http address: offer it as an extra, with the file input as fallback.
+- Photos: <input type="file" accept="image/*" capture="environment"> opens the camera on a phone and works everywhere: use it as the main way. Live camera (navigator.mediaDevices.getUserMedia) is allowed but only when Aidros is opened in https (app.ajean.link), not on a local http address: offer it as an extra, with the file input as fallback.
 - Canvas, image processing, Blob, FileReader, TextEncoder work. No network at all (fetch, images or fonts from the web, WebSocket): everything external goes through a script.
 - Limits: html+css+js 256 KB per version; storage 1 MB; files as above.
 

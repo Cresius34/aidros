@@ -3,9 +3,9 @@
 package aidros
 
 // sys_tray_windows.go — icône de AJEAN dans la zone de notification Windows (system
-// tray). Quand on lance l'app (double-clic ou `ajean app`), l'UI web s'ouvre dans
+// tray). Quand on lance l'app (double-clic ou `aidros app`), l'UI web s'ouvre dans
 // le navigateur ET une petite icône apparaît près de l'horloge : elle montre que
-// AJEAN tourne et offre un menu « Ouvrir AJEAN » / « Quitter ».
+// AJEAN tourne et offre un menu « Ouvrir Aidros » / « Quitter ».
 //
 // getlantern/systray est pur Go sur Windows (Win32 via x/sys, aucun CGO) — le
 // binaire reste statique. L'équivalent macOS vit dans sys_tray_darwin.go (Cocoa,

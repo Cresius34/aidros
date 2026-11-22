@@ -16,7 +16,7 @@ import (
 //
 // Un preset tourne de l'une de ces trois façons :
 //
-//	Local            llama.cpp livré avec AJEAN charge un .gguf (MODEL=…)
+//	Local            llama.cpp livré avec Aidros charge un .gguf (MODEL=…)
 //	API              une API OpenAI-compatible distante (EXTERNAL=1)
 //	Service système  une COMMANDE au choix de l'utilisateur (vLLM, un autre
 //	                 llama-server, TabbyAPI, un script…) qui expose une API
@@ -24,7 +24,7 @@ import (
 //
 // Le service système reprend l'idée de la 0.19 (une ligne de commande, lancée
 // comme service, dont AJEAN utilise l'API) sans sa machinerie : la commande est
-// lancée par le service moteur d'AJEAN (ajean-engine → « ajean serve »), à la
+// lancée par le service moteur d'Aidros (ajean-engine → « aidros serve »), à la
 // place de llama-server. Démarrage avec la machine, relance en cas d'échec,
 // journal, boutons démarrer / arrêter : tout ce que ce service offre déjà sur
 // chaque système s'applique tel quel, et il n'y a toujours qu'un modèle en
@@ -160,7 +160,7 @@ func serviceProgram(cmd string) (string, []string, error) {
 }
 
 // serveServiceCmd lance la commande du preset à la place de llama-server. Elle
-// remplace « ajean serve » (Unix) ou tourne comme son enfant (Windows) : le
+// remplace « aidros serve » (Unix) ou tourne comme son enfant (Windows) : le
 // service moteur la supervise exactement comme il supervise llama-server.
 func serveServiceCmd(cfg map[string]string, cmd string) error {
 	bin, args, err := serviceProgram(cmd)
@@ -194,7 +194,7 @@ func serveServiceCmd(cfg map[string]string, cmd string) error {
 			return err
 		}
 	}
-	fmt.Fprintf(os.Stderr, "[ajean serve] service système : %s\n", engineCmdline(args))
+	fmt.Fprintf(os.Stderr, "[aidros serve] service système : %s\n", engineCmdline(args))
 	_ = putBytes(bkState, engineCmdlineKey, []byte(engineCmdline(args)))
 	args[0] = bin
 	return execServer(bin, args)

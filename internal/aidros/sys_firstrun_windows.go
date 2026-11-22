@@ -190,7 +190,7 @@ func hashFile(p string) (string, error) {
 // allowForeground : le processus qui vient d'être cliqué a le droit de passer au
 // premier plan ; celui qu'il lance en arrière-plan ne l'a pas, et Windows se
 // contente alors de faire clignoter sa fenêtre dans la barre des tâches. On le
-// lui transmet avant de le lancer, pour que la fenêtre d'AJEAN s'affiche pour de
+// lui transmet avant de le lancer, pour que la fenêtre d'Aidros s'affiche pour de
 // bon après une installation ou une mise à jour.
 func allowForeground() { u32s.NewProc("AllowSetForegroundWindow").Call(^uintptr(0)) } // ASFW_ANY
 
@@ -302,7 +302,7 @@ func verLabel(v string) string {
 
 // replaceInstalled écrase le binaire installé par celui qu'on exécute. Le
 // renommage préalable en .old permet de remplacer un exécutable encore ouvert
-// (même mécanique que replaceBinary pour `ajean update`).
+// (même mécanique que replaceBinary pour `aidros update`).
 func replaceInstalled(target string) error {
 	removeOldBinaries(target)
 	old, err := renameAside(target) // nom unique, cf. renameAside
@@ -398,7 +398,7 @@ func portBusy(port int) bool {
 // posées par goversioninfo, cf cmd/aidros/versioninfo.json), comme le fait
 // l'onglet « Détails » des propriétés Windows.
 //
-// ⚠️ NE PAS remplacer par un `ajean version` exécuté : le binaire est compilé en
+// ⚠️ NE PAS remplacer par un `aidros version` exécuté : le binaire est compilé en
 // sous-système GUI, il s'attache à la console du parent et n'écrit RIEN dans un
 // tuyau. La sortie capturée est vide, donc la comparaison de versions échouerait
 // toujours en silence et la mise à jour ne se ferait jamais (vérifié).
@@ -479,14 +479,14 @@ $done=@()
 # source que l'infobulle de l'icône système (sys_marque_os.go:42) : un seul nom.
 $nom=%s
 # Le nom d'avant, figé ici comme « jean.exe » l'est ailleurs : c'est une date, pas
-# une valeur à faire évoluer. Un poste installé d'avant porte « AJEAN.lnk ».
+# une valeur à faire évoluer. Un poste installé d'avant porte « Aidros.lnk ».
 $lnkVieux='AJEAN.lnk'
 $progs=Join-Path ([Environment]::GetFolderPath('StartMenu')) 'Programs'
 foreach ($d in @($progs, [Environment]::GetFolderPath('Desktop'))) {
   if (-not $d) { continue }
   if (-not (Test-Path $d)) { continue }
   # Le renommage du raccourci ne doit pas DOUBLONNER. Sans ce bloc, un poste
-  # installé d'avant se réveille avec « AJEAN.lnk » ET « Aidros.lnk » côte à côte
+  # installé d'avant se réveille avec « Aidros.lnk » ET « Aidros.lnk » côte à côte
   # sur le Bureau : deux icônes pour une application, et plus personne ne sait
   # laquelle il a épinglée. On RENOMME ce qui existe ; si les deux existent déjà,
   # l'ancien est de trop et on le retire.
@@ -533,7 +533,7 @@ foreach ($d in @($progs, [Environment]::GetFolderPath('Desktop'))) {
     $s.WorkingDirectory=(Split-Path $t)
     $s.Description='Aidros'
     # Minimisé (7) : le binaire étant en sous-système console, Windows lui alloue
-    # une console au lancement. AJEAN la referme aussitôt, mais demander un
+    # une console au lancement. Aidros la referme aussitôt, mais demander un
     # démarrage minimisé garantit qu'elle n'est jamais peinte à l'écran.
     $s.WindowStyle=7
     $s.IconLocation="$t,0"

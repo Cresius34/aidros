@@ -2,7 +2,7 @@
 
 package aidros
 
-// Lier un processus enfant (le Chrome du computer use) à la vie d'AJEAN : s'il
+// Lier un processus enfant (le Chrome du computer use) à la vie d'Aidros : s'il
 // meurt, même tué brutalement (arrêt forcé, plantage, redémarrage), Windows
 // ferme le navigateur et tous ses sous-processus. Sans ça, chaque redémarrage
 // laissait un Chrome headless orphelin ; vu le 2026-10-03 : 13 navigateurs

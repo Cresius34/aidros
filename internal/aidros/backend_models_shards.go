@@ -15,7 +15,7 @@ import (
 // llama-server n'a besoin QUE de la première : il ouvre les suivantes tout seul,
 // à condition qu'elles soient dans le même dossier.
 //
-// Tout le reste d'AJEAN traitait chaque tranche comme un modèle indépendant :
+// Tout le reste d'Aidros traitait chaque tranche comme un modèle indépendant :
 // le lien collé ne rapatriait qu'un fichier sur trois (le moteur mourait sur
 // « tensor not found »), la liste du sélecteur montrait trois entrées dont deux
 // ne démarrent pas, et supprimer « le modèle » laissait les deux autres tranches

@@ -13,7 +13,7 @@ import (
 // emplacements invisibles : on ne sait plus si le .exe qu'on a double-cliqué EST
 // l'application ou seulement un installateur, ni où atterrissent la config, les
 // modèles et les fichiers que l'agent écrit. On centralise donc la réponse ici,
-// et on l'expose à la fois en ligne de commande (`ajean where`) et dans l'UI.
+// et on l'expose à la fois en ligne de commande (`aidros where`) et dans l'UI.
 
 type ajeanPaths struct {
 	Home      string `json:"home"`      // AJEAN_HOME : racine des données
@@ -30,7 +30,9 @@ type ajeanPaths struct {
 
 // nomProduit et nomVieuxProduit : le nom du binaire installé, aujourd'hui et
 // hier. La marque à l'écran, les assets de release et le paquet Go portent déjà
-// « aidros » ; le binaire installé était le dernier à dire « ajean ».
+// « aidros » ; le binaire installé était le dernier à dire « ajean ». Son nom
+// d'hier reste nommé ici, et seulement ici : c'est le nom que porte le fichier
+// sur la machine de celui qui a installé avant, donc un identifiant, pas la marque.
 const (
 	nomProduit      = "aidros"
 	nomVieuxProduit = "ajean"
@@ -101,7 +103,7 @@ func currentPaths() ajeanPaths {
 
 func cmdWhere(args []string) error {
 	p := currentPaths()
-	fmt.Printf("Emplacements AJEAN\n\n")
+	fmt.Printf("Emplacements Aidros\n\n")
 	for _, row := range [][2]string{
 		{"données (AJEAN_HOME)", p.Home},
 		{"base", p.Database},

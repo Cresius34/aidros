@@ -8,9 +8,9 @@ import (
 // outils : le shell (run_shell), l'écriture de fichiers et sa mémoire
 // (mem_search/mem_read/mem_add/mem_edit).
 
-// Il est ACTIF D'OFFICE : tous les modes d'AJEAN (Projet, Jean) reposent sur ces
+// Il est ACTIF D'OFFICE : tous les modes d'Aidros (Projet, Jean) reposent sur ces
 // outils, et sans eux le modèle ne peut rien faire d'utile ici. Seul un arrêt
-// explicite (« ajean agent off ») le coupe ; il est noté "0", l'absence de
+// explicite (« aidros agent off ») le coupe ; il est noté "0", l'absence de
 // réglage valant « actif ».
 func agentEnabled() bool { return getStr(bkState, "agent") != "0" }
 
@@ -54,7 +54,7 @@ func cmdAgent(args []string) error {
 			fmt.Printf("    %s  %s\n", bold(p.Name), p.Title)
 		}
 	default:
-		return fmt.Errorf("usage: ajean agent [on|off|status]")
+		return fmt.Errorf("usage: aidros agent [on|off|status]")
 	}
 	return nil
 }

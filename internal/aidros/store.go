@@ -48,7 +48,7 @@ const (
 // bbolt pose un verrou EXCLUSIF sur son fichier tant qu'il est ouvert. Or une
 // machine installée fait tourner en permanence le service de lien, qui sert le
 // tunnel et l'UI : s'il gardait la base ouverte, plus une seule commande ne
-// fonctionnerait à côté — « ajean status », « ajean switch », « ajean edit »
+// fonctionnerait à côté — « aidros status », « aidros switch », « aidros edit »
 // échoueraient toutes sur un délai d'attente, sur la machine même où tout est
 // censé marcher. On ouvre donc pour la durée d'une opération, puis on referme.
 //

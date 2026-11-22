@@ -53,8 +53,8 @@ func appWarning() string {
 	if !strings.Contains(exe, "/AppTranslocation/") {
 		return ""
 	}
-	return "AJEAN tourne depuis une copie temporaire en lecture seule (App Translocation de macOS). " +
-		"Fermez l'app, déplacez AJEAN.app dans le dossier Applications, puis rouvrez-la — " +
+	return "Aidros tourne depuis une copie temporaire en lecture seule (App Translocation de macOS). " +
+		"Fermez l'app, déplacez Aidros.app dans le dossier Applications, puis rouvrez-la — " +
 		"sinon chaque lancement crée une instance séparée et les mises à jour du moteur échouent."
 }
 

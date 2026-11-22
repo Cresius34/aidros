@@ -46,7 +46,7 @@ func TestCapsFromBodyPeutRestreindre(t *testing.T) {
 	}
 }
 
-// Mode rapide : le tour web tourne comme « ajean chat » (bash/write/edit, prompt
+// Mode rapide : le tour web tourne comme « aidros chat » (bash/write/edit, prompt
 // court, ni mémoire ni web), sans jamais rallumer un agent éteint.
 func TestCapsFromBodyModeRapide(t *testing.T) {
 	testHome(t)

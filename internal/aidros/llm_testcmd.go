@@ -14,7 +14,7 @@ func cmdTest(args []string) error {
 	fmt.Printf("→ GET http://localhost:%d/health … ", port)
 	if !healthCheck() {
 		fmt.Println(red("ko"))
-		return fmt.Errorf("/health ne répond pas — ajean start d'abord")
+		return fmt.Errorf("/health ne répond pas — aidros start d'abord")
 	}
 	fmt.Println(green("ok"))
 

@@ -106,7 +106,7 @@ func (h headerRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 
 // connect établit une session pour la config donnée.
 func mcpConnect(ctx context.Context, name string, cfg MCPServerConfig) (*mcpsdk.ClientSession, error) {
-	client := mcpsdk.NewClient(&mcpsdk.Implementation{Name: "ajean", Version: Version}, nil)
+	client := mcpsdk.NewClient(&mcpsdk.Implementation{Name: "aidros", Version: Version}, nil)
 
 	var transport mcpsdk.Transport
 	switch cfg.Transport() {

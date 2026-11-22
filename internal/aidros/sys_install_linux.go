@@ -14,14 +14,14 @@ import (
 // sudoersTemplate autorise l'utilisateur à piloter UNE unité sans mot de passe.
 // Posé pour les deux : l'interface, qui tourne sans privilèges, doit pouvoir
 // redémarrer le moteur (bascule de preset) comme elle-même (nouveau jeton).
-const sudoersTemplate = `# Permet à %[1]s de piloter l'unité %[2]s sans mot de passe (posé par ajean install).
+const sudoersTemplate = `# Permet à %[1]s de piloter l'unité %[2]s sans mot de passe (posé par aidros install).
 %[1]s ALL=(root) NOPASSWD: /bin/systemctl start %[2]s, /bin/systemctl stop %[2]s, /bin/systemctl restart %[2]s, /bin/systemctl enable %[2]s, /bin/systemctl disable %[2]s
 `
 
 // engineUnitTemplate — le moteur : exec llama-server, supervisé directement par
 // systemd. Champs : User, WorkingDirectory, ExecStart.
 const engineUnitTemplate = `[Unit]
-Description=AJEAN — moteur llama.cpp
+Description=Aidros — moteur llama.cpp
 After=network.target
 
 [Service]
@@ -50,7 +50,7 @@ WantedBy=multi-user.target
 // OpenAI, servis par un SEUL process (donc une seule conversation).
 // Champs : unité du moteur (dépendance), User, WorkingDirectory, ExecStart.
 const uiUnitTemplate = `[Unit]
-Description=AJEAN — interface web + accès distant
+Description=Aidros — interface web + accès distant
 After=network-online.target %s.service
 Wants=network-online.target
 

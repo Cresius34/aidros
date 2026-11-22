@@ -1,6 +1,6 @@
 package aidros
 
-// jean_projects.go — accès en LECTURE SEULE du mode Jean aux projets AJEAN.
+// jean_projects.go — accès en LECTURE SEULE du mode Jean aux projets Aidros.
 //
 // Jean a son propre espace (chat_space.go) et ne peut rien modifier chez les
 // projets. Il doit pourtant pouvoir regarder comment un projet fonctionne (« va
@@ -36,7 +36,7 @@ func jeanProjectTools() []Tool {
 	// Un seul outil pour les trois lectures : elles servent rarement, trois
 	// schémas coûtaient ~300 tokens à chaque requête.
 	return []Tool{
-		mk("jean_projects", "READ-ONLY look at the user's AJEAN projects. No argument: list them with their shared scripts. project (+ optional page): that project's memory index, or one page in full. path (scripts/... or workspace/...): read a file or list a folder of the projects' space. To reuse something, copy it into your own scripts folder.",
+		mk("jean_projects", "READ-ONLY look at the user's Aidros projects. No argument: list them with their shared scripts. project (+ optional page): that project's memory index, or one page in full. path (scripts/... or workspace/...): read a file or list a folder of the projects' space. To reuse something, copy it into your own scripts folder.",
 			obj(map[string]any{"project": str("Project slug or name"), "page": str("Memory page, e.g. mail-setup.md"), "path": str("scripts/... or workspace/...")})),
 	}
 }

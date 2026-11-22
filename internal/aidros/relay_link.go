@@ -1,16 +1,16 @@
 package aidros
 
-// relay_link.go — `ajean link <token>` : connecte ce serveur AJEAN au relais public
+// relay_link.go — `aidros link <token>` : connecte ce serveur AJEAN au relais public
 // (ajean.link) par une connexion SORTANTE persistante, pour qu'un utilisateur
 // y accède depuis n'importe où sans ouvrir de port (CGNAT, box, etc.).
 //
 // Principe : l'agent ouvre un WebSocket vers le relais, l'authentifie avec le
 // token d'abonnement, puis multiplexe (yamux) ce lien unique en un stream par
-// requête navigateur. Chaque stream est reverse-proxyfié vers le `ajean web`
+// requête navigateur. Chaque stream est reverse-proxyfié vers le `aidros web`
 // local. Keepalive + reconnexion automatique avec backoff.
 //
 // Le token est fourni par la boutique à l'achat. Il est mémorisé dans
-// $AJEAN_HOME/.link_token pour que `ajean link` (sans argument) reprenne la
+// $AJEAN_HOME/.link_token pour que `aidros link` (sans argument) reprenne la
 // connexion.
 
 import (
@@ -53,9 +53,9 @@ func machineID() string {
 
 // rotateMachineID tire un nouvel identifiant de machine et le persiste, en
 // écrasant l'ancien. Sert au premier appel (aucun id encore) comme à la
-// rotation volontaire (« ajean link newid ») quand l'ancien a fuité, par
+// rotation volontaire (« aidros link newid ») quand l'ancien a fuité, par
 // exemple montré dans une vidéo. Le nouvel id ne prend effet qu'à la
-// prochaine reconnexion du tunnel (« ajean ui restart ») ; l'ancien
+// prochaine reconnexion du tunnel (« aidros ui restart ») ; l'ancien
 // sous-domaine oai cesse alors de router vers un agent vivant.
 func rotateMachineID() string {
 	buf := make([]byte, 8)
@@ -81,14 +81,14 @@ func relayURL() string {
 	return defaultRelayURL
 }
 
-// uiUnitName est l'unité qui exécute « ajean web » : l'UI locale, le tunnel du
+// uiUnitName est l'unité qui exécute « aidros web » : l'UI locale, le tunnel du
 // relais et l'endpoint OpenAI, dans un seul et même process.
 const uiUnitName = "ajean-ui"
 
 func uiServiceName() string { return uiUnitName }
 
 // cmdLink ne gère QUE le compte d'accès distant : le jeton, l'appairage, l'état.
-// Le tunnel n'est plus un service à part — il est ouvert par « ajean web » dès
+// Le tunnel n'est plus un service à part — il est ouvert par « aidros web » dès
 // qu'un jeton est enregistré. Piloter le tunnel, c'est donc piloter le service
 // d'interface (voir cmdUI).
 func cmdLink(args []string) error {
@@ -98,28 +98,28 @@ func cmdLink(args []string) error {
 	}
 	switch sub {
 	case "":
-		// `ajean link` seul : afficher l'aide (NE démarre rien — éviter de prendre
+		// `aidros link` seul : afficher l'aide (NE démarre rien — éviter de prendre
 		// un mot pour un jeton et d'écraser le vrai).
 		printLinkHelp()
 		return nil
 	case "status":
 		tok := readLinkToken()
 		if tok == "" {
-			fmt.Println(yellow("[info]") + " aucun jeton enregistré — lance: ajean link <token>")
+			fmt.Println(yellow("[info]") + " aucun jeton enregistré — lance: aidros link <token>")
 			return nil
 		}
 		fmt.Printf("%s jeton enregistré (%s…), relais: %s\n", green("[ok]"), tok[:min(8, len(tok))], relayURL())
 		if uiServiceActive() {
 			fmt.Printf("%s service %s actif — le tunnel est ouvert\n", green("[ok]"), uiServiceName())
 		} else {
-			fmt.Printf("%s service %s arrêté — pas de tunnel (ajean ui start)\n", yellow("[info]"), uiServiceName())
+			fmt.Printf("%s service %s arrêté — pas de tunnel (aidros ui start)\n", yellow("[info]"), uiServiceName())
 		}
 		return nil
 	case "logout":
 		if err := removeLinkToken(); err != nil {
 			return err
 		}
-		fmt.Println(green("[ok]") + " jeton supprimé — « ajean ui restart » pour fermer le tunnel")
+		fmt.Println(green("[ok]") + " jeton supprimé — « aidros ui restart » pour fermer le tunnel")
 		return nil
 	case "newid":
 		old := getStr(bkState, "link_machine")
@@ -131,7 +131,7 @@ func cmdLink(args []string) error {
 		fmt.Printf("       endpoint OpenAI : https://%s.oai.ajean.link/v1\n", id)
 		// Reconnecter le tunnel pour que le relais enregistre le nouvel id.
 		if err := uiServiceCtl("restart"); err != nil {
-			fmt.Printf("%s redémarre le service à la main pour appliquer : ajean ui restart (%v)\n", yellow("[info]"), err)
+			fmt.Printf("%s redémarre le service à la main pour appliquer : aidros ui restart (%v)\n", yellow("[info]"), err)
 		} else {
 			fmt.Printf("%s tunnel reconnecté sous le nouvel identifiant\n", green("[ok]"))
 		}
@@ -164,7 +164,7 @@ func cmdLink(args []string) error {
 	return linkPrintIdentity()
 }
 
-// cmdUI pilote le service d'interface — « ajean web » en arrière-plan : l'UI
+// cmdUI pilote le service d'interface — « aidros web » en arrière-plan : l'UI
 // locale, le tunnel du relais et l'endpoint OpenAI, servis par le MÊME process.
 // C'est ce qui garantit une conversation unique, identique en local et à distance.
 func cmdUI(args []string) error {
@@ -186,23 +186,23 @@ func cmdUI(args []string) error {
 		}
 		return nil
 	default:
-		return fmt.Errorf("usage: ajean ui [start|stop|restart|status]")
+		return fmt.Errorf("usage: aidros ui [start|stop|restart|status]")
 	}
 }
 
-// printLinkHelp liste les sous-commandes de `ajean link`.
+// printLinkHelp liste les sous-commandes de `aidros link`.
 func printLinkHelp() {
-	fmt.Print(`ajean link — accès distant via le relais ajean.link
+	fmt.Print(`aidros link — accès distant via le relais ajean.link
 
 Usage :
-  ajean link <token>     enregistre le jeton (1re fois / pour le changer) et ouvre le tunnel
-  ajean link status      état du jeton et du tunnel
-  ajean link code        génère un code d'appairage (valable 10 min, à usage unique)
-  ajean link newid       change l'identifiant de la machine (si l'ancien a fuité)
-  ajean link logout      oublie le jeton enregistré
+  aidros link <token>     enregistre le jeton (1re fois / pour le changer) et ouvre le tunnel
+  aidros link status      état du jeton et du tunnel
+  aidros link code        génère un code d'appairage (valable 10 min, à usage unique)
+  aidros link newid       change l'identifiant de la machine (si l'ancien a fuité)
+  aidros link logout      oublie le jeton enregistré
 
 Le jeton est fourni sur ajean.link. Le tunnel est ouvert par le service
-d'interface (« ajean ui ») dès qu'un jeton est enregistré : il n'y a pas de
+d'interface (« aidros ui ») dès qu'un jeton est enregistré : il n'y a pas de
 service séparé pour l'accès distant.
 `)
 }
@@ -217,7 +217,7 @@ func linkPrintIdentity() error {
 	code, err := newPairCode()
 	if err != nil {
 		fmt.Printf("%s code d'appairage indisponible (droits sur %s ?): %v\n", yellow("[link]"), AjeanHome(), err)
-		fmt.Printf("       Réessaie : sudo ajean link code\n")
+		fmt.Printf("       Réessaie : sudo aidros link code\n")
 		return nil
 	}
 	fmt.Printf("       Code d'appairage (valable 10 min, usage unique) : %s\n\n", bold(code))
@@ -348,7 +348,7 @@ func uiLogPath() string { return filepath.Join(AjeanHome(), uiUnitName+".log") }
 // uiServiceCtl pilote le worker de lien (start/stop/restart). Sous Linux c'est
 // l'unité systemd ajean-ui (avec sudo non interactif si on n'est pas root) ;
 // ailleurs — macOS et Windows, où il n'y a ni systemd ni droits root — on lance
-// « ajean link serve » en processus détaché suivi par un fichier PID, comme le
+// « aidros link serve » en processus détaché suivi par un fichier PID, comme le
 // fait déjà le service principal. Sans ça, l'accès distant restait définitivement
 // « arrêté » sur un Mac ou un PC : le token était enregistré mais rien ne
 // composait jamais le tunnel.
@@ -465,7 +465,7 @@ func uiUserSvcCtl(action string) error {
 	cmd := spawnDetached(self, "web")
 	cmd.Stdout, cmd.Stderr = logf, logf
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("démarrage de « ajean web »: %w", err)
+		return fmt.Errorf("démarrage de « aidros web »: %w", err)
 	}
 	pid := cmd.Process.Pid
 	// PID + binaire d'origine : la 2e ligne dit QUELLE copie de l'app a lancé ce

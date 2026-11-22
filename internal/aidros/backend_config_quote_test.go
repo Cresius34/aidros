@@ -65,7 +65,7 @@ func TestConfigEditorText(t *testing.T) {
 	if !contains(txt, "#CTX=") {
 		t.Fatal("le squelette doit documenter CTX")
 	}
-	// Le moteur est livré avec AJEAN : plus de clé BIN à renseigner.
+	// Le moteur est livré avec Aidros : plus de clé BIN à renseigner.
 	if contains(txt, "BIN=") {
 		t.Fatal("le squelette ne doit plus proposer BIN")
 	}

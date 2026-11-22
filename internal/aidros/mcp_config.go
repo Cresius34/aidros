@@ -14,10 +14,10 @@ import (
 // d'outils de l'IA (accès fichiers rapide type desktop-commander, bases de
 // données, APIs métier…). Deux transports :
 //
-//   - stdio : ajean lance un process local (command + args) et parle en
+//   - stdio : aidros lance un process local (command + args) et parle en
 //     JSON-RPC sur stdin/stdout. C'est le cas de desktop-commander, du serveur
 //     filesystem officiel, etc. — lancés via npx/uvx/un binaire.
-//   - http  : ajean parle à un serveur MCP distant en Streamable HTTP (url +
+//   - http  : aidros parle à un serveur MCP distant en Streamable HTTP (url +
 //     éventuels en-têtes d'auth).
 //
 // Le format du fichier mcp.json reprend celui de Claude Desktop (clé

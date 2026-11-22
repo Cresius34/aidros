@@ -6,7 +6,7 @@ import (
 )
 
 // Une page web tierce ne doit pas pouvoir piloter l'API (CSRF / DNS rebinding),
-// sans gêner l'UI servie par ajean lui-même ni les clients hors navigateur.
+// sans gêner l'UI servie par aidros lui-même ni les clients hors navigateur.
 func TestCrossSiteReject(t *testing.T) {
 	cases := []struct {
 		name    string

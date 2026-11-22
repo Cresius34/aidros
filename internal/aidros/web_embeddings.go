@@ -201,7 +201,7 @@ func connectParallelChat(ctx context.Context, base, key string) error {
 	enc := readEmbeddingDefaults().Port
 	switch u.Port() {
 	case parallelUIPort(), parallelEnginePort(), parallelBridgePort(), strconv.Itoa(enc):
-		return errors.New("utiliser l'URL d'un autre Ajean ou d'un autre moteur, pas celle de celui-ci")
+		return errors.New("utiliser l'URL d'un autre Aidros ou d'un autre moteur, pas celle de celui-ci")
 	}
 	u.RawQuery, u.Fragment = "", ""
 	if !strings.HasSuffix(u.Path, "/v1") {

@@ -124,7 +124,7 @@ func launchExternalBrowser(raw string) (string, error) {
 }
 
 // startDetached lance le navigateur et le récupère quand il se termine : sans
-// Wait, chaque lien cliqué laissait un processus zombie jusqu'à l'arrêt d'AJEAN
+// Wait, chaque lien cliqué laissait un processus zombie jusqu'à l'arrêt d'Aidros
 // (Linux, macOS). Le plus souvent le lancement rend la main tout de suite à une
 // instance déjà ouverte.
 func startDetached(c *exec.Cmd) error {

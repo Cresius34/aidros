@@ -164,7 +164,7 @@ func TestMessageDIAVoisineDepuisPosteVoisinNonAutoritaire(t *testing.T) {
 	}
 	// Et le signal d'un ordre légitime doit être nommé, sinon l'agent refuserait
 	// aussi ce qu'il doit accepter.
-	if !strings.Contains(msg, "ajean peer ask") {
+	if !strings.Contains(msg, "aidros peer ask") {
 		t.Fatalf("le message doit dire comment un humain peut légitimement cibler ce poste : %q", msg)
 	}
 	if !strings.Contains(msg, "humain") {
@@ -245,7 +245,7 @@ func TestReponseDuVoisinBaliseChezLAppelant(t *testing.T) {
 	// Sans cette vérification, tout le dispositif d'auteur pourrait ne jamais
 	// quitter la machine et le voisin recevrait du texte nu.
 	if recu.Get(canalHeader) == "" {
-		t.Fatal("l'en-tête du canal n'est pas envoyé : le voisin ne saura pas qu'un Ajean parle")
+		t.Fatal("l'en-tête du canal n'est pas envoyé : le voisin ne saura pas qu'un Aidros parle")
 	}
 	if recu.Get(canalFromHeader) == "" {
 		t.Fatal("la machine qui appelle n'est pas déclarée")
@@ -571,7 +571,7 @@ func TestRefusDuVoisinTraduitEnGeste(t *testing.T) {
 		t.Fatalf("pas d'en-tête, pas de commentaire : %q", got)
 	}
 	got := peerRefusCanal("bridge_agent=off;agent_mode=off")
-	for _, attendu := range []string{"ajean bridge agent on", "mode agent", "ne peut ni lire ses propres journaux"} {
+	for _, attendu := range []string{"aidros bridge agent on", "mode agent", "ne peut ni lire ses propres journaux"} {
 		if !strings.Contains(got, attendu) {
 			t.Fatalf("le geste « %s » manque : %q", attendu, got)
 		}
@@ -615,7 +615,7 @@ func TestRefusDuVoisinRecuParLEseau(t *testing.T) {
 	if !strings.Contains(reply, "modèle nu") {
 		t.Fatalf("la façon dont le voisin a répondu doit être dite : %q", reply)
 	}
-	if !strings.Contains(reply, "ajean bridge agent on") {
+	if !strings.Contains(reply, "aidros bridge agent on") {
 		t.Fatalf("le refus reçu doit être traduit en geste à faire chez le voisin : %q", reply)
 	}
 	// Le souvenir, lui, reste nu : ni la balise ni le refus ne doivent s'y empiler

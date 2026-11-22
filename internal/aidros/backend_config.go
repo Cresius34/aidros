@@ -83,7 +83,7 @@ func cmdSetAPIKey(args []string) error {
 	fmt.Print(dim("[info] redémarrer le service pour appliquer ? [Y/n] "))
 	sc := bufio.NewScanner(os.Stdin)
 	if sc.Scan() && strings.HasPrefix(strings.ToLower(strings.TrimSpace(sc.Text())), "n") {
-		fmt.Println(dim("[info] pense à lancer 'ajean restart'"))
+		fmt.Println(dim("[info] pense à lancer 'aidros restart'"))
 		return nil
 	}
 	return serviceAction("restart")

@@ -448,7 +448,7 @@ func setMemMode(m MemMode) error {
 	return setProjectMemMode(activeProjectSlug(), string(m))
 }
 
-// cmdMemory : ajean memory [off|ondemand|always|search|status]
+// cmdMemory : aidros memory [off|ondemand|always|search|status]
 func cmdMemory(args []string) error {
 	ensureDefaultProject() // amorce/migre les projets si ce process ne passe pas par l'UI web
 	sub := ""
@@ -485,7 +485,7 @@ func cmdMemory(args []string) error {
 		fmt.Printf("  %d page(s) sous %s\n", len(pages), memoryDir())
 		return nil
 	default:
-		return fmt.Errorf("usage: ajean memory [off|ondemand|always|search|status]")
+		return fmt.Errorf("usage: aidros memory [off|ondemand|always|search|status]")
 	}
 	m := memMode()
 	fmt.Printf("%s mémoire : %s — %s\n", green("[ok]"), bold(string(m)), label[m])

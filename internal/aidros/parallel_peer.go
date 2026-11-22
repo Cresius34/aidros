@@ -11,7 +11,7 @@ package aidros
 // Trois règles, non négociables :
 //
 //  1. Rien n'est découvert tout seul. Un voisin, ça s'ajoute à la main
-//     (`ajean peer add` ou la carte UI). Ajean ne balaie pas le réseau.
+//     (`aidros peer add` ou la carte UI). Ajean ne balaie pas le réseau.
 //  2. Rien ne s'exécute de l'autre côté, et rien ne s'exécute ici à cause de
 //     l'autre. peerAsk n'envoie jamais de définitions d'outils : ce qui revient
 //     est du texte simple. Le pont, de son côté, ne fait que proxifier vers un
@@ -143,7 +143,7 @@ func peerAddDeclared(name, rawURL, key, model string) (peerEndpoint, error) {
 	}
 	if !strings.Contains(u, "://") {
 		// On accepte « 192.168.1.98:18190/v1 » : c'est ce que l'on colle depuis
-		// `ajean bridge status`, et le http:// manque est l'erreur la plus fréquente.
+		// `aidros bridge status`, et le http:// manque est l'erreur la plus fréquente.
 		u = "http://" + u
 	}
 	if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
@@ -275,7 +275,7 @@ func completionsBase(raw string) string {
 // permette à l'IA d'en face de savoir si elle reçoit les mots d'un humain ou ceux
 // d'une autre IA. Les deux appelants existants sont justement de part et d'autre
 // de cette frontière — runPeerTool, où c'est l'IA locale qui parle, et la commande
-// `ajean peer ask`, où c'est l'humain dans son terminal.
+// `aidros peer ask`, où c'est l'humain dans son terminal.
 func peerAsk(ctx context.Context, p peerEndpoint, message, origine string) (string, error) {
 	message = strings.TrimSpace(message)
 	if message == "" {
@@ -286,7 +286,7 @@ func peerAsk(ctx context.Context, p peerEndpoint, message, origine string) (stri
 		if ids, err := peerProbe(ctx, p); err == nil && len(ids) > 0 {
 			model = ids[0]
 		} else {
-			model = "ajean" // le pont impose de toute façon le modèle de son preset
+			model = "aidros" // le pont impose de toute façon le modèle de son preset
 		}
 	}
 	thread := append(peerThread(p), peerThreadMessage{Role: "user", Content: message})
@@ -373,7 +373,7 @@ func peerAsk(ctx context.Context, p peerEndpoint, message, origine string) (stri
 	// (canalAgentRefusHeader). Sans cette pièce, « modèle nu » laissait l'appelant
 	// deviner entre un choix assumé et un interrupteur oublié chez l'appelé — mesuré
 	// le 2026-10-27 sur le poste voisin : la réponse à « pourquoi est-ce qu'il ne lit
-	// pas ses propres journaux ? » était un simple `ajean bridge agent on` de son
+	// pas ses propres journaux ? » était un simple `aidros bridge agent on` de son
 	// côté, et personne ne l'a trouvé pendant deux jours.
 	//
 	// La raison entre dans la BALISE, pas à la suite du message : la balise est
@@ -400,7 +400,7 @@ func peerRefusCanal(valeur string) string {
 	}
 	var gestes []string
 	if strings.Contains(v, "bridge_agent=off") {
-		gestes = append(gestes, "l'autorisation du canal est éteinte (`ajean bridge agent on`)")
+		gestes = append(gestes, "l'autorisation du canal est éteinte (`aidros bridge agent on`)")
 	}
 	if strings.Contains(v, "agent_mode=off") {
 		gestes = append(gestes, "le mode agent de cette machine est éteint (Projet/Agent dans l'interface)")
@@ -425,7 +425,7 @@ func peerDiagnose(p peerEndpoint, err error) error {
 	case strings.Contains(msg, "no such host"):
 		return fmt.Errorf("voisin %s : nom %s introuvable sur le réseau local", p.Name, p.URL)
 	case strings.Contains(msg, "refused"):
-		return fmt.Errorf("voisin %s : %s refuse la connexion — le pont est-il ouvert là-bas (ajean bridge on) et le bon port ?", p.Name, p.URL)
+		return fmt.Errorf("voisin %s : %s refuse la connexion — le pont est-il ouvert là-bas (aidros bridge on) et le bon port ?", p.Name, p.URL)
 	case strings.Contains(msg, "timeout"), strings.Contains(msg, "deadline"):
 		return fmt.Errorf("voisin %s : pas de réponse — pare-feu ou machine éteinte ? (%s)", p.Name, p.URL)
 	default:
@@ -439,18 +439,18 @@ func peerStatusError(p peerEndpoint, code int, body []byte) error {
 	trimmed := strings.TrimSpace(string(body))
 	switch code {
 	case http.StatusUnauthorized:
-		return fmt.Errorf("voisin %s : clé API refusée. La clé du canal doit être celle de la machine qui prête (ajean set-api-key là-bas, puis ajean peer add %s <url> <clé>)", p.Name, p.Name)
+		return fmt.Errorf("voisin %s : clé API refusée. La clé du canal doit être celle de la machine qui prête (aidros set-api-key là-bas, puis aidros peer add %s <url> <clé>)", p.Name, p.Name)
 	case http.StatusServiceUnavailable:
 		return fmt.Errorf("voisin %s : son pont refuse de servir — %s", p.Name, bridgeErrorOf(trimmed))
 	case http.StatusConflict:
 		return fmt.Errorf("voisin %s : %s", p.Name, bridgeErrorOf(trimmed))
 	case http.StatusNotFound:
-		return fmt.Errorf("voisin %s : %s répond mais ce n'est pas un pont Ajean (surface /v1/* attendue)", p.Name, p.URL)
+		return fmt.Errorf("voisin %s : %s répond mais ce n'est pas un pont Aidros (surface /v1/* attendue)", p.Name, p.URL)
 	case http.StatusForbidden:
 		// 403 chez un voisin qui a le pont agent (révision 4) : son agent est éteint
 		// ou son pont n'autorise pas le tour. Le message du pont est déjà exact, on y
 		// ajoute seulement ce que l'appelant peut faire, lui.
-		return fmt.Errorf("voisin %s : %s — chez l'appelant : reformuler une demande que ton interlocuteur peut traiter avec le seul texte, ou lui demander d'ouvrir son agent (ajean bridge agent on)", p.Name, bridgeErrorOf(trimmed))
+		return fmt.Errorf("voisin %s : %s — chez l'appelant : reformuler une demande que ton interlocuteur peut traiter avec le seul texte, ou lui demander d'ouvrir son agent (aidros bridge agent on)", p.Name, bridgeErrorOf(trimmed))
 	case http.StatusLoopDetected:
 		// 421 : le voisin a vu l'échange rebondir de poste en poste. La cause est
 		// presque toujours du côté de l'appelant — il a posé chez un voisin une
@@ -550,7 +550,7 @@ func runPeerTool(args map[string]any) string {
 	peers := loadPeers()
 	if act == "list" {
 		if len(peers) == 0 {
-			return "[ok] aucun voisin déclaré. Un canal se déclare à la main : ajean peer add <nom> <http://hote:18190/v1> <clé>, ou la carte « Pont Ajean ↔ Ajean »."
+			return "[ok] aucun voisin déclaré. Un canal se déclare à la main : aidros peer add <nom> <http://hote:18190/v1> <clé>, ou la carte « Pont Aidros ↔ Aidros »."
 		}
 		var b strings.Builder
 		fmt.Fprintf(&b, "voisins déclarés (%d) — chacun a son propre cerveau, le canal ne fait que transporter le texte :\n", len(peers))
@@ -675,12 +675,12 @@ func peerNames(peers []peerEndpoint) string {
 	return strings.Join(names, ", ")
 }
 
-// cmdParallelPeer : `ajean peer list | add <nom> <url> [clé] [modèle] | rm <nom> |
+// cmdParallelPeer : `aidros peer list | add <nom> <url> [clé] [modèle] | rm <nom> |
 // status [nom] | ask <nom> <message> | forget [nom]`.
 // peerArgsNormalize : enlève les drapeaux --key/--cle/… de la ligne de commande.
 //
 // FAUTIF MESURÉ le 2026-10-28, rapporté par la machine voisine : on lui avait
-// soufflé « ajean peer add "ajean-principale" "http://…" --key <clé> ». Notre
+// soufflé « aidros peer add "ajean-principale" "http://…" --key <clé> ». Notre
 // usage est positionnel — `peer add <nom> <url> [clé] [modèle]` — et `--key`
 // n'y existe pas : argAt(args, 2) ramassait littéralement la chaîne « --key »
 // comme étant la CLÉ. La clé rangée valait « --key », le pont d'en face
@@ -731,7 +731,7 @@ func cmdParallelPeer(args []string) error {
 		peers := loadPeers()
 		if len(peers) == 0 {
 			fmt.Printf("aucun voisin déclaré\n")
-			fmt.Printf("  ajean peer add <nom> http://192.168.1.98:18190/v1 <cle-api>\n")
+			fmt.Printf("  aidros peer add <nom> http://192.168.1.98:18190/v1 <cle-api>\n")
 			return nil
 		}
 		for i, p := range peers {
@@ -754,11 +754,11 @@ func cmdParallelPeer(args []string) error {
 		args = peerArgsNormalize(args)
 		for _, a := range args {
 			if strings.HasPrefix(a, "--") {
-				return fmt.Errorf("option %q non reconnue : usage ajean peer add <nom> <http://hote:port/v1> [cle] [modele]", a)
+				return fmt.Errorf("option %q non reconnue : usage aidros peer add <nom> <http://hote:port/v1> [cle] [modele]", a)
 			}
 		}
 		if len(args) < 2 {
-			return errors.New("usage : ajean peer add <nom> <http://hote:port/v1> [cle] [modele]")
+			return errors.New("usage : aidros peer add <nom> <http://hote:port/v1> [cle] [modele]")
 		}
 		p, err := peerAddDeclared(args[0], args[1], argAt(args, 2), argAt(args, 3))
 		if err != nil {
@@ -766,21 +766,21 @@ func cmdParallelPeer(args []string) error {
 		}
 		fmt.Printf("%s voisin %s : %s\n", green("[ok]"), p.Name, p.URL)
 		if p.Key == "" {
-			fmt.Printf("%s aucune clé : le pont de l'autre machine refusera la demande. ajean peer add %s %s <cle>\n", yellow("[!]"), p.Name, p.URL)
+			fmt.Printf("%s aucune clé : le pont de l'autre machine refusera la demande. aidros peer add %s %s <cle>\n", yellow("[!]"), p.Name, p.URL)
 			return nil
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), peerProbeTimeout)
 		defer cancel()
 		if ids, err := peerProbe(ctx, p); err != nil {
 			fmt.Printf("%s %v\n", yellow("[!]"), err)
-			fmt.Printf("             le voisin est déclaré malgré tout ; vérifier son pare-feu et l'état de son pont (ajean bridge status là-bas).\n")
+			fmt.Printf("             le voisin est déclaré malgré tout ; vérifier son pare-feu et l'état de son pont (aidros bridge status là-bas).\n")
 		} else {
 			fmt.Printf("             il prête : %s\n", strings.Join(ids, ", "))
 		}
 		return nil
 	case "rm", "remove", "retirer":
 		if len(args) < 1 {
-			return errors.New("usage : ajean peer rm <nom>")
+			return errors.New("usage : aidros peer rm <nom>")
 		}
 		name, err := peerRemove(args[0])
 		if err != nil {
@@ -791,7 +791,7 @@ func cmdParallelPeer(args []string) error {
 	case "status", "joinable":
 		p, ok := peerFind(argAt(args, 0))
 		if !ok {
-			return errors.New("voisin introuvable — ajean peer list")
+			return errors.New("voisin introuvable — aidros peer list")
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), peerProbeTimeout)
 		defer cancel()
@@ -805,11 +805,11 @@ func cmdParallelPeer(args []string) error {
 		return nil
 	case "ask", "demander":
 		if len(args) < 2 {
-			return errors.New("usage : ajean peer ask <nom> <message>")
+			return errors.New("usage : aidros peer ask <nom> <message>")
 		}
 		p, ok := peerFind(args[0])
 		if !ok {
-			return errors.New("voisin introuvable — ajean peer list")
+			return errors.New("voisin introuvable — aidros peer list")
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), peerAskTimeout)
 		defer cancel()
@@ -829,7 +829,7 @@ func cmdParallelPeer(args []string) error {
 	case "forget", "oublier":
 		p, ok := peerFind(argAt(args, 0))
 		if !ok {
-			return errors.New("voisin introuvable — ajean peer list")
+			return errors.New("voisin introuvable — aidros peer list")
 		}
 		if err := peerForget(p); err != nil {
 			return err
@@ -837,7 +837,7 @@ func cmdParallelPeer(args []string) error {
 		fmt.Printf("%s souvenir du canal avec %s effacé\n", green("[ok]"), p.Name)
 		return nil
 	default:
-		return errors.New("usage : ajean peer [list|add <nom> <url> [cle] [modele]|rm <nom>|status [nom]|ask <nom> <message>|forget [nom]]")
+		return errors.New("usage : aidros peer [list|add <nom> <url> [cle] [modele]|rm <nom>|status [nom]|ask <nom> <message>|forget [nom]]")
 	}
 }
 

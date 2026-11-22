@@ -124,7 +124,7 @@ func isE2EAuthed(r *http.Request) bool {
 	return v
 }
 
-// web_auth.go protège l'API de pilotage (ajean web) quand elle est exposée sur
+// web_auth.go protège l'API de pilotage (aidros web) quand elle est exposée sur
 // internet — c.-à-d. l'API que tout client (navigateur, app mobile, script…)
 // utilise pour switcher de preset, redémarrer le service, lire le status, etc.
 //
@@ -161,7 +161,7 @@ func requireWebAuth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		if !checkBearer(r, hash) {
-			w.Header().Set("WWW-Authenticate", `Bearer realm="ajean"`)
+			w.Header().Set("WWW-Authenticate", `Bearer realm="aidros"`)
 			sendJSON(w, http.StatusUnauthorized, map[string]any{"error": "non autorisé"})
 			return
 		}
@@ -215,7 +215,7 @@ func cmdSetWebKey(args []string) error {
 	}
 	fmt.Printf("%s clé de pilotage enregistrée\n", green("[ok]"))
 	fmt.Printf("       les clients doivent envoyer : %s\n", dim("Authorization: Bearer "+key))
-	fmt.Printf("       (relance 'ajean web' si le serveur web tourne déjà — non requis, lu à chaud)\n")
+	fmt.Printf("       (relance 'aidros web' si le serveur web tourne déjà — non requis, lu à chaud)\n")
 	return nil
 }
 
@@ -248,7 +248,7 @@ func crossSiteReject(r *http.Request, keyed bool) string {
 		return "origine non autorisée"
 	}
 	if !keyed && !localHostName(r.Host) {
-		return "hôte « " + r.Host + " » non autorisé sans clé de pilotage — définis-en une (ajean set-web-key) pour accéder à l'interface par ce nom"
+		return "hôte « " + r.Host + " » non autorisé sans clé de pilotage — définis-en une (aidros set-web-key) pour accéder à l'interface par ce nom"
 	}
 	return ""
 }

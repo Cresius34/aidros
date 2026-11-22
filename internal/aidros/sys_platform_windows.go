@@ -60,7 +60,7 @@ func homeRoot() string {
 // Elle s'appelle « Aidros » depuis le renommage du 21/11 (ordre de l'humain :
 // « il cherche le mauvais dossier, fais-lui chercher un dossier Aidros »).
 //
-// Le dossier « ajean » reste ADMIS, en second seulement, et cet ordre est un
+// Le dossier « aidros » reste ADMIS, en second seulement, et cet ordre est un
 // contrat : une machine installée avant le renommé a sa mémoire sous
 // <ProgramData>\ajean. Repartir sur un Aidros vide, c'est l'application qui
 // s'ouvre SANS MÉMOIRE et sans se plaindre — un dossier créé par la machine ne
@@ -80,7 +80,7 @@ func defaultAjeanHome() string {
 	return nouveau
 }
 
-// defaultEditor is used by `ajean edit` when $EDITOR is unset.
+// defaultEditor is used by `aidros edit` when $EDITOR is unset.
 func defaultEditor() string { return "notepad" }
 
 // openBrowser ouvre l'URL dans le navigateur par défaut. rundll32 évite les
@@ -154,7 +154,7 @@ func libraryPathEnvWith(dir string, extra []string) []string {
 }
 
 // execServer runs llama-server as a child process and waits for it. Windows has
-// no exec() that replaces the current image, so `ajean serve` stays alive as the
+// no exec() that replaces the current image, so `aidros serve` stays alive as the
 // parent (this is the detached process the service supervisor tracks).
 // args[0] is the binary path; the rest are its arguments.
 func execServer(bin string, args []string) error {
@@ -166,7 +166,7 @@ func execServer(bin string, args []string) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	// Pas d'exec sous Windows : llama-server est un ENFANT de `ajean serve`. On le
+	// Pas d'exec sous Windows : llama-server est un ENFANT de `aidros serve`. On le
 	// lie à sa vie (job object) pour qu'il ne survive jamais à son parent ; sinon un
 	// parent tué hors de taskkill /T laissait un llama-server orphelin qui gardait
 	// le port 8080 et sa mémoire verrouillée (issue #114).
@@ -265,7 +265,7 @@ func msvcInstallVersion() string {
 
 // ensureCompiler makes sure an MSVC C++ toolchain is available, installing the
 // Visual Studio 2022 Build Tools (VCTools workload) via winget if not. This is a
-// large download but keeps `ajean llamacpp install` fully unattended on a bare
+// large download but keeps `aidros llamacpp install` fully unattended on a bare
 // Windows box.
 //
 //lint:ignore U1000 le machin de compilation de llama.cpp est debranche en bloc par l'amont : ses appelants (backend_llamacpp.go:182/:272/:571, web_llamacpp.go:503/:539, mesures en v0.18.17) n'existent plus depuis v0.20.0, et aucune route /api/build ne mene ici chez nous. La machinerie reste intacte pour qui la rebranche.
@@ -470,7 +470,7 @@ Sans elle, CMake échoue sur « No CUDA toolset found ». Pour corriger, au choi
   1. relance l'installeur du CUDA Toolkit (installation personnalisée) et coche « CUDA → Visual Studio Integration » — Visual Studio doit déjà être installé à ce moment-là ;
   2. ou copie (en admin) les fichiers de
        %s
-     vers le dossier BuildCustomizations ci-dessus, puis relance ajean llamacpp install`, ver, wantProps, installPath, src)
+     vers le dossier BuildCustomizations ci-dessus, puis relance aidros llamacpp install`, ver, wantProps, installPath, src)
 }
 
 // cudaPathEnv returns the CUDA toolkit env vars the MSBuild CUDA integration

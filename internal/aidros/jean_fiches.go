@@ -38,7 +38,7 @@ type jeanFiche struct {
 	ModTime             int64 // epoch ms
 }
 
-// normFicheName : « Déployer AJEAN » → « deployer-ajean ».
+// normFicheName : « Déployer AJEAN » → « deployer-aidros ».
 func normFicheName(n string) string {
 	n = foldSearch(n)
 	var b strings.Builder
@@ -106,7 +106,7 @@ func jeanFiches(full bool) []jeanFiche {
 func JeanSave(name, when, content string) (string, error) {
 	name = normFicheName(name)
 	if !jeanFicheNameRe.MatchString(name) {
-		return "", fmt.Errorf("nom invalide : court, ex. « deployer-ajean »")
+		return "", fmt.Errorf("nom invalide : court, ex. « deployer-aidros »")
 	}
 	when = strings.Join(strings.Fields(when), " ")
 	if when == "" {

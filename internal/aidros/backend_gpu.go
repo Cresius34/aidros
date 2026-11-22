@@ -53,7 +53,7 @@ func cmdGPU(args []string) error {
 			return fmt.Errorf("index GPU invalide: %q (attendu un nombre)", tok)
 		}
 		if n < 0 || n >= len(gpus) {
-			return fmt.Errorf("index GPU %d hors limites (0..%d) — voir « ajean gpu »", n, len(gpus)-1)
+			return fmt.Errorf("index GPU %d hors limites (0..%d) — voir « aidros gpu »", n, len(gpus)-1)
 		}
 		idx = append(idx, strconv.Itoa(n))
 	}
@@ -102,7 +102,7 @@ func gpuList() error {
 	} else {
 		fmt.Printf("  Sélection : %s (CUDA_VISIBLE_DEVICES=%s)\n", bold(sel), sel)
 	}
-	fmt.Printf("  %s ajean gpu <index…>  pour choisir,  ajean gpu all  pour réinitialiser\n", dim("→"))
+	fmt.Printf("  %s aidros gpu <index…>  pour choisir,  aidros gpu all  pour réinitialiser\n", dim("→"))
 	return nil
 }
 
@@ -120,7 +120,7 @@ func gpuSet(value string) error {
 	fmt.Print(dim("[info] redémarrer le service pour appliquer ? [Y/n] "))
 	sc := bufio.NewScanner(os.Stdin)
 	if sc.Scan() && strings.HasPrefix(strings.ToLower(strings.TrimSpace(sc.Text())), "n") {
-		fmt.Println(dim("[info] pense à lancer 'ajean restart'"))
+		fmt.Println(dim("[info] pense à lancer 'aidros restart'"))
 		return nil
 	}
 	return serviceAction("restart")
@@ -129,16 +129,16 @@ func gpuSet(value string) error {
 // detectGPUs queries nvidia-smi for the list of NVIDIA GPUs.
 func detectGPUs() ([]gpuInfo, error) {
 	if !hasTool("nvidia-smi") {
-		// Sur une machine AMD, `ajean gpu` (qui écrit CUDA_VISIBLE_DEVICES) n'a de
+		// Sur une machine AMD, `aidros gpu` (qui écrit CUDA_VISIBLE_DEVICES) n'a de
 		// toute façon aucun effet : le choix de carte AMD passe par --device du
 		// preset, réglable dans l'éditeur de modèle de l'UI web (issue #49). On le
 		// dit clairement plutôt que « uniquement sur NVIDIA », qui laissait croire
-		// qu'AJEAN ne gère pas du tout le GPU AMD (alors que l'inférence tourne bien).
+		// qu'Aidros ne gère pas du tout le GPU AMD (alors que l'inférence tourne bien).
 		if hasTool("rocm-smi") || hasTool("amd-smi") || isDir("/opt/rocm") {
 			return nil, fmt.Errorf("GPU AMD détecté : la sélection de carte se fait dans l'UI web " +
-				"(éditeur de modèle → « cartes graphiques »), pas via `ajean gpu` — cette commande ne pilote que CUDA_VISIBLE_DEVICES (NVIDIA)")
+				"(éditeur de modèle → « cartes graphiques »), pas via `aidros gpu` — cette commande ne pilote que CUDA_VISIBLE_DEVICES (NVIDIA)")
 		}
-		return nil, fmt.Errorf("nvidia-smi introuvable — sélection GPU par `ajean gpu` disponible uniquement sur NVIDIA")
+		return nil, fmt.Errorf("nvidia-smi introuvable — sélection GPU par `aidros gpu` disponible uniquement sur NVIDIA")
 	}
 	out, err := hideCmd(exec.Command("nvidia-smi",
 		"--query-gpu=index,name,memory.total,memory.used,compute_cap",

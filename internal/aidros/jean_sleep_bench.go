@@ -14,7 +14,7 @@ import (
 //	ajean jean-sleep-test v1|v2 --dump   affiche seulement ce que le modèle lirait
 func cmdJeanSleepTest(args []string) error {
 	if len(args) == 0 || (args[0] != "v1" && args[0] != "v2") {
-		return fmt.Errorf("usage : ajean jean-sleep-test v1|v2 [--dump]")
+		return fmt.Errorf("usage : aidros jean-sleep-test v1|v2 [--dump]")
 	}
 	if os.Getenv("AJEAN_HOME") == "" {
 		return fmt.Errorf("AJEAN_HOME doit pointer sur une copie, jamais sur la vraie mémoire")

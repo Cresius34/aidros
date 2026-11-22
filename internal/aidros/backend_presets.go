@@ -285,7 +285,7 @@ var preservedKeys = []string{
 
 // softPreservedKeys : préservées SEULEMENT si le preset d'arrivée ne les définit
 // pas lui-même. CUDA_VISIBLE_DEVICES est dans ce cas : c'est d'ordinaire un
-// choix de machine (`ajean gpu`) qui doit survivre aux bascules, MAIS un preset
+// choix de machine (`aidros gpu`) qui doit survivre aux bascules, MAIS un preset
 // a le droit de l'imposer — « QWEN 3.6 27B FABLE 2 GPU » réclame `1,0` pour que
 // son `--tensor-split 0.965,0.035` ait bien deux cartes en face. Le préserver
 // inconditionnellement écrasait cette valeur par l'ancienne (mono-GPU) : le
@@ -428,7 +428,7 @@ func cmdSwitch(args []string) error {
 // newPresetSeedKeys : les SEULES clés reprises de la configuration active quand
 // on crée un preset. Ce sont des réglages de MACHINE (où le moteur écoute), pas
 // des réglages de modèle. Le moteur lui-même n'en fait plus partie : c'est
-// celui livré avec AJEAN (voir engine.go).
+// celui livré avec Aidros (voir engine.go).
 //
 // Issue #17 : le nouveau preset repartait d'une copie COMPLÈTE de la config
 // active. Les réglages du modèle précédent (EXTRA_ARGS — --n-cpu-moe,

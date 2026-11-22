@@ -164,7 +164,7 @@ func strataAskModels(src string) (*strataCatalogue, error) {
 	}
 	if err = send(map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize",
 		"params": map[string]any{"protocolVersion": "2024-11-05", "capabilities": map[string]any{},
-			"clientInfo": map[string]any{"name": "ajean", "version": "1"}}}); err != nil {
+			"clientInfo": map[string]any{"name": "aidros", "version": "1"}}}); err != nil {
 		cmd.Wait()
 		return nil, err
 	}

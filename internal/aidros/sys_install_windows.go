@@ -12,9 +12,9 @@ import (
 )
 
 // On Windows there's no systemd unit, sudoers, or /usr/local/bin to populate.
-// `ajean install` simply provisions the data directory and a starter config; the
+// `aidros install` simply provisions the data directory and a starter config; the
 // service itself is managed by the PID-file supervisor in sys_service_windows.go
-// (ajean start / stop / status), which needs no admin rights.
+// (aidros start / stop / status), which needs no admin rights.
 
 func cmdInstall(args []string) error {
 	ajeanHome := AjeanHome()
@@ -32,7 +32,7 @@ func cmdInstall(args []string) error {
 	retire019Units() // services Windows des modèles laissés par la 0.19
 
 	// 2. Le binaire va dans AJEAN_HOME\bin, ajouté au PATH utilisateur, pour que
-	//    `ajean` soit appelable depuis n'importe quel shell (pendant Windows du
+	//    `aidros` soit appelable depuis n'importe quel shell (pendant Windows du
 	//    lien /usr/local/bin créé par l'installateur Unix).
 	dir := binDir()
 	onPath := false
@@ -56,13 +56,13 @@ func cmdInstall(args []string) error {
 	fmt.Println()
 	fmt.Printf("%s installation terminée.\n", green("[ok]"))
 	fmt.Printf("\nProchaines étapes :\n")
-	fmt.Printf("  1. édite la config :   %s   (renseigne BIN, MODEL)\n", bold("ajean edit"))
-	fmt.Printf("  2. démarre le service: %s\n", bold("ajean start"))
-	fmt.Printf("  3. UI web :            %s\n", bold("ajean web"))
+	fmt.Printf("  1. édite la config :   %s   (renseigne BIN, MODEL)\n", bold("aidros edit"))
+	fmt.Printf("  2. démarre le service: %s\n", bold("aidros start"))
+	fmt.Printf("  3. UI web :            %s\n", bold("aidros web"))
 	if onPath {
-		fmt.Printf("\n%s ouvre un NOUVEAU terminal pour que 'ajean' soit reconnu (le PATH n'est lu qu'au démarrage du shell).\n", dim("[info]"))
+		fmt.Printf("\n%s ouvre un NOUVEAU terminal pour que 'aidros' soit reconnu (le PATH n'est lu qu'au démarrage du shell).\n", dim("[info]"))
 	} else {
-		fmt.Printf("\n%s pour exécuter 'ajean' depuis n'importe où, ajoute son dossier au PATH.\n", dim("[info]"))
+		fmt.Printf("\n%s pour exécuter 'aidros' depuis n'importe où, ajoute son dossier au PATH.\n", dim("[info]"))
 	}
 	return nil
 }
@@ -252,7 +252,7 @@ func cmdUninstall(args []string) error {
 
 	// Raccourcis posés à l'installation (menu Démarrer + Bureau).
 	if removeShortcuts() {
-		fmt.Printf("  %s raccourcis « AJEAN » supprimés\n", green("✓"))
+		fmt.Printf("  %s raccourcis « Aidros » supprimés\n", green("✓"))
 	}
 
 	if !keepData {

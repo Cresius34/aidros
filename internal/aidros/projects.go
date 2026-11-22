@@ -1,6 +1,6 @@
 package aidros
 
-// projects.go — les PROJETS d'AJEAN. Un projet cloisonne une mémoire (un dossier
+// projects.go — les PROJETS d'Aidros. Un projet cloisonne une mémoire (un dossier
 // de pages .md + un index MEMORY.md, façon Claude Code) ET son propre jeu de
 // sessions de chat. Fini la mémoire globale fourre-tout : on crée un projet par
 // chantier, chacun avec sa mémoire et ses conversations indépendantes.

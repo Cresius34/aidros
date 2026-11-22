@@ -16,7 +16,7 @@ import (
 // partout » et se prenait quand même un délai d'attente depuis son autre
 // machine. AJEAN pose donc la règle lui-même, quand il en a le droit.
 //
-// `ajean install` ne réclame PAS les droits administrateur (voir
+// `aidros install` ne réclame PAS les droits administrateur (voir
 // sys_install_windows.go) : netsh échouera donc souvent. On ne fait pas semblant
 // que ça a marché — firewallState relit la règle, et firewallManualHint donne la
 // commande exacte à coller dans un terminal administrateur.
@@ -24,7 +24,7 @@ import (
 // firewallRuleName identifie nos règles. Une par port : changer PORT dans la
 // configuration ne doit pas laisser une règle ouverte sur l'ancien.
 func firewallRuleName(port int) string {
-	return "AJEAN moteur (port " + strconv.Itoa(port) + ")"
+	return "Aidros moteur (port " + strconv.Itoa(port) + ")"
 }
 
 // netsh exécute netsh sans faire clignoter de console (hideCmd) et renvoie sa

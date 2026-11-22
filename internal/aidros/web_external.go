@@ -45,7 +45,7 @@ func handlePresetExternal(w http.ResponseWriter, r *http.Request) {
 		"ctx":    strings.TrimSpace(cfg["CTX"]),
 		"vision": strings.TrimSpace(cfg[extKeyVision]) == "1",
 		"hasKey": strings.TrimSpace(cfg[extKeyToken]) != "",
-		// Service système : la commande lancée par AJEAN (vide = simple API).
+		// Service système : la commande lancée par Aidros (vide = simple API).
 		"service": serviceCmdOf(cfg) != "",
 		"cmd":     strings.TrimSpace(cfg[svcKeyCmd]),
 		"workdir": strings.TrimSpace(cfg[svcKeyWorkdir]),

@@ -233,7 +233,7 @@ func jeanPdfText(ctx context.Context, path string) (string, bool, error) {
 		if !jeanPdfHasPypdf() {
 			return "", false, nil
 		}
-		// -E : sans variables PYTHON* ; lancé depuis le dossier d'AJEAN, pas depuis
+		// -E : sans variables PYTHON* ; lancé depuis le dossier d'Aidros, pas depuis
 		// un dossier où traînerait un pypdf.py.
 		cmd = exec.CommandContext(ctx, bin, "-E", "-c", jeanPypdf, path)
 		cmd.Dir = AjeanHome()

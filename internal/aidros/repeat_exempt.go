@@ -30,7 +30,7 @@ var liveStateReadTools = map[string]bool{
 	"task_list":     true,
 	"tracker":       true,
 	"inspect":       true,
-	// Le canal Ajean↔Ajean est un état VIVANT de l'autre côté : un voisin a sa
+	// Le canal Aidros↔Aidros est un état VIVANT de l'autre côté : un voisin a sa
 	// propre mémoire et sa propre conversation. Rejouer une demande identique
 	// depuis le cache supprimerait l'échange — deux fois la même question n'a
 	// jamais la même réponse d'une autre IA.

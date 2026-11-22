@@ -1,4 +1,4 @@
-// engine_detect.go — ce qu'AJEAN regarde sur la machine pour choisir la variante
+// engine_detect.go — ce qu'Aidros regarde sur la machine pour choisir la variante
 // du moteur (carte NVIDIA, version CUDA du pilote, ROCm, Vulkan), et quelques
 // utilitaires de fichiers partagés.
 package aidros

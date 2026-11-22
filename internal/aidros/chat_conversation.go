@@ -789,7 +789,7 @@ func (c *Conversation) generate(ctx context.Context, caps Caps, temperature floa
 		// notification, l'utilisateur est là et a coupé volontairement. Un Reset annule
 		// aussi le ctx, mais ce cas sort plus haut (stale) sans jamais atteindre ici.
 		if hasPushSubs() && ctx.Err() == nil {
-			go sendPushToAll("AJEAN", "Réponse prête · "+fmtDurFR(time.Since(turnStart)))
+			go sendPushToAll("Aidros", "Réponse prête · "+fmtDurFR(time.Since(turnStart)))
 		}
 		// File d'attente (issue #74). Interrompu par un stop : l'utilisateur reprend la
 		// main, on abandonne les messages en file. Sinon on démarre le prochain tour
@@ -835,7 +835,7 @@ func (c *Conversation) generate(ctx context.Context, caps Caps, temperature floa
 	if !caps.Agent || caps.Terminal {
 		final = dropProjectSystem(msgs)
 	}
-	// Mode rapide (Terminal) : prompt court seulement, comme « ajean chat ».
+	// Mode rapide (Terminal) : prompt court seulement, comme « aidros chat ».
 	if sp := readSysPrompt(); sp != "" && caps.Agent && !caps.Terminal {
 		final = append([]Message{{Role: "system", Content: sp}}, msgs...)
 	}

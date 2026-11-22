@@ -40,7 +40,7 @@ const parallelMemoryRevision = 7
 // numérotation d'avant la scission, conservée pour que les étiquettes +rev*
 // restent lisibles). Sur la base 0.18.15 : « 0.18.15.5 Cresius » (tag git
 // v0.18.15+rev5) : la révision 1 était le patch correctif, la 2
-// ajoute le canal Ajean↔Ajean (pont + outil peer), la 3 rend ce canal honnête —
+// ajoute le canal Aidros↔Aidros (pont + outil peer), la 3 rend ce canal honnête —
 // le modèle prêté sait enfin qu'il est prêté et qu'il n'a aucun outil, et un
 // refus du build portable explique POURQUOI il refuse ; la 4 fait rendre au pont
 // un véritable tour d'agent de l'autre côté, sous double autorisation ; la 5
@@ -199,7 +199,7 @@ func parallelCommandAllowed(cmd string) bool {
 	case "app", "web", "help", "-h", "--help", "version", "-v", "--version", "where", "serve", "import-presets", "bridge", "peer":
 		return true
 	// La clé API machine se définit déjà depuis l'interface (/api/apikey n'est
-	// pas bloqué par parallelHTTPHandler). Sans elle, le pont Ajean↔Ajean ne
+	// pas bloqué par parallelHTTPHandler). Sans elle, le pont Aidros↔Aidros ne
 	// peut tout simplement pas exister : antKeyOK n'admet personne. La CLI
 	// portable doit donc pouvoir la poser, comme l'UI le fait déjà.
 	case "set-api-key":
@@ -218,7 +218,7 @@ var parallelBlockedRoutes = []struct {
 	msg    string
 }{
 	{"/api/update/", "Mise à jour désactivée : cette version portable de Cresius se met à jour à la main (le binaire est livré avec son patch)."},
-	{"/api/network", "Exposition du moteur sur le réseau désactivée dans cette version portable : le seul port ouvert vers l'extérieur est celui du pont Ajean↔Ajean (page Réglages, carte « Pont Ajean ↔ Ajean »), verrouillé par la clé API de la machine. Le port du moteur reste sur cette machine."},
+	{"/api/network", "Exposition du moteur sur le réseau désactivée dans cette version portable : le seul port ouvert vers l'extérieur est celui du pont Aidros↔Aidros (page Réglages, carte « Pont Aidros ↔ Aidros »), verrouillé par la clé API de la machine. Le port du moteur reste sur cette machine."},
 	{"/api/cloud/", "GPU cloud désactivé dans cette version portable."},
 	{"/api/link/", "Accès distant ajean.link désactivé dans cette version portable : rien ne sort de cette machine hors du réseau local."},
 	{"/api/oai/", "Exposition publique (ajean.link) désactivée dans cette version portable."},
@@ -297,7 +297,7 @@ func parallelOpenURL(addr string) string {
 func cmdParallelApp() error {
 	// Le port de l'interface se lit, il ne s'impose plus : deux installations
 	// côte à côte (la vivante et une copie de réparation, ou les deux moitiés
-	// d'un pont Ajean↔Ajean sur la même machine) doivent pouvoir démarrer sans
+	// d'un pont Aidros↔Aidros sur la même machine) doivent pouvoir démarrer sans
 	// se voler 18090. AJEAN_UI_PORT ou la clé parallel_ui_port décalent.
 	port := parallelUIPort()
 	addr := "127.0.0.1:" + port
@@ -325,20 +325,20 @@ func cmdParallelApp() error {
 	if err := ensureParallelEnginePort(); err != nil {
 		fmt.Printf("[moteur] port non aligné : %v\n", err)
 	}
-	// Le pont Ajean↔Ajean s'allume ici, dans le process qui tient déjà la base :
+	// Le pont Aidros↔Aidros s'allume ici, dans le process qui tient déjà la base :
 	// la clé API est relue à chaque requête, donc une clé définie après le
 	// démarrage est valable immédiatement. Éteint par défaut : rien ne s'expose
 	// tout seul. La veille rattache l'écoute au réglage, pour qu'un
-	// « ajean bridge on » lancé à côté de cette instance prenne sans redémarrer.
+	// « aidros bridge on » lancé à côté de cette instance prenne sans redémarrer.
 	bridgeStop := make(chan struct{})
 	defer close(bridgeStop)
 	if parallelBridgeEnabled() {
 		if err := startParallelBridge(); err != nil {
-			fmt.Printf("[pont ajean] non démarré : %v\n", err)
+			fmt.Printf("[pont aidros] non démarré : %v\n", err)
 		}
 	}
 	go parallelBridgeWatch(bridgeStop)
-	fmt.Printf("AJEAN — %s\n%s\nDonnées : %s\nMoteur local : 127.0.0.1:%s ; API existante disponible par preset.\n", displayVersion(), url, AjeanHome(), parallelLocalEnginePort())
+	fmt.Printf("Aidros — %s\n%s\nDonnées : %s\nMoteur local : 127.0.0.1:%s ; API existante disponible par preset.\n", displayVersion(), url, AjeanHome(), parallelLocalEnginePort())
 	_ = openBrowser(url) // normal browser tab: a separate profile is unnecessary
 	runTray(url)
 	return nil

@@ -14,7 +14,7 @@ package aidros
 // du voisin (p.Key).
 //
 // Ce qui N'EST PAS réutilisé, volontairement : peerStatusError (L438) traduit TOUT 404 en « ce
-// n'est pas un pont Ajean (surface /v1/* attendue) ». C'est exact pour une complétion, et FAUX pour
+// n'est pas un pont Aidros (surface /v1/* attendue) ». C'est exact pour une complétion, et FAUX pour
 // un fichier que le pont nomme mais qu'il n'a pas. Un fichier absent doit être nommé absent, pas
 // faire douter de la nature du pont. Les statuts des fichiers ont donc leur propre traduction,
 // ci-dessous.
@@ -66,13 +66,13 @@ func peerFichiersRequete(ctx context.Context, p peerEndpoint, methode, nom, corp
 
 // peerFichiersStatut : un code HTTP de la route fichiers, traduit SANS passer par
 // peerStatusError. Le 404 y est la cause la plus fréquente, et la traduction générale y lirait
-// « ce n'est pas un pont Ajean » : faux, et surtout il ferait douter de la nature du poste alors
+// « ce n'est pas un pont Aidros » : faux, et surtout il ferait douter de la nature du poste alors
 // qu'il nomme juste un fichier absent.
 func peerFichiersStatut(p peerEndpoint, code int, corps []byte) error {
 	message := bridgeErrorOf(strings.TrimSpace(string(corps)))
 	switch code {
 	case http.StatusUnauthorized:
-		return fmt.Errorf("voisin %s : clé API refusée pour l'échange de fichiers. La clé du canal doit être celle de la machine qui prête (ajean set-api-key là-bas)", p.Name)
+		return fmt.Errorf("voisin %s : clé API refusée pour l'échange de fichiers. La clé du canal doit être celle de la machine qui prête (aidros set-api-key là-bas)", p.Name)
 	case http.StatusNotFound:
 		return fmt.Errorf("voisin %s : le pont répond bien, le fichier demandé n'est pas dans SON dossier d'échange — `files` pour voir ce qu'il a", p.Name)
 	case http.StatusConflict:

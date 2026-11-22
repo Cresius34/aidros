@@ -1,6 +1,6 @@
 package aidros
 
-// cli_term.go : primitives terminal du chat en ligne de commande (ajean chat) :
+// cli_term.go : primitives terminal du chat en ligne de commande (aidros chat) :
 // passage en mode brut, lecture et décodage des touches, largeur d'affichage.
 //
 // Le chat reste « en ligne » (façon pi / Claude Code) : rien ne prend l'écran,

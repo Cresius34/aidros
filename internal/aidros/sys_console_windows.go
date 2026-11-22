@@ -6,13 +6,13 @@ package aidros
 //
 // Le binaire est compilé en sous-système CONSOLE. C'est ce qui fait que `cmd`
 // ATTEND la fin du programme : avec un binaire graphique, il rendait la main
-// aussitôt et réaffichait son invite AVANT la sortie d'AJEAN, ce qui donnait
+// aussitôt et réaffichait son invite AVANT la sortie d'Aidros, ce qui donnait
 //
 //	C:\Users\Alice>ajean
 //
 //	C:\Users\Alice>ajean 0.8.0 — manager llama.cpp + UI web
 //
-// La même cause cassait la redirection et les tubes, et rendait `ajean chat`
+// La même cause cassait la redirection et les tubes, et rendait `aidros chat`
 // inutilisable depuis un terminal (le shell et AJEAN se disputaient l'entrée).
 //
 // EN CONTREPARTIE, Windows alloue une console à tout lancement sans terminal —

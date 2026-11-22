@@ -47,10 +47,10 @@ func cmdWeb(args []string) error {
 			return err
 		}
 	}
-	fmt.Printf("[ajean web] http://%s  (Ctrl-C pour arrêter)\n", addr)
+	fmt.Printf("[aidros web] http://%s  (Ctrl-C pour arrêter)\n", addr)
 	if !webKeyConfigured() {
 		fmt.Printf("%s API de pilotage NON protégée (aucune clé). Avant de l'exposer sur internet :\n", yellow("[!]"))
-		fmt.Printf("       %s\n", bold("ajean set-web-key"))
+		fmt.Printf("       %s\n", bold("aidros set-web-key"))
 	} else {
 		fmt.Printf("%s API protégée par clé (Authorization: Bearer …)\n", green("[ok]"))
 	}
@@ -66,7 +66,7 @@ func cmdWeb(args []string) error {
 		killForeignUIWorker() // rescapé d'une version antérieure ou d'une autre copie
 		fmt.Printf("%s connexion au relais %s …\n", cyan("[link]"), relayURL())
 		if fp := e2eFingerprint(); fp != "" {
-			fmt.Printf("%s empreinte E2E : %s   (code d'appairage : ajean link code)\n", green("[e2e]"), bold(fp))
+			fmt.Printf("%s empreinte E2E : %s   (code d'appairage : aidros link code)\n", green("[e2e]"), bold(fp))
 		}
 		fmt.Printf("%s front OpenAI public prêt (activation en direct via l'UI ; état: %v)\n", green("[oai]"), oaiPublicEnabled())
 		startAppLink(mux)
@@ -91,13 +91,13 @@ func cmdWeb(args []string) error {
 }
 
 // newWebMux construit le routeur HTTP de l'UI web. Extrait de cmdWeb pour être
-// réutilisé par `ajean link`, qui sert ce même mux à travers le tunnel sans
+// réutilisé par `aidros link`, qui sert ce même mux à travers le tunnel sans
 // repasser par un écouteur TCP local.
 var convLoadOnce sync.Once
 
 func newWebMux() *http.ServeMux {
-	// Charge l'état de conversation persisté (une fois par process : ajean web ET
-	// ajean link serve appellent newWebMux).
+	// Charge l'état de conversation persisté (une fois par process : aidros web ET
+	// aidros link serve appellent newWebMux).
 	convLoadOnce.Do(func() {
 		// Amorce le projet « Générale » et migre l'existant (mémoire plate + sessions
 		// + keyvault) AVANT de charger la conversation, pour que memoryDir() et le
@@ -122,7 +122,7 @@ func newWebMux() *http.ServeMux {
 	// recharge son état pour l'annoncer « interrompue » au lieu de n'afficher
 	// plus rien du tout.
 	lcRestoreOnce.Do(lcRestore)
-	// Le moteur llama.cpp est livré avec AJEAN : s'il manque (première
+	// Le moteur llama.cpp est livré avec Aidros : s'il manque (première
 	// installation, ou mise à jour qui change la version épinglée), on l'installe
 	// maintenant, en tâche de fond, sans que l'utilisateur ait à le demander.
 	engineAutoInstall()
@@ -232,7 +232,7 @@ func newWebMux() *http.ServeMux {
 	api("/api/moe/verify", handleMoeProbe)                 // test explicite réponse + appel d’outil du prototype
 	api("/api/hf/search", handleHFSearch)                  // recherche de dépôts GGUF sur Hugging Face
 	api("/api/hf/files", handleHFFiles)                    // fichiers .gguf d'un dépôt (quantifications, tailles)
-	api("/api/engine", handleEngine)                       // moteur llama.cpp livré avec AJEAN : version épinglée, variante installée
+	api("/api/engine", handleEngine)                       // moteur llama.cpp livré avec Aidros : version épinglée, variante installée
 	api("/api/engine/repair", handleEngineRepair)          // job : retélécharge le moteur ({variant} impose une variante)
 	api("/api/engine/job", handleEngineJob)                // progression + logs de l'installation
 	api("/api/engine/job/dismiss", handleEngineJobDismiss) // masque un job terminé (l'erreur ne revient plus au démarrage)
@@ -255,7 +255,7 @@ func newWebMux() *http.ServeMux {
 	api("/api/apikey", handleAPIKey)
 	api("/api/oai/public", handleOAIPublic)
 	api("/api/link/status", handleLinkStatus)         // état de l'accès distant (ajean.link)
-	api("/api/link/connect", handleLinkConnect)       // clé de liaison remise par connect.html → ajean link
+	api("/api/link/connect", handleLinkConnect)       // clé de liaison remise par connect.html → aidros link
 	api("/api/link/start", handleLinkStart)           // (re)démarre le tunnel avec la clé déjà enregistrée
 	api("/api/link/disconnect", handleLinkDisconnect) // arrête le lien + oublie la clé
 	api("/api/link/paircode", handleLinkPairCode)     // code d'appairage + empreinte pour la 1re connexion
@@ -276,7 +276,7 @@ func newWebMux() *http.ServeMux {
 	api("/api/embeddings/search", handleEmbeddingSearch)
 	api("/api/embeddings/connect", handleEmbeddingConnect)
 	api("/api/embeddings/demo", handleEmbeddingDemo)
-	api("/api/bridge", handleParallelBridge) // pont Ajean↔Ajean : état, allumer/couper, déplacer le port
+	api("/api/bridge", handleParallelBridge) // pont Aidros↔Aidros : état, allumer/couper, déplacer le port
 	api("/api/peers", handleParallelPeers)   // le canal : voisins déclarés (jamais la clé)
 	// Piloter UN VOISIN depuis la carte : la route qui relaie vers son pont.
 	// La clé du voisin ne traverse pas le navigateur — GET /api/peers ne rend

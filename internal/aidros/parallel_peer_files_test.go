@@ -115,11 +115,11 @@ func TestEchangeFichiersCycleReelDeuxInstances(t *testing.T) {
 	} else if !strings.Contains(err.Error(), "existe déjà") {
 		t.Errorf("refus d'écrasement local mal nommé : %v", err)
 	}
-	// Un nom que B n'a pas : nommé ABSENT, jamais « pas un pont Ajean ».
+	// Un nom que B n'a pas : nommé ABSENT, jamais « pas un pont Aidros ».
 	if _, err := peerPriseFichier(ctx, p, "jamis-envoye-depuis-toujours.bin"); err == nil {
 		t.Errorf("prise d'un fichier absent acceptée")
-	} else if strings.Contains(err.Error(), "pas un pont Ajean") {
-		t.Errorf("fichier absent traduit en « pas un pont Ajean » : la traduction générale est revenue\n%v", err)
+	} else if strings.Contains(err.Error(), "pas un pont Aidros") {
+		t.Errorf("fichier absent traduit en « pas un pont Aidros » : la traduction générale est revenue\n%v", err)
 	} else if !strings.Contains(err.Error(), "dossier d'échange") {
 		t.Errorf("fichier absent mal nommé : %v", err)
 	}

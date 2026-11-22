@@ -38,7 +38,7 @@ func TestUrlOuvertureNommeLeProduit(t *testing.T) {
 	if !strings.Contains(u, "/?"+uiOpenQueryParam+"=") {
 		t.Errorf("l'URL ne nomme pas le produit (%q) : %s", uiOpenQueryParam, u)
 	}
-	for _, vieux := range []string{"memory-test=", "memoire-test=", "ajean=", "AJEAN"} {
+	for _, vieux := range []string{"memory-test=", "memoire-test=", "aidros=", "Aidros"} {
 		if strings.Contains(u, vieux) {
 			t.Errorf("l'URL porte encore l'ancien nom %q : %s", vieux, u)
 		}

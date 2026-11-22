@@ -2,7 +2,7 @@ package aidros
 
 // Rejoué le 2026-10-28 : comment mes trois `peer ask` ont-ils pu rendre la liste
 // des voisins ? Le message contenait des guillemets doubles ASCII non échappés
-// (j'écrivais « ajean peer ask cresius "test symetrie" » dans une chaîne JSON).
+// (j'écrivais « aidros peer ask cresius "test symetrie" » dans une chaîne JSON).
 // Ce tableau rejoue les formes réellement émises, telles quelles, et regarde ce
 // que la réparation en fait. But : établir le mécanisme, pas le deviner.
 //
@@ -29,7 +29,7 @@ func TestReparationFormesEmisesVersListeMuette(t *testing.T) {
 		{"objet vide", "{}"},
 		{"action seule, message perdu", `{"action":"ask","peer":"bekka"}`},
 		{"message long, guillemets ASCII imbriques",
-			`{"action":"ask","peer":"bekka","message":"Deux verifications : « ajean peer ask cresius "test symetrie: repond juste echo" » doit repondre"}`},
+			`{"action":"ask","peer":"bekka","message":"Deux verifications : « aidros peer ask cresius "test symetrie: repond juste echo" » doit repondre"}`},
 		{"message long, guillemets imbriques en debut de phrase",
 			`{"action":"ask","peer":"bekka","message":"appelle-moi depuis chez toi, un mot suffit. Si « reponse » arrive dis "recu" et le temps.`},
 		{"chaine ouverte a la fin (coupure)",

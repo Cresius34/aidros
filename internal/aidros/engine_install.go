@@ -22,7 +22,7 @@ import (
 // Un seul installateur à la fois
 // ---------------------------------------------------------------------------
 
-// Le service du moteur (ajean serve) et l'interface (ajean web) sont deux
+// Le service du moteur (aidros serve) et l'interface (aidros web) sont deux
 // processus : au premier démarrage après une mise à jour, les deux constatent
 // que le moteur manque. engineMu sérialise dans un processus, le fichier verrou
 // entre processus. Le détenteur rafraîchit sa date toutes les 5 s ; un verrou
@@ -220,7 +220,7 @@ func engineRuntimeLibDirs(root, dir string) []string {
 // engineReusableRuntime cherche, parmi les moteurs déjà installés (version
 // précédente), des bibliothèques GPU IDENTIQUES à celles demandées. Les
 // bibliothèques CUDA changent rarement d'une version de llama.cpp à l'autre :
-// les recopier évite de retélécharger ~400 Mo à chaque mise à jour d'AJEAN.
+// les recopier évite de retélécharger ~400 Mo à chaque mise à jour d'Aidros.
 func engineReusableRuntime(sha string) string {
 	entries, err := os.ReadDir(engineRoot())
 	if err != nil {
@@ -397,7 +397,7 @@ func engineInstallVariant(ctx context.Context, tag string, v engineVariant, dl s
 
 // enginePrune supprime tout ce qui n'est pas le moteur courant : versions
 // précédentes, archives téléchargées, et l'ancien dossier des précompilés
-// (géré par AJEAN avant la 0.20, plusieurs centaines de Mo devenus inutiles).
+// (géré par Aidros avant la 0.20, plusieurs centaines de Mo devenus inutiles).
 func enginePrune(keep string, logf func(string)) {
 	entries, _ := os.ReadDir(engineRoot())
 	for _, e := range entries {
@@ -417,8 +417,8 @@ func enginePrune(keep string, logf func(string)) {
 }
 
 // engineEnsure renvoie le chemin du llama-server à lancer, en installant le
-// moteur épinglé s'il manque. C'est ce qu'appelle « ajean serve » : après une
-// mise à jour d'AJEAN qui change de version de llama.cpp, le nouveau moteur est
+// moteur épinglé s'il manque. C'est ce qu'appelle « aidros serve » : après une
+// mise à jour d'Aidros qui change de version de llama.cpp, le nouveau moteur est
 // en place avant le premier chargement de modèle, sans geste de l'utilisateur.
 func engineEnsure(logf, phasef func(string)) (string, error) {
 	if p := engineDevBin(); p != "" {
@@ -435,7 +435,7 @@ func engineEnsure(logf, phasef func(string)) (string, error) {
 }
 
 // ---------------------------------------------------------------------------
-// Ligne de commande : ajean engine [status | install | repair]
+// Ligne de commande : aidros engine [status | install | repair]
 // ---------------------------------------------------------------------------
 
 func cmdEngine(args []string) error {
@@ -493,7 +493,7 @@ func cmdEngine(args []string) error {
 
 func engineStatusCLI() error {
 	fmt.Printf("%s\n", bold("Moteur llama.cpp"))
-	fmt.Printf("  version  : %s (livrée avec AJEAN %s)\n", enginePin(), Version)
+	fmt.Printf("  version  : %s (livrée avec Aidros %s)\n", enginePin(), Version)
 	if p := engineDevBin(); p != "" {
 		fmt.Printf("  %s AJEAN_ENGINE_BIN remplace le moteur livré : %s\n", yellow("dev"), p)
 	}
@@ -502,13 +502,13 @@ func engineStatusCLI() error {
 		fmt.Printf("  binaire  : %s\n", green(e.binPath()))
 	} else {
 		fmt.Printf("  état     : %s — il s'installe seul au démarrage, ou tout de suite avec %s\n",
-			yellow("pas encore installé"), bold("ajean engine install"))
+			yellow("pas encore installé"), bold("aidros engine install"))
 	}
 	if v := engineForcedVariant(); v != "" {
-		fmt.Printf("  imposée  : %s (retour à l'automatique : %s)\n", v, bold("ajean engine repair --variant=auto"))
+		fmt.Printf("  imposée  : %s (retour à l'automatique : %s)\n", v, bold("aidros engine repair --variant=auto"))
 	}
 	if legacy := engineLegacyDirs(); len(legacy) > 0 {
-		fmt.Printf("\n  Dossiers d'anciennes versions, qu'AJEAN n'utilise plus (à supprimer si tu n'en as plus besoin) :\n")
+		fmt.Printf("\n  Dossiers d'anciennes versions, qu'Aidros n'utilise plus (à supprimer si tu n'en as plus besoin) :\n")
 		for _, l := range legacy {
 			fmt.Printf("    %s  %s\n", l.Path, dim("— "+l.What))
 		}

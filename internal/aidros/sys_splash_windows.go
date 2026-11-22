@@ -169,7 +169,7 @@ func createSplashWindow() uintptr {
 	cy, _, _ := pGetSystemMetrics.Call(smCY)
 	x := (int(cx) - splashW) / 2
 	y := (int(cy) - splashH) / 2
-	title, _ := syscall.UTF16PtrFromString("AJEAN")
+	title, _ := syscall.UTF16PtrFromString("Aidros")
 
 	hwnd, _, _ := pCreateWindowExW.Call(
 		uintptr(exTopmost|exToolwindow),
@@ -298,7 +298,7 @@ func paintSplash(hdc uintptr) {
 	pSetTextColor.Call(hdc, colWhite)
 
 	textX := ox + logo + 26
-	drawText(hdc, "AJEAN", -30, 700, rect{textX, 40, splashW - 20, 82})
+	drawText(hdc, "Aidros", -30, 700, rect{textX, 40, splashW - 20, 82})
 	drawText(hdc, "Lancement en cours…", -17, 400, rect{textX, 84, splashW - 20, 118})
 }
 

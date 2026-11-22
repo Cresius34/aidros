@@ -561,7 +561,7 @@ func compactMessages(ctx context.Context, msgs []Message, caps Caps) ([]Message,
 
 	// Garantie de réduction : on n'accepte la compaction que si elle enlève au
 	// moins ~20% du contexte estimé. Sinon (torse déjà maigre, résumé peu rentable)
-	// on la refuse — sans ça, ajean « compactait » à presque chaque message sans
+	// on la refuse — sans ça , aidros « compactait » à presque chaque message sans
 	// vraiment réduire, puis re-déclenchait aussitôt.
 	before := estimateTokens(msgs)
 	reduces := func(out []Message) bool { return estimateTokens(out) <= before*4/5 }

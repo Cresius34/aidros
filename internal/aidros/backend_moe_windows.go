@@ -4,14 +4,14 @@ package aidros
 
 // backend_moe_windows.go : préparation du moteur MoE sous Windows.
 //
-// La release d'ajean ne publie pas de binaire Windows du moteur (le pack
+// La release d'aidros ne publie pas de binaire Windows du moteur (le pack
 // moeEngineAsset est un binaire Linux ELF) : le moteur est compilé sur place
 // depuis les sources du paquet, auquel ajean a appliqué le patch remote-drop
 // (moeApplyPatch — le patch voyage dans le pack Linux, qui le distribue
 // appliqué). Prérequis : le toolkit CUDA (nvcc), Visual Studio Build Tools
 // (cl.exe), CMake et Ninja.
 //
-// La détection de l'outillage est réutilisée depuis le reste d'ajean (la
+// La détection de l'outillage est réutilisée depuis le reste d'aidros (la
 // compilation Windows de llama.cpp) : findNvcc/nvccCandidates pour CUDA,
 // vswhere/vcvarsPath/msvcDevEnv pour Visual Studio, et le générateur Ninja
 // avec l'environnement MSVC posé via buildEnv — pas de .bat temporaire à un
@@ -208,7 +208,7 @@ func moeEnsureEngine() error {
 }
 
 // moeRunInstaller : l'installeur du moteur sous Windows. setup.py s'exécute
-// DANS son venv (sys.executable) : ajean crée le .venv, y installe les
+// DANS son venv (sys.executable) : aidros crée le .venv, y installe les
 // dépendances, puis lance setup.py — qui trouve le moteur compilé dans
 // engine-cuda12/ (source "prebuilt") et fait modèle + pack + vision.
 func moeRunInstaller(family, quant string, env moeEnv, pre string) error {
@@ -238,7 +238,7 @@ func moeRunInstaller(family, quant string, env moeEnv, pre string) error {
 	if moeNvccMajor(moeWinCudaPath()) < 13 {
 		args = append(args, "--cuda", "12")
 	}
-	// Le mode « peu de RAM » est décidé et appliqué par ajean (MOE_MMAP, voir
+	// Le mode « peu de RAM » est décidé et appliqué par aidros (MOE_MMAP, voir
 	// moeBuildConfig) : l'installeur tourne en mode normal, sans réserver sa
 	// propre variante (qui ne voit pas un experts.bin déjà présent).
 	args = append(args, "--low-ram", "off")
@@ -269,7 +269,7 @@ func moeWinCudaPath() string {
 // dans un fichier de log (moeHome()/logs/), et dont l'UI ne reçoit qu'une ligne
 // de progression périodique — pas les centaines de lignes nvcc/cl (qui
 // inonderaient le journal du job). Sur échec, la fin du log est remontée.
-// Pas de console (ajean mode application Windows : os.Stdin/os.Stdout invalides).
+// Pas de console (aidros mode application Windows : os.Stdin/os.Stdout invalides).
 // Annulable : setCurCmd + cancelCurrentBuild tue l'arbre de process.
 func moeRunWinStep(cwd, extraEnv, name, bin string, args ...string) error {
 	logPath := filepath.Join(moeHome(), "logs", name+".log")
@@ -374,7 +374,7 @@ func moeRunWinStep(cwd, extraEnv, name, bin string, args ...string) error {
 // moeWinStep : une commande cmake/ninja exécutée DANS l'environnement MSVC
 // (msvcDevEnv → INCLUDE, LIB, PATH avec cl.exe) étendu du dossier bin du
 // toolkit CUDA. Même mécanique que la compilation Windows de llama.cpp : pas de
-// .bat temporaire ni de console (ajean mode application Windows). La sortie
+// .bat temporaire ni de console (aidros mode application Windows). La sortie
 // complète va dans un log (moeRunWinStep).
 func moeWinStep(cwd, cudaBin, bin string, args ...string) error {
 	if err := os.MkdirAll(cwd, 0o755); err != nil {
@@ -403,7 +403,7 @@ func moeVenvPython(srcDir string) string {
 }
 
 // moeWriteLauncher : sous Windows, pas de lanceur .bat (CreateProcess ne le
-// prend pas) : ajean serve exécute directement le python de SON venv (en place,
+// prend pas) : aidros serve exécute directement le python de SON venv (en place,
 // dans les sources — il retrouve pyvenv.cfg et ses dépendances à côté) sur
 // serve/server.py. Renvoie (programme, args) — args SANS le programme (c'est
 // serveMoe qui le pose en tête, comme pour llama-server).

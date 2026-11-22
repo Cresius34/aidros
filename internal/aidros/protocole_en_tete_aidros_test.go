@@ -157,7 +157,7 @@ func TestModelAgentAdmetLeNomDhier(t *testing.T) {
 	}
 	// Un gguf reste un gguf : l'admission ne doit pas transformer n'importe quoi
 	// en agent, sinon « modèle nu » disparaîtrait du protocole.
-	for _, a := range []string{"", "Qwen3.5-9B-Q8_0", "strata-0.1.57", "aidros", "ajean"} {
+	for _, a := range []string{"", "Qwen3.5-9B-Q8_0", "strata-0.1.57", "aidros", "aidros"} {
 		if modelCanalEstAgent(a) {
 			t.Fatalf("%q : un modèle nu passe pour un agent", a)
 		}

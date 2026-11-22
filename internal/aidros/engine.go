@@ -1,16 +1,16 @@
-// engine.go — le moteur llama.cpp d'AJEAN.
+// engine.go — le moteur llama.cpp d'Aidros.
 //
 // AJEAN fonctionne comme Ollama : il lance le llama-server officiel de
 // llama.cpp, à UNE version précise, choisie et validée par le mainteneur pour
-// chaque version d'AJEAN. L'utilisateur ne choisit ni ne met à jour le moteur :
+// chaque version d'Aidros. L'utilisateur ne choisit ni ne met à jour le moteur :
 //
 //   - la version tient dans LLAMA_CPP_VERSION (un tag amont, ex. b12257), et
 //     llama_cpp_assets.json liste ses binaires avec leur empreinte SHA-256.
-//     Les deux sont embarqués dans le binaire d'AJEAN ; on les change avec
+//     Les deux sont embarqués dans le binaire d'Aidros ; on les change avec
 //     « go run ./tools/bump-llamacpp <tag> » (voir docs/moteur.md) ;
 //   - le moteur s'installe tout seul (au premier lancement de l'interface, et
 //     au démarrage du service s'il manque) et se remplace tout seul quand une
-//     mise à jour d'AJEAN change la version épinglée ;
+//     mise à jour d'Aidros change la version épinglée ;
 //   - la variante (CUDA, ROCm, Vulkan, Metal, CPU) est choisie d'après la
 //     machine, puis SONDÉE dans un processus jetable : une variante qui plante
 //     ou ne voit aucune carte est écartée et la suivante est essayée, jusqu'au
@@ -42,7 +42,7 @@ var llamaCppAssetsFile []byte
 // engineDownloadBase : d'où viennent les archives. Variable pour les tests.
 var engineDownloadBase = "https://github.com/ggml-org/llama.cpp/releases/download"
 
-// enginePin : la version de llama.cpp livrée par cette version d'AJEAN.
+// enginePin : la version de llama.cpp livrée par cette version d'Aidros.
 func enginePin() string {
 	if engineManifestTest != nil {
 		return engineManifestTest.Tag
@@ -337,7 +337,7 @@ func engineCandidates(assets []engineAsset, hw engineHW, forced string) ([]engin
 		}
 		add("cpu", "CPU (Linux "+arch+")", find("bin-ubuntu-"+arch+".tar.gz"))
 	default:
-		return nil, fmt.Errorf("AJEAN ne fournit pas de moteur pour %s/%s", hw.OS, hw.Arch)
+		return nil, fmt.Errorf("Aidros ne fournit pas de moteur pour %s/%s", hw.OS, hw.Arch)
 	}
 	if forced != "" {
 		var kept []engineVariant
@@ -358,7 +358,7 @@ func engineCandidates(assets []engineAsset, hw engineHW, forced string) ([]engin
 }
 
 // engineForcedVariant : la variante imposée sur cette machine ("" = automatique).
-// Réglage machine (« ajean engine repair --variant=vulkan »), l'équivalent du
+// Réglage machine (« aidros engine repair --variant=vulkan »), l'équivalent du
 // OLLAMA_LLM_LIBRARY d'Ollama : pour une carte que la détection sert mal.
 func engineForcedVariant() string {
 	v := strings.ToLower(strings.TrimSpace(getStr(bkState, "engine_variant")))
@@ -390,7 +390,7 @@ type engineLegacy struct {
 }
 
 // engineLegacyDirs liste ce que les versions d'avant la 0.20 ont pu laisser et
-// qu'AJEAN n'utilise plus : moteur compilé, moteurs personnalisés, ExLlama.
+// qu'Aidros n'utilise plus : moteur compilé, moteurs personnalisés, ExLlama.
 // AJEAN ne les supprime pas de lui-même (ils peuvent contenir des modèles ou
 // des sources modifiées) : il les signale.
 func engineLegacyDirs() []engineLegacy {
@@ -435,7 +435,7 @@ func removedEngine(cfg map[string]string) string {
 }
 
 func removedEngineError(name string) error {
-	return fmt.Errorf("ce preset utilise %s, retiré d'AJEAN 0.20. Un preset tourne désormais en Local (llama.cpp, modèles GGUF), par une API, ou comme Service système : choisis-en ou crées-en un autre", name)
+	return fmt.Errorf("ce preset utilise %s, retiré d'Aidros 0.20. Un preset tourne désormais en Local (llama.cpp, modèles GGUF), par une API, ou comme Service système : choisis-en ou crées-en un autre", name)
 }
 
 func nowStamp() string { return time.Now().Format(time.RFC3339) }

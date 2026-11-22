@@ -152,7 +152,7 @@ func memCryptoSelfTest() error {
 	if err != nil {
 		return err
 	}
-	sample := []byte("ajean auto-test — éàçùô — 0123456789 — ✔")
+	sample := []byte("aidros auto-test — éàçùô — 0123456789 — ✔")
 
 	enc, err := encPage(dek, sample)
 	if err != nil {

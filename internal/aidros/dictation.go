@@ -3,7 +3,7 @@
 // (POST {url}/audio/transcriptions), par exemple Whisper chez Groq, et renvoie le
 // texte, qui est inséré dans le champ de saisie.
 //
-// Réglages rangés dans l'état d'AJEAN (bkState), comme ceux de l'ancienne voix :
+// Réglages rangés dans l'état d'Aidros (bkState), comme ceux de l'ancienne voix :
 // la clé ne repart jamais vers le navigateur (seulement « clé enregistrée »).
 // L'audio passe en JSON base64 : c'est ce que le chiffrement de bout en bout
 // d'app.ajean.link sait transporter.

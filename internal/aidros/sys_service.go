@@ -19,13 +19,13 @@ import (
 
 // preflightEngine vérifie ce sans quoi le moteur ne PEUT pas démarrer, avant de
 // lancer le service. Sinon llama-server sortait en erreur, systemd le relançait
-// toutes les 3 s, et `ajean start` affichait un « activating » rassurant pendant
-// que `ajean test` répondait « /health ne répond pas ». Le diagnostic n'était
+// toutes les 3 s, et `aidros start` affichait un « activating » rassurant pendant
+// que `aidros test` répondait « /health ne répond pas ». Le diagnostic n'était
 // visible que dans le journal.
 func preflightEngine() error {
 	cfg := ReadConfig()
 	// Preset distant (API externe ou GPU cloud) : aucun llama-server LOCAL à
-	// lancer. Exiger BIN/MODEL refusait `ajean start` et `ajean restart` sur tout
+	// lancer. Exiger BIN/MODEL refusait `aidros start` et `aidros restart` sur tout
 	// preset distant, avec un message invitant à réinstaller llama.cpp — alors que
 	// le cloud n'a besoin que du relais local (serveCloudProxy) et l'externe de
 	// rien du tout (resolveChatEndpoint part directement chez le fournisseur).
@@ -68,14 +68,14 @@ func preflightEngine() error {
 	model := strings.TrimSpace(cfg["MODEL"])
 	if model == "" {
 		return fmt.Errorf("MODEL non défini — indique un .gguf avec %s (dossier des modèles : %s)",
-			bold("ajean edit"), modelsDir())
+			bold("aidros edit"), modelsDir())
 	}
 	p, err := resolveServeModelPath(model)
 	if err != nil {
 		return fmt.Errorf("MODEL=%s : %w", model, err)
 	}
 	if _, err := os.Stat(p); err != nil {
-		return fmt.Errorf("modèle introuvable : %s — corrige MODEL avec %s", p, bold("ajean edit"))
+		return fmt.Errorf("modèle introuvable : %s — corrige MODEL avec %s", p, bold("aidros edit"))
 	}
 	// Modèle en plusieurs fichiers : une tranche manquante ne se voit qu'au moment
 	// où llama-server réclame un tenseur absent, dans le journal du service.
@@ -86,7 +86,7 @@ func preflightEngine() error {
 	return nil
 }
 
-// configTemplate est le squelette commenté proposé par `ajean edit` : la
+// configTemplate est le squelette commenté proposé par `aidros edit` : la
 // configuration vit en base, donc sur une installation neuve le fichier
 // temporaire était QUASI VIDE — impossible de deviner quoi écrire. On y déroule
 // donc les clés utiles avec leur rôle, les valeurs déjà définies telles quelles,
@@ -114,9 +114,9 @@ var configTemplate = []struct{ key, help string }{
 // configEditorText rend la configuration au format présenté dans $EDITOR.
 func configEditorText(cfg map[string]string) string {
 	var b strings.Builder
-	b.WriteString("# Configuration du moteur AJEAN (ajean-engine).\n")
+	b.WriteString("# Configuration du moteur Aidros (ajean-engine).\n")
 	b.WriteString("# Une clé par ligne : CLE=valeur. Les lignes commentées (#) sont ignorées :\n")
-	b.WriteString("# décommente celles dont tu as besoin. « ajean restart » applique.\n\n")
+	b.WriteString("# décommente celles dont tu as besoin. « aidros restart » applique.\n\n")
 	seen := map[string]bool{}
 	for _, f := range configTemplate {
 		seen[f.key] = true
@@ -175,7 +175,7 @@ func editConfig() error {
 	if err := WriteConfig(parseEnv(string(b))); err != nil {
 		return err
 	}
-	fmt.Println(dim("[info] ajean restart pour appliquer"))
+	fmt.Println(dim("[info] aidros restart pour appliquer"))
 	return nil
 }
 

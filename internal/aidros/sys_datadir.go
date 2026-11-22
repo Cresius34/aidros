@@ -19,7 +19,7 @@ func dataDirs() []string {
 
 // defaultConfig est la configuration de départ d'une installation neuve. Les
 // valeurs sont volontairement incomplètes (BIN et MODEL sont vides) : c'est
-// l'écran d'accueil, ou « ajean llamacpp install », qui les renseigne.
+// l'écran d'accueil, ou « aidros llamacpp install », qui les renseigne.
 func defaultConfig() map[string]string {
 	host := "0.0.0.0"
 	if runtime.GOOS == "windows" {

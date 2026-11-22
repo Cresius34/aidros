@@ -53,7 +53,7 @@ func jeanSleepTimeout() time.Duration {
 var jeanSleepV1 = os.Getenv("AJEAN_JEAN_SLEEP_V1") != ""
 
 // Mots de nom trop généraux pour rapprocher deux fiches à eux seuls.
-var jeanSleepNameStop = map[string]bool{"fiche": true, "jean": true, "ajean": true, "suivi": true, "etat": true, "lire": true, "note": true, "liste": true, "faire": true, "propre": true, "dernier": true, "envoi": true}
+var jeanSleepNameStop = map[string]bool{"fiche": true, "jean": true, "aidros": true, "suivi": true, "etat": true, "lire": true, "note": true, "liste": true, "faire": true, "propre": true, "dernier": true, "envoi": true}
 
 func jeanNameWords(name string) map[string]bool {
 	out := map[string]bool{}

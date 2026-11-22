@@ -36,14 +36,14 @@ func TestAjeanAnswersOn(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "le ping d'AJEAN",
+			name: "le ping d'Aidros",
 			h: func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path != "/api/ping" {
 					w.WriteHeader(http.StatusNotFound)
 					return
 				}
 				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write([]byte(`{"ok":true,"service":"ajean","version":"0.18.1"}`))
+				_, _ = w.Write([]byte(`{"ok":true,"service":"aidros","version":"0.18.1"}`))
 			},
 			want: true,
 		},
@@ -61,16 +61,16 @@ func TestAjeanAnswersOn(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "un JSON qui n'est pas AJEAN",
+			name: "un JSON qui n'est pas Aidros",
 			h: func(w http.ResponseWriter, r *http.Request) {
 				_, _ = w.Write([]byte(`{"ok":true,"service":"autre"}`))
 			},
 			want: false,
 		},
 		{
-			name: "un AJEAN protégé par une clé de pilotage",
+			name: "un Aidros protégé par une clé de pilotage",
 			h: func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("WWW-Authenticate", `Bearer realm="ajean"`)
+				w.Header().Set("WWW-Authenticate", `Bearer realm="aidros"`)
 				w.WriteHeader(http.StatusUnauthorized)
 			},
 			want: true,
@@ -91,6 +91,6 @@ func TestAjeanAnswersOn(t *testing.T) {
 
 	// Personne n'écoute : faux, et sans paniquer.
 	if ajeanAnswersOn(1) {
-		t.Error("un port fermé ne doit pas passer pour AJEAN")
+		t.Error("un port fermé ne doit pas passer pour Aidros")
 	}
 }

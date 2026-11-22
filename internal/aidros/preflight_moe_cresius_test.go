@@ -6,13 +6,13 @@ import (
 )
 
 // Le moteur MoE (Strata) est NOTRE moteur : il doit passer le pré-vol de
-// `ajean start` / `ajean restart`, là où l'amont 0.20 a mis removedEngine() qui
-// répond « ce preset utilise MoE, retiré d'AJEAN 0.20 ».
+// `aidros start` / `aidros restart`, là où l'amont 0.20 a mis removedEngine() qui
+// répond « ce preset utilise MoE, retiré d'Aidros 0.20 ».
 //
 // Mesuré le 2026-11-14 : la fusion 0.20.1 amenait la version de l'amont de
 // preflightEngine(), donc le pré-vol échouait AVANT même de tenter le moteur.
 // Deux conséquences, la même chaîne :
-//   - `ajean serve` ne partait jamais sur serveMoe() : Strata ne s'initialisait pas ;
+//   - `aidros serve` ne partait jamais sur serveMoe() : Strata ne s'initialisait pas ;
 //   - engineEnsure() n'étant jamais appelé, le moteur livré llama.cpp restait
 //     absent, BIN vide — et vulkanVramGPUs, le SEUL repli qui voie une carte AMD
 //     sous Windows, rend une liste vide : l'encart « Appareil » ne montrait plus
@@ -31,7 +31,7 @@ func TestPreflightAccepteMoteurMoE(t *testing.T) {
 		t.Fatal(err)
 	}
 	err := preflightEngine()
-	if err != nil && strings.Contains(err.Error(), "retiré d'AJEAN") {
+	if err != nil && strings.Contains(err.Error(), "retiré d'Aidros") {
 		t.Errorf("le pré-vol refuse le moteur MoE comme un moteur retiré : %v", err)
 	}
 	if err != nil && strings.Contains(err.Error(), "BIN non défini") {
@@ -50,7 +50,7 @@ func TestPreflightAccepteMoteurMoE(t *testing.T) {
 
 // TestRoutageServeAccepteMoteurMoE exerce le ROUTAGE de serve(), pas le pré-vol :
 // c'est là que la fusion 0.20.1 avait remis la version de l'amont, où
-// removedEngine() répond « MoE, retiré d'AJEAN 0.20 » avant toute tentative.
+// removedEngine() répond « MoE, retiré d'Aidros 0.20 » avant toute tentative.
 //
 // Mesuré le 2026-11-15, au moment de poser 0.20.1.2 Cresius : l'arbre de travail
 // ne contenait plus l'appel `return serveMoe(cfg)` de backend_serve.go (HEAD, lui,
@@ -64,7 +64,7 @@ func TestPreflightAccepteMoteurMoE(t *testing.T) {
 // Le test n'installe ni ne démarre rien : avec ENGINE=moe et ni MOE_RUNTIME ni
 // MOE_CONFIG, serve() part sur serveMoe() puis moePreflight(), qui refuse pour
 // MOE_CONFIG absent. Cette erreur-là est la preuve que le routage a pris NOTRE
-// branche ; l'erreur de l'amont (« retiré d'AJEAN ») prouverait l'inverse.
+// branche ; l'erreur de l'amont (« retiré d'Aidros ») prouverait l'inverse.
 // execServer n'atteint donc pas son spawn : pas de moteur de 74 Go, pas de fils.
 func TestRoutageServeAccepteMoteurMoE(t *testing.T) {
 	testHome(t)
@@ -77,7 +77,7 @@ func TestRoutageServeAccepteMoteurMoE(t *testing.T) {
 		t.Fatal("serve() d'un preset MoE a réussi : on attendait qu'il aille jusqu'à moePreflight et refuse là, pas qu'il revienne propre")
 	}
 	msg := err.Error()
-	if strings.Contains(msg, "retiré d'AJEAN") {
+	if strings.Contains(msg, "retiré d'Aidros") {
 		t.Errorf("serve() route le moteur MoE vers le garde des moteurs retirés : %v", err)
 	}
 	if !strings.Contains(msg, "MOE_CONFIG") {

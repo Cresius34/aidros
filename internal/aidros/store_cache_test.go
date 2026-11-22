@@ -3,7 +3,7 @@ package aidros
 import "testing"
 
 // Le cache de lecture ne doit jamais servir une valeur périmée après une
-// écriture de ce process : un « ajean edit » suivi d'un « ajean restart » doit
+// écriture de ce process : un « aidros edit » suivi d'un « aidros restart » doit
 // démarrer sur la NOUVELLE configuration.
 func TestCacheConfigInvalideParEcriture(t *testing.T) {
 	testHome(t)

@@ -18,7 +18,7 @@ import (
 // defaultAjeanHome est la racine des données quand ni $AJEAN_HOME ni
 // /etc/default/ajean n'en imposent une.
 //
-// Le dossier s'appelle « aidros » depuis le renommage du 21/11, le nom « ajean »
+// Le dossier s'appelle « aidros » depuis le renommage du 21/11, le nom « aidros »
 // restant ADMIS en second (voir sys_platform_windows.go : même contrat, même
 // raison — une machine installée avant le renommé a sa mémoire sous l'ancien
 // nom). Sur macOS, c'est ~/Library/Application Support/aidros.
@@ -49,7 +49,7 @@ func unixHome(nouveau, ancien string) string {
 	// (« mkdir /etc/aidros: permission denied »), et un Mac est une machine de
 	// bureau, pas un serveur — on retombe donc sur le dossier utilisateur.
 	if isWritableDir("/etc/" + nouveau) {
-		return "/etc/" + nouveau // installé par `sudo ajean install` puis chown à l'utilisateur
+		return "/etc/" + nouveau // installé par `sudo aidros install` puis chown à l'utilisateur
 	}
 	if home, err := os.UserHomeDir(); err == nil {
 		for _, name := range []string{nouveau, ancien} {
@@ -79,7 +79,7 @@ func isWritableDir(dir string) bool {
 	return true
 }
 
-// defaultEditor is used by `ajean edit` when $EDITOR is unset.
+// defaultEditor is used by `aidros edit` when $EDITOR is unset.
 func defaultEditor() string { return "nano" }
 
 // hideCmd : no-op sur Unix (pas de fenêtre de console à masquer).

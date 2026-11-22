@@ -107,7 +107,7 @@ func lcRestore() {
 		StartedAt: p.StartedAt, EndedAt: p.EndedAt,
 	}
 	if p.Running {
-		j.Err = "interrompu : AJEAN a redémarré pendant l'installation du moteur"
+		j.Err = "interrompu : Aidros a redémarré pendant l'installation du moteur"
 		j.Phase = "interrompu"
 		j.EndedAt = time.Now().Unix()
 	}
@@ -123,7 +123,7 @@ func lcRestore() {
 		j.lines = lines
 	}
 	if p.Running {
-		j.lines = append(j.lines, "✗ interrompu : AJEAN a redémarré (l'installation ne survit pas au redémarrage)")
+		j.lines = append(j.lines, "✗ interrompu : Aidros a redémarré (l'installation ne survit pas au redémarrage)")
 	}
 	lcMu.Lock()
 	if lcCur == nil {

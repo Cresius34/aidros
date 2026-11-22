@@ -160,7 +160,7 @@ func cdpLaunch() (*cdpSession, error) {
 		args = append([]string{"--headless=new"}, args...)
 	}
 	cmd := exec.Command(bin, args...)
-	prepareBoundChild(cmd) // meurt avec AJEAN (sys_childbind_*.go)
+	prepareBoundChild(cmd) // meurt avec Aidros (sys_childbind_*.go)
 	if err := cmd.Start(); err != nil {
 		os.RemoveAll(userDir)
 		return nil, err

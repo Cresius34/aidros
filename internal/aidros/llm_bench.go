@@ -48,7 +48,7 @@ Le cuisinier ferme les yeux pour goûter la sauce. Trop salée. Il ajoute une po
 // inflating decode numbers — what you measure here is close to what you'll
 // see in real chat at the same context length.
 func runBench(nPrompt, nPredict int) (*benchResult, error) {
-	// Moteur tiers lancé par ajean (EXTERNAL_SERVICE, ex. moteur MoE) : il ne renvoie
+	// Moteur tiers lancé par aidros (EXTERNAL_SERVICE, ex. moteur MoE) : il ne renvoie
 	// pas les `timings` de llama.cpp, on mesure en streaming (voir runBenchStream).
 	if cfg := ReadConfig(); serviceCmdOf(cfg) != "" {
 		// Service système : un serveur quelconque, mesuré en streaming lui aussi.
@@ -82,7 +82,7 @@ func runBench(nPrompt, nPredict int) (*benchResult, error) {
 	// Use the same endpoint your real chat hits, so the comparison is honest
 	// (chat template, reasoning, OpenAI-compat layer all included).
 	payload := map[string]any{
-		"model":        "ajean",
+		"model":        "aidros",
 		"messages":     []Message{{Role: "user", Content: prompt + "\n\nContinue this passage with another 1000+ words of original varied prose, mixing French and English narrative paragraphs on different topics."}},
 		"max_tokens":   nPredict,
 		"stream":       false,
@@ -204,7 +204,7 @@ func benchMatchesPreset(sb savedBench, cfg map[string]string) bool {
 }
 
 // benchModelKey : sous quel modèle ranger le bench de cette config. Un moteur
-// local : son GGUF. Un moteur tiers lancé par ajean (EXTERNAL_SERVICE) : son
+// local : son GGUF. Un moteur tiers lancé par aidros (EXTERNAL_SERVICE) : son
 // modèle déclaré, préfixé pour ne jamais coïncider avec un GGUF. Une API
 // distante ou le GPU Cloud : "" (pas de bench attribuable).
 func benchModelKey(cfg map[string]string) string {
@@ -306,7 +306,7 @@ func benchNonce() string {
 
 var benchSeq atomic.Int64
 
-// runBenchStream mesure un moteur tiers lancé par ajean (EXTERNAL_SERVICE) qui
+// runBenchStream mesure un moteur tiers lancé par aidros (EXTERNAL_SERVICE) qui
 // ne renvoie pas les `timings` de llama.cpp : on stream la réponse, le délai
 // jusqu'au premier token donne la lecture du prompt, le reste la génération.
 // Les comptes de tokens viennent de `usage` (dernier chunk du flux).

@@ -81,7 +81,7 @@ func appWindowProfileDir() string {
 	if err != nil {
 		return ""
 	}
-	dir := filepath.Join(base, "ajean", "appwindow")
+	dir := filepath.Join(base, "aidros", "appwindow")
 	if os.MkdirAll(dir, 0o700) != nil {
 		return ""
 	}

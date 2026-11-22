@@ -18,7 +18,7 @@ import (
 )
 
 // On Windows there is no systemd, so "the service" is a background copy of
-// `ajean serve` that this process launches detached. We track it with a PID file
+// `aidros serve` that this process launches detached. We track it with a PID file
 // and stream its output to a log file under AJEAN_HOME. This needs no admin
 // rights and no external tools beyond the always-present tasklist/taskkill.
 
@@ -33,7 +33,7 @@ func pidFilePath() string { return filepath.Join(AjeanHome(), serviceName()+".pi
 // engineLogInUse = chemin RÉELLEMENT écrit pour le journal du moteur. Vide tant
 // qu'aucun démarrage n'a résolu le chemin ; renseigné par openEngineLog, qui bascule
 // sur un repli si le journal principal n'est pas accessible en écriture (issue #88 :
-// un `.log` créé par un `ajean start` élevé appartient à l'admin, et l'ajean-ui non
+// un `.log` créé par un `aidros start` élevé appartient à l'admin, et l'ajean-ui non
 // élevé ne peut plus y écrire → l'ouverture échouait et bloquait tout le démarrage).
 var engineLogInUse string
 
@@ -69,7 +69,7 @@ func openEngineLog() *os.File {
 // svcMu sérialise start/stop/restart. Chaque bascule de preset lance son
 // redémarrage en arrière-plan : deux clics rapprochés faisaient courir deux
 // restart en parallèle, chacun lisant un fichier PID périmé et lançant SON
-// `ajean serve` → deux modèles en RAM et « port 8080 déjà utilisé » (issue #114).
+// `aidros serve` → deux modèles en RAM et « port 8080 déjà utilisé » (issue #114).
 // systemd sérialise de lui-même sous Linux ; ici c'est à nous de le faire.
 var svcMu sync.Mutex
 
@@ -131,14 +131,14 @@ func svcStart() error {
 		cmd.Stderr = logf
 	}
 	cmd.Dir = AjeanHome() // les chemins relatifs de config.env se résolvent depuis AJEAN_HOME
-	// createNoWindow + HideWindow : le service enfant (`ajean serve`) ne doit JAMAIS
+	// createNoWindow + HideWindow : le service enfant (`aidros serve`) ne doit JAMAIS
 	// faire clignoter de console noire quand AJEAN est lancé en mode app (double-clic).
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		HideWindow:    true,
 		CreationFlags: createNewProcessGroup | detachedProcess | createNoWindow,
 	}
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("démarrage de 'ajean serve': %w", err)
+		return fmt.Errorf("démarrage de 'aidros serve': %w", err)
 	}
 	pid := cmd.Process.Pid
 	// Écriture du PID en best-effort : si le dossier n'est pas accessible en écriture,
@@ -156,14 +156,14 @@ func checkStarted(pid int) error {
 	time.Sleep(2 * time.Second)
 	if processAlive(pid) {
 		fmt.Printf("%s %s: démarré (PID %d)\n", green("[ok]"), serviceName(), pid)
-		fmt.Printf("       logs: %s  (ajean logs pour suivre)\n", dim(logFilePath()))
+		fmt.Printf("       logs: %s  (aidros logs pour suivre)\n", dim(logFilePath()))
 		return nil
 	}
 	fmt.Printf("%s %s: le processus s'est arrêté — derniers logs :\n", red("[ERREUR]"), serviceName())
 	fmt.Println("------------------------------------------------")
 	fmt.Print(tailFile(logFilePath(), 20))
 	fmt.Println("------------------------------------------------")
-	fmt.Printf("→ ajean logs   pour plus de détails\n→ ajean edit   pour corriger config.env\n")
+	fmt.Printf("→ aidros logs   pour plus de détails\n→ aidros edit   pour corriger config.env\n")
 	_ = os.Remove(pidFilePath())
 	return fmt.Errorf("service %s non démarré", serviceName())
 }

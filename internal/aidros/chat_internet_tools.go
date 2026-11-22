@@ -1,5 +1,5 @@
 // chat_internet_tools.go — les 4 outils web exposés au modèle (web_search,
-// web_open, web_read, web_grep) + la sous-commande `ajean internet`.
+// web_open, web_read, web_grep) + la sous-commande `aidros internet`.
 package aidros
 
 import (
@@ -273,7 +273,7 @@ func toolWebGrep(args map[string]any) string {
 		entry.url, len(matchIdx), pattern, capped, strings.Join(blocks, "\n\n---\n\n"))
 }
 
-// ─── CLI : ajean internet [on|off|status] ───────────────────────────────────
+// ─── CLI : aidros internet [on|off|status] ───────────────────────────────────
 
 func cmdInternet(args []string) error {
 	sub := ""
@@ -292,7 +292,7 @@ func cmdInternet(args []string) error {
 		fmt.Printf("  moteur  : %s (aucune installation, pas de rendu JavaScript)\n", bold("intégré"))
 		fmt.Printf("  outils  : web_search, web_open, web_read, web_grep\n")
 	default:
-		return fmt.Errorf("usage: ajean internet [on|off|status]")
+		return fmt.Errorf("usage: aidros internet [on|off|status]")
 	}
 	return nil
 }

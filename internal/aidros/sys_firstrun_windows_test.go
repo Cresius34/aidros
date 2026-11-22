@@ -12,7 +12,7 @@ import (
 // binaryVersion pilote la mise à jour automatique du binaire installé quand on
 // lance le fichier téléchargé : si elle renvoie du vide, plus aucune mise à jour
 // n'a lieu, et en silence. C'est exactement ce qui arrivait avec la première
-// implémentation (exécuter `ajean version`, dont la sortie est vide pour un
+// implémentation (exécuter `aidros version`, dont la sortie est vide pour un
 // binaire en sous-système GUI). D'où ces tests sur la plomberie syscall.
 func TestBinaryVersionReadsResource(t *testing.T) {
 	// kernel32.dll porte toujours une ressource de version.
@@ -31,7 +31,7 @@ func TestBinaryVersionReadsResource(t *testing.T) {
 // C:\ProgramData\ajean\bin\ajean.exe: The system cannot find the path specified »
 // et AJEAN ne s'installait jamais.
 func TestInstallSelfCreatesBinDir(t *testing.T) {
-	binDir := filepath.Join(t.TempDir(), "ajean", "bin") // deux niveaux absents
+	binDir := filepath.Join(t.TempDir(), "aidros", "bin") // deux niveaux absents
 	dst, err := installSelf(binDir)
 	if err != nil {
 		t.Fatalf("installSelf sur un dossier absent : %v", err)

@@ -88,7 +88,7 @@ func handleControl(w http.ResponseWriter, r *http.Request) {
 	if !parallelBridgeControlOn() {
 		sendJSON(w, http.StatusForbidden, map[string]any{
 			"ok":    false,
-			"error": "le pilotage à distance est éteint sur ce poste. L'allumer : ajean bridge control on, ou le menu Pont (le basculement d'un preset arrête le moteur en place)",
+			"error": "le pilotage à distance est éteint sur ce poste. L'allumer : aidros bridge control on, ou le menu Pont (le basculement d'un preset arrête le moteur en place)",
 		})
 		return
 	}

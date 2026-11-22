@@ -158,7 +158,7 @@ func lcJobSnapshot(from int, withLines bool) map[string]any {
 // ---------------------------------------------------------------------------
 
 // engineAutoInstall installe le moteur en tâche de fond au démarrage de
-// l'interface s'il manque : première installation d'AJEAN, ou mise à jour qui
+// l'interface s'il manque : première installation d'Aidros, ou mise à jour qui
 // change la version épinglée. L'utilisateur n'a rien à lancer ; il voit
 // seulement la progression. Sans effet si le moteur est déjà là.
 func engineAutoInstall() {
@@ -189,7 +189,7 @@ func lcRunEngine(force bool) {
 		return
 	}
 	devCacheReset() // les cartes vues par le moteur dépendent de la variante
-	// Installation automatique après une mise à jour d'AJEAN : le modèle tourne
+	// Installation automatique après une mise à jour d'Aidros : le modèle tourne
 	// peut-être encore sur le moteur de la version précédente (le service moteur
 	// n'est pas relancé par la mise à jour). On le relance sur le nouveau, sinon
 	// l'interface annoncerait une version de llama.cpp qui n'est pas celle en marche.
@@ -204,7 +204,7 @@ func lcRunEngine(force bool) {
 
 // engineRunningIsStale : un llama-server local tourne-t-il depuis un autre
 // dossier que celui du moteur qu'on vient d'installer ? On le lit dans la
-// dernière ligne de commande lancée par « ajean serve ».
+// dernière ligne de commande lancée par « aidros serve ».
 func engineRunningIsStale(info *engineInfo) bool {
 	cfg := ReadConfig()
 	if isExternalConfig(cfg) || removedEngine(cfg) != "" || !serviceIsActive() {
@@ -339,7 +339,7 @@ func handleEngineJobCancel(w http.ResponseWriter, r *http.Request) {
 // uiBuildID : empreinte de l'interface embarquée dans ce binaire. Deux builds
 // peuvent porter le même numéro de version (préversion republiée, build de
 // test) : la page compare cette empreinte, pas seulement la version, pour savoir
-// qu'elle doit se recharger après un remplacement d'AJEAN.
+// qu'elle doit se recharger après un remplacement d'Aidros.
 var (
 	uiBuildOnce sync.Once
 	uiBuildVal  string

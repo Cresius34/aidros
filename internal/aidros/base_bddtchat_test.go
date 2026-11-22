@@ -4,7 +4,7 @@ package aidros
 // l'ancien nom n'est jamais abandonnée en silence.
 //
 // Ordre de l'humain du 21/11 : « ajean.db devra devenir bddtchat.db, ne renomme
-// pas le fichier, on le fera lors de la bascule, mais les traces de "Ajean"
+// pas le fichier, on le fera lors de la bascule, mais les traces de "Aidros"
 // doivent être modifiées ».
 //
 // Ce que ce test protège n'est pas le nom. C'est ce que bbolt fait d'un chemin

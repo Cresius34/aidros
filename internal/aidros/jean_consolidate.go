@@ -311,7 +311,7 @@ var errJeanSleepRetry = fmt.Errorf("mémoire illisible, à retenter")
 var jeanSleepGroups int
 
 // jeanConsolidateRun : le sommeil lui-même, sans planification ni bascule de
-// preset (partagé avec le banc d'essai « ajean jean-sleep-test »). Renvoie le
+// preset (partagé avec le banc d'essai « aidros jean-sleep-test »). Renvoie le
 // bilan lisible.
 func jeanConsolidateRun(ctx context.Context, cancel context.CancelFunc, caps Caps, temp float64) (string, error) {
 	start := time.Now()

@@ -48,7 +48,7 @@ func baseSystemPrompt(caps Caps) string {
 	//. Le modèle recopie la casse d'ici quand il se
 	// présente, d'où « Jean » et « AJEAN » écrits tels quels. Éviter « real tools »,
 	// qui sonnait bizarre à l'oral (« je fonctionne avec de vrais outils »).
-	b.WriteString("You are Jean, the assistant inside AJEAN, an AI app that runs on this machine. You can act on it directly through your tools.")
+	b.WriteString("You are Jean, the assistant inside Aidros, an AI app that runs on this machine. You can act on it directly through your tools.")
 	if memProactive(caps.Mem) {
 		b.WriteString(" You evolve with every conversation: you actively maintain a persistent memory so nothing useful is lost between sessions.")
 	}
@@ -236,7 +236,7 @@ func runShell(parent context.Context, command string, timeoutSec int) string {
 	// Marqueur d'un tour d'agent, transmis au shell. Ce n'est pas un filtre sur la
 	// commande (un patron de chaîne se contourne, et il casserait les diagnostics
 	// légitimes du CLI) : c'est un fait d'environnement que le sous-processus reçoit
-	// sans pouvoir le refuser. `ajean peer ask` lancé d'ici n'est pas la parole d'un
+	// sans pouvoir le refuser. `aidros peer ask` lancé d'ici n'est pas la parole d'un
 	// humain, c'est l'agent qui taperait une commande — et l'origine « humain », qui
 	// est justement ce qui rend un message du canal faisant-autorité, ne doit pas
 	// pouvoir s'attribuer comme ça.

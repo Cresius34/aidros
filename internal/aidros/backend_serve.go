@@ -196,7 +196,7 @@ func downgradeLoadMode(args []string) []string {
 	case "mmap+mlock":
 		add("--mlock")
 	case "dio":
-		fmt.Fprintf(os.Stderr, "[ajean serve] ce moteur ne connaît pas --load-mode dio (DirectIO) : chargement par défaut\n")
+		fmt.Fprintf(os.Stderr, "[aidros serve] ce moteur ne connaît pas --load-mode dio (DirectIO) : chargement par défaut\n")
 	}
 	return kept
 }
@@ -237,8 +237,8 @@ func cmdServe(args []string) error {
 		return nil
 	}
 	// Moteur MoE (Strata) : NOTRE moteur, pas un moteur retire. La branche doit
-	// partir AVANT le garde de l'amont : sinon `ajean serve` repond « MoE, retire
-	// d'AJEAN 0.20 » et Strata ne s'initialise jamais. Mesure du 15/11 : la fusion
+	// partir AVANT le garde de l'amont : sinon `aidros serve` repond « MoE, retire
+	// d'Aidros 0.20 » et Strata ne s'initialise jamais. Mesure du 15/11 : la fusion
 	// 0.20.1 avait amene la version amont de cette fonction, et le test du pre-vol
 	// (preflight_moe_cresius_test.go) ne couvrait pas le routage de serve() — il
 	// est passe vert en laissant le defaut entrer. ExLlama et GPU Cloud restent
@@ -251,7 +251,7 @@ func cmdServe(args []string) error {
 	}
 	model := cfg["MODEL"]
 	if model == "" {
-		return fmt.Errorf("MODEL non défini — lance « ajean edit »")
+		return fmt.Errorf("MODEL non défini — lance « aidros edit »")
 	}
 	// MODEL vaut soit un simple nom de fichier (le .gguf vit dans AJEAN_HOME ou
 	// dans un dossier déclaré — disque externe…), soit un chemin absolu. Sous
@@ -280,12 +280,12 @@ func cmdServe(args []string) error {
 			strings.Join(missing, ", "), filepath.Dir(model), len(shardFamily(filepath.Base(model))))
 	}
 	// Le moteur : le llama-server de la version épinglée par cette version
-	// d'AJEAN (voir engine.go). Il n'y a rien à configurer ; s'il manque (première
-	// installation, ou mise à jour d'AJEAN qui change de version de llama.cpp),
+	// d'Aidros (voir engine.go). Il n'y a rien à configurer ; s'il manque (première
+	// installation, ou mise à jour d'Aidros qui change de version de llama.cpp),
 	// il est installé ici, avant de charger le modèle.
 	bin, err := engineEnsure(
-		func(s string) { fmt.Fprintln(os.Stderr, "[ajean serve]   "+s) },
-		func(s string) { fmt.Fprintln(os.Stderr, "[ajean serve] moteur : "+s) },
+		func(s string) { fmt.Fprintln(os.Stderr, "[aidros serve]   "+s) },
+		func(s string) { fmt.Fprintln(os.Stderr, "[aidros serve] moteur : "+s) },
 	)
 	if err != nil {
 		return fmt.Errorf("moteur llama.cpp indisponible : %w", err)
@@ -296,7 +296,7 @@ func cmdServe(args []string) error {
 	// Linux, PATH on Windows — handled inside execServer.
 	setLibraryPath(filepath.Dir(bin))
 
-	// Sélection GPU (ajean gpu) : on filtre les devices visibles par llama-server.
+	// Sélection GPU (aidros gpu) : on filtre les devices visibles par llama-server.
 	// CUDA_DEVICE_ORDER=PCI_BUS_ID garantit que les index correspondent à ceux
 	// affichés par nvidia-smi (sinon CUDA réordonne par "device le plus rapide").
 	if v := cfg["CUDA_VISIBLE_DEVICES"]; v != "" {
@@ -414,7 +414,7 @@ func cmdServe(args []string) error {
 			// Vieux moteur (ou fork) qui ne connaît pas le drapeau : le lui passer
 			// le ferait sortir en erreur au démarrage, donc boucler. On le dit et on
 			// continue sans — mieux vaut un modèle qui réfléchit qu'un moteur mort.
-			fmt.Fprintf(os.Stderr, "[ajean serve] ce moteur ne connaît pas --reasoning : impossible de désactiver le raisonnement\n")
+			fmt.Fprintf(os.Stderr, "[aidros serve] ce moteur ne connaît pas --reasoning : impossible de désactiver le raisonnement\n")
 		}
 	}
 	// API_KEY protège le serveur quand il est exposé sur internet : llama-server
@@ -455,10 +455,10 @@ func cmdServe(args []string) error {
 	}
 	warnKVCuda(ktv, vtv)
 
-	fmt.Fprintf(os.Stderr, "[ajean serve] %s  model=%s  port=%s\n",
+	fmt.Fprintf(os.Stderr, "[aidros serve] %s  model=%s  port=%s\n",
 		bin, filepath.Base(model), port)
 	// Ligne de commande réellement lancée, gardée pour l'interface (#108) :
-	// vérifier ce qu'AJEAN ajoute, la partager. Clé API masquée.
+	// vérifier ce qu'Aidros ajoute, la partager. Clé API masquée.
 	_ = putBytes(bkState, engineCmdlineKey, []byte(engineCmdline(llmArgs)))
 
 	// Hand off to the llama-server process. On Unix this replaces the current
@@ -524,7 +524,7 @@ func waitPortFree(host, port string, wait time.Duration) error {
 		c.Close()
 		if time.Now().After(deadline) {
 			return fmt.Errorf("le port %s est déjà utilisé (sans doute un ancien llama-server encore actif) : "+
-				"arrête-le (Gestionnaire des tâches, ou « ajean stop » en admin s'il a été lancé en admin) ou change PORT", port)
+				"arrête-le (Gestionnaire des tâches, ou « aidros stop » en admin s'il a été lancé en admin) ou change PORT", port)
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
@@ -546,7 +546,7 @@ func warnKVCuda(k, v string) {
 		v = "f16"
 	}
 	if !fastKVCuda[k+"|"+v] {
-		fmt.Fprintf(os.Stderr, "[ajean serve] avertissement : cache KV %s/%s non accéléré par le moteur CUDA "+
+		fmt.Fprintf(os.Stderr, "[aidros serve] avertissement : cache KV %s/%s non accéléré par le moteur CUDA "+
 			"(converti en f16 à chaque pas, lent). Préfère q8_0, q4_0 ou f16.\n", k, v)
 	}
 }
