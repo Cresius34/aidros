@@ -265,6 +265,8 @@ func msvcDevEnv() ([]string, error) { return nil, nil }
 // ensureCompiler makes sure a C/C++ toolchain (cc + c++ + make) is present,
 // installing it via the system package manager when missing. build-essential on
 // Debian/Ubuntu pulls the lot; elsewhere we fall back to individual packages.
+//
+//lint:ignore U1000 le machin de compilation de llama.cpp est debranche en bloc par l'amont : ses appelants (backend_llamacpp.go:182/:272/:571, web_llamacpp.go:503/:539, mesures en v0.18.17) n'existent plus depuis v0.20.0, et aucune route /api/build ne mene ici chez nous. La machinerie reste intacte pour qui la rebranche.
 func ensureCompiler() error {
 	haveCC := hasTool("cc") || hasTool("gcc") || hasTool("clang")
 	haveCXX := hasTool("c++") || hasTool("g++") || hasTool("clang++")

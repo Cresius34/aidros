@@ -62,6 +62,8 @@ func memReadPage(name string) ([]byte, error) {
 // memPageText lit une page et renvoie (texte, lisible). Ne renvoie jamais
 // d'erreur : une page chiffrée non déchiffrable donne readable=false (utile pour
 // lister/chercher sans planter quand la mémoire est verrouillée).
+//
+//lint:ignore U1000 débranché CHEZ NOUS à la mémoire par projet, pas par l'amont : en v0.20.1 il était appelé deux fois par chat_memory.go (L98, L138, mesuré), aujourd'hui ces deux lignes appellent memPageTextIn(root, name), qui prend la racine du projet en argument. Cette version sans racine ne peut plus savoir dans quel projet lire ; elle reste pour les appelants hors projet.
 func memPageText(name string) (string, bool) {
 	b, err := memReadPage(name)
 	if err != nil {

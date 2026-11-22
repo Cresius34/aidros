@@ -1275,6 +1275,8 @@ func moeConfigTag(path string) string {
 }
 
 // moeVisionActive : le preset MoE actif lit les images (encodeur installé).
+//
+//lint:ignore U1000 sa logique est vivante, son appel ne l'est plus : backend_moe.go:509 (d.Vision = pc["MOE_VISION"] != "0") et backend_moe.go:1019 lisent la même clé avec la même condition. La fonction lit sa PROPRE config via ReadConfig() : elle ne peut pas servir un preset autre que celui du processus, ce que le panneau Appareil fait depuis.
 func moeVisionActive() bool {
 	cfg := ReadConfig()
 	return isMoeConfig(cfg) && cfg["MOE_VISION"] != "0"
@@ -1355,6 +1357,8 @@ const moeMaxReserveMiB = 8192
 // moeEffectiveCtx : le contexte que le moteur appliquera vraiment pour cette
 // config. En mode hors RAM (carte d'aide, MOE_DROP), moeBuildConfig le ramène à
 // moeDropMaxCtx ; la jauge et le compactage doivent voir la même limite.
+//
+//lint:ignore U1000 le garde est appliqué AILLEURS, plus en amont : backend_moe.go:1003-1004 ramène déjà ctx à moeDropMaxCtx quand STRATA_REMOTE_DROP=1, avant que la jauge ne voie la valeur. La jauge et le compactage (le but du correctif dc351f3 du 17/10) lisent donc la limite appliquée : la fonction reste exacte, mais personne ne l'appelle plus.
 func moeEffectiveCtx(cfg map[string]string, ctx int) int {
 	if isMoeConfig(cfg) && cfg["MOE_DROP"] == "1" && moeHelperOn(cfg) && !moeLayerSplit(cfg) && ctx > moeDropMaxCtx {
 		return moeDropMaxCtx

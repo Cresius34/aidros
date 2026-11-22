@@ -341,6 +341,8 @@ func strataEngineMin(s string) string { return strings.TrimSpace(s) }
 // strataVerdict : l'avis du moteur sur cette machine, en une ligne. On le garde
 // comme EXPPLICATION a cote du notre, jamais a sa place : il ne connait ni notre
 // carte d'aide ni notre page file.
+//
+//lint:ignore U1000 remplacé par strataSize, qui rend déjà OnThisPC et Installed pour la même famille/taille (mesuré : 7 appelants vivants, dont backend_moe_strata.go:640 et :931). strataVerdict n'est qu'un déballage de ces deux champs ; le garder coûte un avertissement, l'appeler ne dirait rien de plus.
 func strataVerdict(cat *strataCatalogue, fam, quant string) (why string, installed bool) {
 	if cat == nil {
 		return "", false

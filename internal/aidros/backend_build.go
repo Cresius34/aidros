@@ -1,5 +1,16 @@
 // backend_build.go — machinerie de compilation de llama.cpp : détection du
 // plan de build (CUDA/ROCm/Metal/Vulkan/CPU), cmake, suivi de progression, logs.
+//
+// Ce fichier n'est plus routé, et c'est l'amont qui l'a débranché. Mesuré le
+// 22/11 : ses deux appelants (backend_llamacpp.go, web_llamacpp.go) existent en
+// v0.18.17 et n'existent plus en v0.20.1, où leurs 4 fichiers de tests sont
+// partis avec eux ; aucune route /api/build n'existe chez nous (mesuré à zéro).
+// Le fichier est gardé tel quel, rien ne l'appelle : 56 des 70 avertissements
+// U1000 de staticcheck sortent d'ici, et c'est un seul sous-système, pas 56
+// négligences. Le remettre en service demande de poser une route ET une porte
+// dans l'UI — pas de supprimer ces symboles, qui sont la machinerie intacte.
+//
+//lint:file-ignore U1000 sous-système « compiler llama.cpp soi-même » débranché en bloc par l'amont à v0.20.0/v0.20.1 : ses appelants et ses tests sont supprimés chez lui, et aucune route ne mène ici chez nous.
 package aidros
 
 import (
