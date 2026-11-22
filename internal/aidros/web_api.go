@@ -370,6 +370,16 @@ func handleReasoning(w http.ResponseWriter, r *http.Request) {
 		sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
 		return
 	}
+	// Le raccourci du composeur n'écrit que la config VIVANTE. Sans la seconde
+	// écriture, un preset MoE qui ne porte pas REASONING_EFFORT repartait au
+	// défaut à chaque bascule : la clé n'est PAS dans preservedKeys (mesuré,
+	// backend_presets.go:281-284 — MEM_MODE, CUDA_VISIBLE_DEVICES, HOST,
+	// MEM_ENCRYPTED, BACKUP_AUTO, COMPACT, COMPACT_MAX, COMPACT_FRAC, MACHINES).
+	// Ce rétabli-là avait SAUTÉ à la fusion 0.20.0 : en v0.18.17 ce même
+	// handleReasoning appelait moePersistEffort juste après SetConfigKey
+	// (web_api.go:340, mesuré), et la campagne de rétablis du 15/11 (93c24d0) a
+	// rendu les autres ponts sans celui-ci.
+	moePersistEffort(eff)
 	sendJSON(w, 200, map[string]any{"ok": true, "effort": eff})
 }
 
@@ -554,8 +564,15 @@ func handlePreset(w http.ResponseWriter, r *http.Request) {
 	if parallelBuild() {
 		content = withDisplayName(formatEnv(resolveParallelConfig(parseEnv(content))), presetDisplayName(content, id))
 	}
+	// UNE seule réponse. La ligne du dessous venait de la fusion 0.20.1 (4ecd150,
+	// 14/11) ; en rétablissant le champ « sysprompt » le 15/11 (e9ece17), j'ai
+	// AJOUTÉ cet envoi sans retirer l'autre : /api/preset rendait DEUX objets
+	// JSON collés, et tout client strict la rejetait — « invalid character '{'
+	// after top-level value » en Go, « Extra data » pour json.loads côté Python
+	// (tools/embedding-test/smoke_portable.py:128 lit cette route), et
+	// response.json() côté navigateur. La carte du preset se charge par ici
+	// (ui/src/js/07-models.js:86, getUrl:'/api/preset').
 	sendJSON(w, 200, map[string]any{"id": id, "name": presetDisplayName(content, id), "content": content, "sysprompt": presetSysPrompt(id)})
-	sendJSON(w, 200, map[string]any{"id": id, "name": presetDisplayName(content, id), "content": content})
 }
 
 // presetSaveReq is the preset editor payload. `id` identifies an existing
