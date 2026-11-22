@@ -97,31 +97,59 @@ func TestUrlOuvertureDistingueDeuxInstallations(t *testing.T) {
 // garde qui le croirait porteuse mentirait sur ce que le renommage coûte.
 //
 // Mesuré le 22/11 : r.URL.Query() n'est appelé nulle part sur l'interface, et le
-// seul URLSearchParams du dépôt (13-remote.js:60) fabrique un paramètre
-// origin/host, il ne lit pas celui-ci. Donc renommer n'efface AUCUNE logique.
-// Si quelqu'un branche un lecteur sur ce mot, ce test rougit et la question de
-// la compatibilité se repose — c'est l'usage d'un garde : dire le jour où ça change.
+// seul URLSearchParams du dépôt fabrique un paramètre origin/host, il ne lit pas
+// celui-ci. Donc renommer n'efface AUCUNE logique. Si quelqu'un branche un
+// lecteur sur ce mot, ce test rougit et la question de la compatibilité se
+// repose — c'est l'usage d'un garde : dire le jour où ça change.
+//
+// ⚠ Le balayage se fait par DOSSIER, pas par liste de fichiers. Le premier jet
+// nommait « ui/src/js/13-remote.js » — le fichier qui portait l'URLSearchParams
+// en question. Le même jour, « Ajean Link » a été retiré et ce fichier avec. Le
+// garde aurait alors rougi sur os.ReadFile : un ROUGE qui ne reproche rien, la
+// pièce à conviction ayant quitté la scène pour une raison sans rapport avec le
+// paramètre d'ouverture. Un garde qui cite des noms de fichiers meurt de la
+// mort de ces fichiers ; un garde qui balaye le dossier survit à tous les
+// ménages. C'est la même leçon que le renommage d'hier : ancrer sur ce qui
+// change, c'est armer un faux rouge.
 func TestParametreOuvertureSansLecteurCache(t *testing.T) {
-	for _, f := range []string{
-		"ui/src/index.tmpl.html",
-		"ui/src/js/13-remote.js",
-	} {
-		// Chemin relatif au DOSSIER DU PAQUET : c'est de là que go test lance le
-		// binaire de test, et c'est ce que fait déjà le voisin logo_marque_test.go:195.
-		b, err := os.ReadFile(f)
+	// Les sources de l'interface, là où un lecteur du paramètre surgirait.
+	dossiers := []string{"ui/src", "ui/src/js"}
+	lus := 0
+	for _, d := range dossiers {
+		fichiers, err := os.ReadDir(d)
 		if err != nil {
-			t.Fatalf("%s : %v", f, err)
+			t.Fatalf("%s : %v", d, err)
 		}
-		// ⚠ Le MOT NU ne suffit pas, mesuré par la contre-épreuve de ce fichier :
-		// avec l'ancien nom, cette recherche trouvait « memory-test » dans
-		// « memory-test-build » — l'IDENTIFIANT DOM DU BADGE, qui n'est pas le
-		// paramètre d'URL et que je n'ai pas renommé. Deux surfaces distinctes,
-		// chevauchées en sous-chaîne. Un garde ancré sur le mot nu rendait un
-		// ROUGE qui ne reprochait rien, et m'aurait fait renommer le badge « pour
-		// faire taire le filet » — exactement l'inverse du travail. Donc : la
-		// FORME PARAMÈTRE, avec son signe égal.
-		if strings.Contains(string(b), uiOpenQueryParam+"=") {
-			t.Errorf("%s lit le paramètre d'ouverture : le renommage n'est plus décoratif, à trancher", f)
+		for _, fe := range fichiers {
+			if fe.IsDir() {
+				continue
+			}
+			n := fe.Name()
+			if !strings.HasSuffix(n, ".js") && !strings.HasSuffix(n, ".html") {
+				continue
+			}
+			// 00a-i18n-data.js porte des dizaines de milliers de caractères de
+			// texte traduit ; il ne lit rien et ne sert qu'à ralentir la chasse.
+			b, err := os.ReadFile(d + "/" + n)
+			if err != nil {
+				t.Fatalf("%s/%s : %v", d, n, err)
+			}
+			lus++
+			// ⚠ Le MOT NU ne suffit pas, mesuré par la contre-épreuve de ce fichier :
+			// avec l'ancien nom, cette recherche trouvait « memory-test » dans
+			// « memory-test-build » — l'IDENTIFIANT DOM DU BADGE, qui n'est pas le
+			// paramètre d'URL et que je n'ai pas renommé. Deux surfaces distinctes,
+			// chevauchées en sous-chaîne. Un garde ancré sur le mot nu rendait un
+			// ROUGE qui ne reprochait rien, et m'aurait fait renommer le badge « pour
+			// faire taire le filet » — exactement l'inverse du travail. Donc : la
+			// FORME PARAMÈTRE, avec son signe égal.
+			if strings.Contains(string(b), uiOpenQueryParam+"=") {
+				t.Errorf("%s/%s lit le paramètre d'ouverture : le renommage n'est plus décoratif, à trancher", d, n)
+			}
 		}
+	}
+	// Filet sur le filet : un balayage qui ne lit rien passe sans rien vérifier.
+	if lus < 20 {
+		t.Errorf("seulement %d fichiers d'interface lus : le dossier est-il encore là ?", lus)
 	}
 }

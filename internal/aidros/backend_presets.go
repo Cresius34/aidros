@@ -270,8 +270,10 @@ func safePresetPath(name string) (string, error) {
 //   - MEM_ENCRYPTED : drapeau du chiffrement mémoire. Effacé = l'UI croit le
 //     chiffrement off, ne propose plus le déverrouillage, et l'utilisateur se
 //     retrouve enfermé dehors de sa mémoire pourtant chiffrée sur le disque.
-//   - BACKUP_AUTO : sauvegarde ajean.link quotidienne. Effacé = elle « se
-//     désactivait toute seule » à chaque changement de preset.
+//   - BACKUP_AUTO : sauvegarde quotidienne vers le relais ajean.link. Retirée le
+//     22/11 avec le relais lui-même : le seul qui l'écrivait (handleBackupAuto)
+//     n'existe plus. Une clé orpheline préservée n'est pas innocente — elle
+//     survit à chaque bascule de preset en faisant croire à un réglage vivant.
 //   - COMPACT : compactage automatique du contexte (toggle utilisateur).
 //   - MACHINES : gestion autonome des machines (toggle utilisateur).
 //
@@ -280,7 +282,7 @@ func safePresetPath(name string) (string, error) {
 // déjà rangées dans le bucket état (bkState), hors config, donc à l'abri.
 var preservedKeys = []string{
 	"MEM_MODE", "CUDA_VISIBLE_DEVICES", "HOST",
-	"MEM_ENCRYPTED", "BACKUP_AUTO", "COMPACT", "COMPACT_MAX", "COMPACT_FRAC", "MACHINES",
+	"MEM_ENCRYPTED", "COMPACT", "COMPACT_MAX", "COMPACT_FRAC", "MACHINES",
 }
 
 // softPreservedKeys : préservées SEULEMENT si le preset d'arrivée ne les définit

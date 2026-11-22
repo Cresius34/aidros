@@ -76,7 +76,7 @@ func TestLecturesSurBaseVide(t *testing.T) {
 		t.Errorf("la réactivation de l'agent ne tient pas (err=%v)", err)
 	}
 	wk, _ := webKeyHashErr()
-	if readAPIKey() != "" || wk != "" || readLinkToken() != "" {
+	if readAPIKey() != "" || wk != "" {
 		t.Error("clés non vides sur une base neuve")
 	}
 }

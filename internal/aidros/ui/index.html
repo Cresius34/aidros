@@ -386,15 +386,6 @@ details[open]>summary::after{transform:rotate(45deg)}
 .gated-group>.subhead:first-child{margin-top:12px}
 details>summary+.subhead{margin-top:4px}
 .io-group{margin-top:8px}
-.link-perks-head{font-size:13px;font-weight:600;color:var(--text);margin:2px 0 10px}
-.link-perks{display:flex;flex-direction:column;gap:11px;margin:0 0 12px}
-.link-perk{display:flex;gap:10px;align-items:flex-start}
-.link-perk-i{flex:none;width:27px;height:27px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--accent-bg);color:var(--accent)}
-.link-perk-i svg{width:15px;height:15px}
-.link-perk-t{font-size:12.5px;font-weight:600;color:var(--text)}
-.link-perk-d{font-size:11.5px;line-height:1.45;color:var(--dim);margin-top:1px}
-.link-price{font-size:11px;color:var(--dim);margin-top:8px}
-.link-perks-mini{font-size:11px;color:var(--dim);line-height:1.5;margin:10px 2px 0}
 .slist{background:var(--panel);border:1px solid var(--border);border-radius:9px;
   overflow:visible;margin:0 0 8px}
 .slist:last-child{margin-bottom:0}
@@ -1939,21 +1930,6 @@ button.th-head:hover{background:var(--t1)}
 .slist>.switchrow.sw-action .sw-sub{font-weight:400}
 .slist>.switchrow.sw-action.danger,.slist>.switchrow.sw-action.danger .sw-ai{color:var(--err)}
 .slist>.switchrow.sw-action.danger:hover{background:color-mix(in srgb,var(--err) 9%,transparent);color:var(--err)}
-.pair-body{display:flex;flex-direction:column;gap:18px}
-.pair-step{display:flex;gap:12px;align-items:flex-start}
-.pair-n{flex:none;width:24px;height:24px;border-radius:50%;background:var(--t2);color:var(--text);font-size:12px;font-weight:600;
-  display:flex;align-items:center;justify-content:center}
-.pair-c{flex:1;min-width:0;padding-top:2px}
-.pair-t{font-size:13px;color:var(--text);margin-bottom:6px}
-.pair-val{display:flex;align-items:center;gap:6px;padding:4px 4px 4px 12px;border-radius:10px;background:var(--t1)}
-.pair-url{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pair-fp{padding:9px 12px;border-radius:10px;background:var(--t1);font-family:var(--mono);font-size:13.5px;letter-spacing:.06em;color:var(--text)}
-.pair-code{flex:1;font-family:var(--mono);font-size:22px;font-weight:600;letter-spacing:.12em;color:var(--text);padding:4px 0}
-.pair-note{font-size:11.5px;color:var(--dim);margin-top:6px}
-.pair-err{font-size:12.5px;color:var(--err)}
-.pair-val .sw-ic{flex:none;width:32px;height:32px;min-height:32px;margin:0;padding:0;display:flex;align-items:center;justify-content:center;border:none;
-  border-radius:8px;background:transparent;color:var(--dim);box-shadow:none;cursor:pointer;transition:background .15s ease,color .15s ease}
-.pair-val .sw-ic:hover{background:var(--t2);color:var(--text)}
 #modal.kind-moe-memory #m-engine-row,
 #modal.kind-moe-memory #m-run-row,
 #modal.kind-moe-memory #m-settings-row,
@@ -2256,10 +2232,6 @@ audio.jf-media{width:min(520px,100%);margin-top:18vh}
         <div class="api-lbl" data-i18n="api.local_address_label">Adresse</div>
         <div class="api-line"><input id="oai-url" readonly class="api-val"><button class="sw-ic" onclick="copyText(document.getElementById('oai-url').value,'adresse copiée');flashCopied(this)" title="copier" data-i18n="api.copy_title" data-i18n-attr="title"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div>
       </div>
-      <div id="oai-public-wrap" class="api-ent" style="display:none">
-        <div class="api-lbl" data-i18n="api.public_address_label">Adresse publique</div>
-        <div class="api-line"><input id="oai-public-url" readonly class="api-val"><button class="sw-ic" onclick="copyText(document.getElementById('oai-public-url').value,'adresse publique copiée');flashCopied(this)" title="copier" data-i18n="api.copy_title" data-i18n-attr="title"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div>
-      </div>
       <div class="api-ent">
         <div class="api-lbl" data-i18n="api.model_label">Modèle</div>
         <div class="api-line"><input readonly class="api-val" value="aidros"><button class="sw-ic" onclick="copyText('aidros');flashCopied(this)" title="copier" data-i18n="api.copy_title" data-i18n-attr="title"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div>
@@ -2276,53 +2248,7 @@ audio.jf-media{width:min(520px,100%);margin-top:18vh}
     <div class="slist">
       <label class="switchrow"><span class="switch"><input type="checkbox" id="lan-toggle" onchange="toggleLAN()"><span class="slider"></span></span> <span data-i18n="api.lan_toggle">joignable depuis le réseau local</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="api.lan_help" data-i18n-html>Éteint, le moteur n'écoute que sur <b>cette machine</b> : l'adresse ci-dessus ne répond qu'ici. Allumez-le pour brancher un logiciel depuis un autre ordinateur du réseau (sous Windows, la règle de pare-feu est posée en même temps). <b>Redémarre le moteur.</b></span></span></label>
       <div id="lan-warn" class="rowbody" style="display:none"></div>
-      <label class="switchrow"><span class="switch"><input type="checkbox" id="oai-public-toggle" onchange="toggleOAIPublic()"><span class="slider"></span></span> <span data-i18n="api.public_toggle">exposer en public (ajean.link)</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="api.public_help" data-i18n-html>Rend votre IA joignable depuis <b>n'importe où</b> via <code>https://&lt;machine&gt;.oai.ajean.link/v1</code> (pour brancher un SaaS). Le trafic est chiffré <b>de bout en bout</b> jusqu'à ce serveur — le relais ajean.link ne voit rien. Nécessite l'accès distant actif.</span></span></label>
     </div>
-  </details>
-<details id="remote-details" style="display:none"><summary><span class="stitle" data-i18n="link.title">AJEAN LINK</span><span id="remote-badge" class="sbadge"></span></summary>
-    <div class="subhead"><span data-i18n="link.remote_subhead">Accès distant</span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="link.remote_help" data-i18n-html>Accédez à ce serveur Aidros depuis <b>n'importe où</b>, sans ouvrir de port, à travers le relais <b>ajean.link</b>. Le trafic est chiffré de <b>bout en bout</b> : le relais ne voit rien. Abonnement 4,80 €/mois.</span></span></div>
-    <div id="remote-off" class="slist"><div class="rowbody">
-      <div class="link-perks-head" data-i18n="link.perks_heading">Passez à AJEAN LINK</div>
-      <div class="link-perks">
-        <div class="link-perk">
-          <span class="link-perk-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-          <div><div class="link-perk-t" data-i18n="link.perk_remote_t">Accès distant sécurisé</div><div class="link-perk-d" data-i18n="link.perk_remote_d">Accédez à votre serveur Aidros depuis n'importe où et depuis n'importe quelle application, chiffré de bout en bout : le relais ne voit rien.</div></div>
-        </div>
-        <div class="link-perk">
-          <span class="link-perk-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
-          <div><div class="link-perk-t" data-i18n="link.perk_backup_t">Sauvegarde intégrée</div><div class="link-perk-d" data-i18n="link.perk_backup_d">Vos réglages, presets, historique et mémoire sauvegardés automatiquement, chiffrés avant l'envoi.</div></div>
-        </div>
-      </div>
-      <p class="muted" style="margin:0 0 8px" data-i18n="link.remote_off_desc">Ouvrez l'accès distant à ce serveur en quelques clics, sans terminal.</p>
-      <button class="btn-primary" onclick="remoteConnect()"  data-i18n="link.connect_button">Connecter à ajean.link</button>
-      <div class="link-price" data-i18n="link.price_note">4,80 €/mois · sans engagement, résiliable à tout moment</div>
-    </div></div>
-    <div id="remote-on" style="display:none">
-      <div class="slist api-conn">
-        <div class="api-ent">
-          <div class="api-lbl"><span data-i18n="link.remote_address_label">Adresse d'accès distant</span><span id="remote-status" class="api-state"></span></div>
-          <div class="api-line"><input id="remote-url" readonly class="api-val">
-            <button class="sw-ic" onclick="copyText(document.getElementById('remote-url').value,'adresse copiée');flashCopied(this)" title="copier" data-i18n="link.copy_title" data-i18n-attr="title"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
-            <button class="sw-ic" onclick="window.open(document.getElementById('remote-url').value,'_blank')" title="ouvrir" data-i18n="link.open_title" data-i18n-attr="title"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg></button></div>
-        </div>
-        <button type="button" id="remote-start" class="switchrow sw-action" onclick="remoteStart()" style="display:none"><svg class="sw-ai" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg><span data-i18n="link.start_tunnel">Démarrer le tunnel</span></button>
-      </div>
-      <div id="remote-firstconn">
-        <div class="slist">
-          <button type="button" class="switchrow sw-action" onclick="openPairModal()"><svg class="sw-ai" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18h2"/></svg><span class="sw-txt"><span data-i18n="link.pair_row">Connecter un nouvel appareil</span><span class="sw-sub" data-i18n="link.pair_row_sub">Une fois par appareil, à sa première ouverture</span></span></button>
-          <button type="button" class="switchrow sw-action danger" onclick="remoteDisconnect()"><svg class="sw-ai" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 7H7a5 5 0 0 0 0 10h2"/><path d="M15 7h2a5 5 0 0 1 4 8"/><path d="M3 3l18 18"/></svg><span data-i18n="link.disconnect">Déconnecter l'accès distant</span></button>
-        </div>
-      </div>
-    </div>
-    <div id="backup-block" style="display:none">
-      <div class="subhead"><span data-i18n="link.backup_subhead">Sauvegarde</span><span id="backup-badge" class="sbadge"></span><span class="help" tabindex="0" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('open')">?<span class="tip" data-i18n="link.backup_help" data-i18n-html>Sauvegarde ta mémoire, tes presets et tes réglages sur ajean.link. Tout est <b>chiffré sur ton serveur avant l'envoi</b> : le relais ne voit qu'un blob opaque, illisible même s'il était piraté. Restaurable sur un serveur vierge avec ton mot de passe de sauvegarde.</span></span></div>
-      <div class="slist">
-        <label class="switchrow"><span class="switch"><input type="checkbox" id="backup-auto-toggle" onchange="toggleBackupAuto()"><span class="slider"></span></span> <span class="sw-txt"><span data-i18n="link.backup_auto_toggle">sauvegarde automatique quotidienne</span><span id="backup-status" class="sw-sub"></span></span></label>
-        <button type="button" class="switchrow sw-action" onclick="backupNow()"><svg class="sw-ai" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><span data-i18n="link.backup_now">Sauvegarder maintenant</span></button>
-        <button type="button" class="switchrow sw-action" onclick="backupRestore()"><svg class="sw-ai" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span data-i18n="link.backup_restore">Restaurer…</span></button>
-      </div>
-    </div>
-    <div id="remote-perks-mini" class="link-perks-mini" style="display:none" data-i18n="link.perks_mini" data-i18n-html>Inclus dans <b>AJEAN LINK</b> : accès distant chiffré de bout en bout · sauvegarde de vos réglages, presets, historique et mémoire.</div>
   </details>
   <details id="bridge-details" hidden><summary><span class="stitle">Pont Aidros ↔ Aidros</span><span id="bridge-badge" class="sbadge"></span></summary>
     <div class="slist api-conn">
@@ -2573,34 +2499,6 @@ audio.jf-media{width:min(520px,100%);margin-top:18vh}
   <button data-eff="xhigh" onclick="pickReason('xhigh')">xhigh <span class="rm-h" data-i18n="reason.hint_max">max</span></button>
 </div>
 <div id="toast"></div>
-<div id="pair-modal" class="modal-ov" style="display:none" onclick="if(event.target===this)closePairModal()">
-  <div class="modal-card" style="max-width:440px">
-    <div class="modal-head">
-      <strong data-i18n="pair.title">Connecter un appareil</strong>
-      <button class="modal-x" onclick="closePairModal()" aria-label="Fermer">×</button>
-    </div>
-    <div class="modal-body pair-body">
-      <div class="pair-step"><span class="pair-n">1</span><div class="pair-c">
-        <div class="pair-t" data-i18n="pair.step_open">Sur l'appareil, ouvrez l'adresse d'accès distant</div>
-        <div class="pair-val"><span id="pair-url" class="pair-url"></span><button class="sw-ic" onclick="copyText(document.getElementById('pair-url').textContent);flashCopied(this)" title="copier"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div>
-      </div></div>
-      <div class="pair-step"><span class="pair-n">2</span><div class="pair-c">
-        <div class="pair-t" data-i18n="pair.step_check">Vérifiez que l'empreinte affichée est bien celle-ci</div>
-        <div id="pair-fp" class="pair-fp"></div>
-      </div></div>
-      <div class="pair-step"><span class="pair-n">3</span><div class="pair-c">
-        <div class="pair-t" data-i18n="pair.step_code">Saisissez ce code</div>
-        <div class="pair-val"><span id="pair-code" class="pair-code"></span><button class="sw-ic" onclick="copyText(document.getElementById('pair-code').textContent);flashCopied(this)" title="copier"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div>
-        <div class="pair-note" data-i18n="pair.code_note">Valable 10 minutes, une seule fois.</div>
-      </div></div>
-      <div id="pair-err" class="pair-err" hidden></div>
-    </div>
-    <div class="modal-foot">
-      <button class="pe-btn" onclick="openPairModal()" data-i18n="pair.new_code">Nouveau code</button>
-      <button class="pe-btn primary" onclick="closePairModal()" data-i18n="pair.done">Terminé</button>
-    </div>
-  </div>
-</div>
 <div id="bench-modal" class="modal-ov" style="display:none;z-index:55" onclick="if(event.target===this)closeBenchModal()">
   <div class="modal-card" style="max-width:480px">
     <div class="modal-head">
@@ -3957,9 +3855,6 @@ fr: {
   "api.copy_title": "copier",
   "api.lan_toggle": "joignable depuis le réseau local",
   "api.lan_help": "Éteint, le moteur n'écoute que sur <b>cette machine</b> : l'adresse ci-dessus ne répond qu'ici. Allumez-le pour brancher un logiciel depuis un autre ordinateur du réseau (sous Windows, la règle de pare-feu est posée en même temps). <b>Redémarre le moteur.</b>",
-  "api.public_toggle": "exposer en public (ajean.link)",
-  "api.public_help": "Rend votre IA joignable depuis <b>n'importe où</b> via <code>https://&lt;machine&gt;.oai.ajean.link/v1</code> (pour brancher un SaaS). Le trafic est chiffré <b>de bout en bout</b> jusqu'à ce serveur — le relais ajean.link ne voit rien. Nécessite l'accès distant actif.",
-  "api.public_address_label": "Adresse publique",
   "api.key_subhead": "Clé API",
   "api.key_help": "Protège l'endpoint des complétions (llama-server). Indispensable avant d'exposer le serveur sur internet. Modifier la clé <b>redémarre</b> le service.",
   "api.key_eye_title": "afficher / masquer",
@@ -3971,40 +3866,6 @@ fr: {
   "api.model_label": "Modèle",
   "api.access_subhead": "Accès",
   "api.key_menu_title": "gérer la clé",
-  "link.title": "AJEAN LINK",
-  "link.remote_subhead": "Accès distant",
-  "link.remote_help": "Accédez à ce serveur Aidros depuis <b>n'importe où</b>, sans ouvrir de port, à travers le relais <b>ajean.link</b>. Le trafic est chiffré de <b>bout en bout</b> : le relais ne voit rien. Abonnement 4,80 €/mois.",
-  "link.remote_off_desc": "Ouvrez l'accès distant à ce serveur en quelques clics, sans terminal.",
-  "link.connect_button": "Connecter à ajean.link",
-  "link.perks_heading": "Passez à AJEAN LINK",
-  "link.perk_remote_t": "Accès distant sécurisé",
-  "link.perk_remote_d": "Accédez à votre serveur Aidros depuis n'importe où et depuis n'importe quelle application, chiffré de bout en bout : le relais ne voit rien.",
-  "link.perk_backup_t": "Sauvegarde intégrée",
-  "link.perk_backup_d": "Vos réglages, presets, historique et mémoire sauvegardés automatiquement, chiffrés avant l'envoi.",
-  "link.price_note": "4,80 €/mois · sans engagement, résiliable à tout moment",
-  "link.perks_mini": "Inclus dans <b>AJEAN LINK</b> : accès distant chiffré de bout en bout · sauvegarde de vos réglages, presets, historique et mémoire.",
-  "link.remote_address_label": "Votre adresse d'accès distant",
-  "link.copy_title": "copier",
-  "link.open_title": "ouvrir",
-  "link.start_tunnel": "Démarrer le tunnel",
-  "link.first_connection_subhead": "Première connexion",
-  "link.first_connection_help": "À votre première ouverture du portail distant, confirmez l'<b>empreinte</b> et saisissez le <b>code d'appairage</b> : cela verrouille la boîte noire sur CE serveur (anti-interception). Une seule fois par appareil.",
-  "link.show_pairing": "Afficher l'empreinte et le code d'appairage",
-  "link.pair_row": "Connecter un nouvel appareil",
-  "link.pair_row_sub": "Une fois par appareil, à sa première ouverture",
-  "pair.title": "Connecter un appareil",
-  "pair.step_open": "Sur l'appareil, ouvrez l'adresse d'accès distant",
-  "pair.step_check": "Vérifiez que l'empreinte affichée est bien celle-ci",
-  "pair.step_code": "Saisissez ce code",
-  "pair.code_note": "Valable 10 minutes, une seule fois.",
-  "pair.new_code": "Nouveau code",
-  "pair.done": "Terminé",
-  "link.disconnect": "Déconnecter l'accès distant",
-  "link.backup_subhead": "Sauvegarde",
-  "link.backup_help": "Sauvegarde ta mémoire, tes presets et tes réglages sur ajean.link. Tout est <b>chiffré sur ton serveur avant l'envoi</b> : le relais ne voit qu'un blob opaque, illisible même s'il était piraté. Restaurable sur un serveur vierge avec ton mot de passe de sauvegarde.",
-  "link.backup_auto_toggle": "sauvegarde automatique quotidienne",
-  "link.backup_now": "Sauvegarder maintenant",
-  "link.backup_restore": "Restaurer…",
   "engine.title": "Moteur",
   "engine.bundled_desc": "Livré avec Aidros et installé automatiquement. Il change avec les mises à jour d'Aidros.",
   "engine.cannot_dismiss": "impossible de masquer",
@@ -4693,27 +4554,6 @@ fr: {
   "settings.memory.decrypt_confirm_title": "Désactiver le chiffrement ?",
   "settings.memory.decrypt_ok_text": "Déchiffrer",
   "settings.encryption_off": "Chiffrement désactivé",
-  "settings.backup.auto_badge": "auto",
-  "settings.backup.manual_badge": "manuel",
-  "settings.backup.last_backup_prefix": "Dernière sauvegarde : ",
-  "settings.backup.none_yet": "Aucune sauvegarde encore.",
-  "settings.backup.auto_enabled_msg": "La sauvegarde automatique tournera une fois par jour, tant que ta mémoire est déverrouillée (le paquet est chiffré avec ta clé, jamais stockée sur le serveur).",
-  "settings.backup.auto_enabled_title": "Sauvegarde auto activée",
-  "settings.backup_in_progress": "Sauvegarde en cours…",
-  "settings.backup.sent": "Sauvegarde envoyée",
-  "settings.backup.relay_unreachable": "Relais injoignable.",
-  "settings.backup.none_available": "Aucune sauvegarde disponible sur le relais.",
-  "settings.backup.restore_title": "Restaurer",
-  "settings.backup.restore_choose_msg": "Quelle sauvegarde restaurer ? Elle remplacera la mémoire, les presets et les réglages de cette machine. Un snapshot de sécurité est pris avant.",
-  "settings.backup.this_machine": "cette machine",
-  "settings.backup.old_backup": "ancienne sauvegarde",
-  "settings.backup.versions_this_machine": "sauvegarde(s) de cette machine",
-  "settings.backup.versions_total": "au total sur le compte",
-  "settings.backup.restore_secret_prompt": "Ta clé d'API (ou ta clé de récupération) pour ouvrir la sauvegarde :",
-  "settings.backup.restore_secret_placeholder": "clé d'API ou clé de récupération",
-  "settings.backup.restoring": "Restauration…",
-  "settings.backup.restore_done_msg": "Restauration terminée.",
-  "settings.backup.restore_done_title": "OK",
   "settings.memory.no_pages": "(aucune page mémoire)",
   "settings.memory.no_results_before": "(aucun résultat pour « ",
   "settings.memory.no_results_after": " »)",
@@ -4742,10 +4582,6 @@ fr: {
   "settings.applying": "application…",
   "settings.apikey.set_prompt_msg": "Colle ta clé API (ou laisse vide pour annuler) :",
   "settings.apikey.set_prompt_title": "Définir la clé API",
-  "settings.oai.public_needs_remote_msg": "Vous devez activer l'accès distant (ajean.link) pour bénéficier de cette fonctionnalité. Ouvrez le panneau « Accès distant » pour connecter ce serveur.",
-  "settings.oai.public_needs_remote_title": "Accès distant requis",
-  "settings.oai.public_on": "accès public activé",
-  "settings.oai.public_off": "accès public coupé",
   "settings.export.preparing": "préparation de l'export…",
   "settings.export.exported_prefix": "exporté : ",
   "settings.error_prefix": "erreur : ",
@@ -4967,29 +4803,6 @@ fr: {
   "mcp.delete_title": "Supprimer le serveur MCP ?",
   "mcp.delete_btn": "Supprimer",
   "mcp.server_deleted": "serveur supprimé",
-  "remote.not_connected": "non connecté",
-  "remote.online_status": "En ligne",
-  "remote.tunnel_stopped": "Arrêté",
-  "remote.connected": "connecté",
-  "remote.stopped": "arrêté",
-  "remote.this_server": "ce serveur",
-  "remote.allow_popups": "autorisez les popups pour connecter ajean.link",
-  "remote.remote_access_connected": "accès distant connecté",
-  "remote.token_saved_service_prefix": "token enregistré (service : ",
-  "remote.connection_failed": "échec de la connexion",
-  "remote.error_prefix": "erreur : ",
-  "remote.starting": "démarrage…",
-  "remote.tunnel_started": "tunnel démarré",
-  "remote.tunnel_did_not_start": "le tunnel n'a pas démarré",
-  "remote.start_tunnel_btn": "démarrer le tunnel",
-  "remote.confirm_disconnect": "Couper l'accès distant et oublier la clé de liaison de ce serveur ?",
-  "remote.remote_access_title": "Accès distant",
-  "remote.disconnect_btn": "Déconnecter",
-  "remote.remote_access_cut": "accès distant coupé",
-  "remote.generating_code": "génération du code…",
-  "remote.fingerprint_label": "Empreinte :",
-  "remote.pairing_code_label": "Code d'appairage (valable 10 min, usage unique)",
-  "remote.code_unavailable": "code indisponible",
   "push.ios_add_to_home": "Sur iPhone : ajoute d'abord Aidros à l'écran d'accueil, puis rouvre-le depuis l'icône pour activer les notifications.",
   "push.not_supported": "Ce navigateur ne prend pas en charge les notifications.",
   "push.blocked_in_browser": "Notifications bloquées dans les réglages du navigateur — réautorise-les pour ce site.",
@@ -5527,9 +5340,6 @@ en: {
   "api.copy_title": "copy",
   "api.lan_toggle": "reachable from the local network",
   "api.lan_help": "Off, the engine only listens on <b>this machine</b>: the address above only responds here. Turn it on to connect software from another computer on the network (on Windows, the firewall rule is set at the same time). <b>Restarts the engine.</b>",
-  "api.public_toggle": "expose publicly (ajean.link)",
-  "api.public_help": "Makes your AI reachable from <b>anywhere</b> via <code>https://&lt;machine&gt;.oai.ajean.link/v1</code> (to connect a SaaS). Traffic is encrypted <b>end-to-end</b> to this server — the ajean.link relay sees nothing. Requires remote access to be on.",
-  "api.public_address_label": "Public address",
   "api.key_subhead": "API key",
   "api.key_help": "Protects the completions endpoint (llama-server). Essential before exposing the server to the internet. Changing the key <b>restarts</b> the service.",
   "api.key_eye_title": "show / hide",
@@ -5541,40 +5351,6 @@ en: {
   "api.model_label": "Model",
   "api.access_subhead": "Access",
   "api.key_menu_title": "manage the key",
-  "link.title": "AJEAN LINK",
-  "link.remote_subhead": "Remote access",
-  "link.remote_help": "Access this Aidros server from <b>anywhere</b>, with no port forwarding, through the <b>ajean.link</b> relay. Traffic is encrypted <b>end-to-end</b>: the relay sees nothing. Subscription €4.80/month.",
-  "link.remote_off_desc": "Open remote access to this server in a few clicks, no terminal needed.",
-  "link.connect_button": "Connect to ajean.link",
-  "link.perks_heading": "Upgrade to AJEAN LINK",
-  "link.perk_remote_t": "Secure remote access",
-  "link.perk_remote_d": "Reach your Aidros server from anywhere and from any app, end-to-end encrypted: the relay sees nothing.",
-  "link.perk_backup_t": "Built-in backup",
-  "link.perk_backup_d": "Your settings, presets, history and memory backed up automatically, encrypted before upload.",
-  "link.price_note": "€4.80/month · no commitment, cancel anytime",
-  "link.perks_mini": "Included with <b>AJEAN LINK</b>: end-to-end encrypted remote access · backup of your settings, presets, history and memory.",
-  "link.remote_address_label": "Your remote access address",
-  "link.copy_title": "copy",
-  "link.open_title": "open",
-  "link.start_tunnel": "Start the tunnel",
-  "link.first_connection_subhead": "First connection",
-  "link.first_connection_help": "The first time you open the remote portal, confirm the <b>fingerprint</b> and enter the <b>pairing code</b>: this locks the black box to THIS server (anti-interception). Only needed once per device.",
-  "link.show_pairing": "Show fingerprint and pairing code",
-  "link.pair_row": "Connect a new device",
-  "link.pair_row_sub": "Once per device, the first time it opens",
-  "pair.title": "Connect a device",
-  "pair.step_open": "On the device, open the remote access address",
-  "pair.step_check": "Check that the fingerprint shown matches this one",
-  "pair.step_code": "Enter this code",
-  "pair.code_note": "Valid for 10 minutes, single use.",
-  "pair.new_code": "New code",
-  "pair.done": "Done",
-  "link.disconnect": "Disconnect remote access",
-  "link.backup_subhead": "Backup",
-  "link.backup_help": "Backs up your memory, presets, and settings to ajean.link. Everything is <b>encrypted on your server before being sent</b>: the relay only sees an opaque blob, unreadable even if it were hacked. Restorable to a fresh server with your backup password.",
-  "link.backup_auto_toggle": "automatic daily backup",
-  "link.backup_now": "Back up now",
-  "link.backup_restore": "Restore…",
   "engine.title": "Engine",
   "engine.bundled_desc": "Shipped with Aidros and installed automatically. It changes with Aidros updates.",
   "engine.cannot_dismiss": "cannot dismiss",
@@ -6263,27 +6039,6 @@ en: {
   "settings.memory.decrypt_confirm_title": "Disable encryption?",
   "settings.memory.decrypt_ok_text": "Decrypt",
   "settings.encryption_off": "Encryption disabled",
-  "settings.backup.auto_badge": "auto",
-  "settings.backup.manual_badge": "manual",
-  "settings.backup.last_backup_prefix": "Last backup: ",
-  "settings.backup.none_yet": "No backup yet.",
-  "settings.backup.auto_enabled_msg": "Automatic backup will run once a day, as long as your memory is unlocked (the package is encrypted with your key, which is never stored on the server).",
-  "settings.backup.auto_enabled_title": "Auto backup enabled",
-  "settings.backup_in_progress": "Backing up…",
-  "settings.backup.sent": "Backup sent",
-  "settings.backup.relay_unreachable": "Relay unreachable.",
-  "settings.backup.none_available": "No backup available on the relay.",
-  "settings.backup.restore_title": "Restore",
-  "settings.backup.restore_choose_msg": "Which backup should be restored? It will replace this machine's memory, presets and settings. A safety snapshot is taken beforehand.",
-  "settings.backup.this_machine": "this machine",
-  "settings.backup.old_backup": "older backup",
-  "settings.backup.versions_this_machine": "backup(s) of this machine",
-  "settings.backup.versions_total": "in total on the account",
-  "settings.backup.restore_secret_prompt": "Your API key (or recovery key) to open the backup:",
-  "settings.backup.restore_secret_placeholder": "API key or recovery key",
-  "settings.backup.restoring": "Restoring…",
-  "settings.backup.restore_done_msg": "Restore complete.",
-  "settings.backup.restore_done_title": "OK",
   "settings.memory.no_pages": "(no memory pages)",
   "settings.memory.no_results_before": "(no results for \"",
   "settings.memory.no_results_after": "\")",
@@ -6312,10 +6067,6 @@ en: {
   "settings.applying": "applying…",
   "settings.apikey.set_prompt_msg": "Paste your API key (or leave empty to cancel):",
   "settings.apikey.set_prompt_title": "Set the API key",
-  "settings.oai.public_needs_remote_msg": "You need to enable remote access (ajean.link) to use this feature. Open the \"Remote access\" panel to connect this server.",
-  "settings.oai.public_needs_remote_title": "Remote access required",
-  "settings.oai.public_on": "public access enabled",
-  "settings.oai.public_off": "public access disabled",
   "settings.export.preparing": "preparing the export…",
   "settings.export.exported_prefix": "exported: ",
   "settings.error_prefix": "error: ",
@@ -6537,29 +6288,6 @@ en: {
   "mcp.delete_title": "Delete the MCP server?",
   "mcp.delete_btn": "Delete",
   "mcp.server_deleted": "server deleted",
-  "remote.not_connected": "not connected",
-  "remote.online_status": "Online",
-  "remote.tunnel_stopped": "Stopped",
-  "remote.connected": "connected",
-  "remote.stopped": "stopped",
-  "remote.this_server": "this server",
-  "remote.allow_popups": "allow pop-ups to connect ajean.link",
-  "remote.remote_access_connected": "remote access connected",
-  "remote.token_saved_service_prefix": "token saved (service: ",
-  "remote.connection_failed": "connection failed",
-  "remote.error_prefix": "error: ",
-  "remote.starting": "starting…",
-  "remote.tunnel_started": "tunnel started",
-  "remote.tunnel_did_not_start": "the tunnel didn't start",
-  "remote.start_tunnel_btn": "start the tunnel",
-  "remote.confirm_disconnect": "Disconnect remote access and forget this server's link key?",
-  "remote.remote_access_title": "Remote access",
-  "remote.disconnect_btn": "Disconnect",
-  "remote.remote_access_cut": "remote access disconnected",
-  "remote.generating_code": "generating code…",
-  "remote.fingerprint_label": "Fingerprint:",
-  "remote.pairing_code_label": "Pairing code (valid 10 min, single use)",
-  "remote.code_unavailable": "code unavailable",
   "push.ios_add_to_home": "On iPhone: first add Aidros to the home screen, then reopen it from the icon to enable notifications.",
   "push.not_supported": "This browser doesn't support notifications.",
   "push.blocked_in_browser": "Notifications blocked in the browser settings — re-allow them for this site.",
@@ -8138,61 +7866,6 @@ async function toggleMemEncrypt(){
     toast(t('settings.encryption_off')); loadMem();
   }
 }
-async function loadBackup(){
-  const block=document.getElementById('backup-block'); if(!block) return;
-  let s; try{ s=await jget('/api/backup/status'); }catch(e){ block.style.display='none'; return; }
-  if(!s.linked){ block.style.display='none'; return; } 
-  block.style.display='';
-  document.getElementById('backup-auto-toggle').checked=!!s.auto;
-  setBadge('backup-badge', !!s.auto, s.auto?t('settings.backup.auto_badge'):t('settings.backup.manual_badge'));
-  const st=document.getElementById('backup-status');
-  let msg='';
-  if(s.last){ const d=new Date(s.last); msg=t('settings.backup.last_backup_prefix')+(isNaN(d)?s.last:d.toLocaleString()); }
-  else msg=t('settings.backup.none_yet');
-  if(Array.isArray(s.versions)){
-    const mine = s.versions.filter(v=>v.this).length;
-    msg += ' · '+mine+' '+t('settings.backup.versions_this_machine');
-    if(s.versions.length > mine) msg += ' · '+s.versions.length+' '+t('settings.backup.versions_total');
-  }
-  if(s.error) msg+='\n'+s.error;
-  st.textContent=msg; st.style.whiteSpace='pre-line';
-}
-async function toggleBackupAuto(){
-  const on=document.getElementById('backup-auto-toggle').checked;
-  await jpost('/api/backup/auto',{on});
-  if(on) await askAlert(t('settings.backup.auto_enabled_msg'),{title:t('settings.backup.auto_enabled_title')});
-  loadBackup();
-}
-async function backupNow(){
-  toast(t('settings.backup_in_progress'));
-  let r; try{ r=await jpost('/api/backup/now',{}); }catch(e){ await askAlert(t('common.failed_prefix')+e); return; }
-  if(!r.ok){ await askAlert(t('common.failed_prefix')+(r.error||t('common.unknown'))); return; }
-  toast(t('settings.backup.sent')); loadBackup();
-}
-function backupLabel(v){
-  const when = v.when ? new Date(v.when).toLocaleString() : v.id;
-  const who = v.this ? t('settings.backup.this_machine')
-            : (v.machineName || (v.machine ? v.machine.slice(0,8) : t('settings.backup.old_backup')));
-  return who+' · '+when;
-}
-async function backupRestore(){
-  let s; try{ s=await jget('/api/backup/status'); }catch(e){ await askAlert(t('settings.backup.relay_unreachable')); return; }
-  const vers=(s.versions||[]);
-  if(!vers.length){ await askAlert(t('settings.backup.none_available')); return; }
-  const def = vers.find(v=>v.this) || vers[0];
-  const key = v => (v.machine||'')+'/'+v.id;
-  if(!await askConfirm(t('settings.backup.restore_choose_msg'),{title:t('settings.backup.restore_title'),okText:t('settings.backup.restore_title'),danger:true,
-      choices: vers.map(v=>({value:key(v), label:backupLabel(v)})), choice: key(def)})) return;
-  const pick = vers.find(v=>key(v)===askChoice()) || def;
-  while(true){
-    const secret=await askPrompt(t('settings.backup.restore_secret_prompt'),{title:t('settings.backup.restore_title'),placeholder:t('settings.backup.restore_secret_placeholder')});
-    if(!secret) return; 
-    toast(t('settings.backup.restoring'));
-    let r; try{ r=await jpost('/api/backup/restore',{id:pick.id,machine:pick.machine||'',secret}); }catch(e){ await askAlert(t('common.failed_prefix')+e); return; }
-    if(r.ok){ await askAlert(t('settings.backup.restore_done_msg'),{title:t('settings.backup.restore_done_title')}); loadMem(); return; }
-    await askAlert((r.error&&r.error.indexOf('incorrecte')>=0)?t('settings.wrong_key'):(t('common.failed_prefix')+(r.error||t('common.unknown'))),{title:t('settings.refused_title')});
-  }
-}
 function setAgentGate(on){
   ['mem-block','net-block','cu-block','mcp-block'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.classList.toggle('gated', !on);
@@ -8325,15 +7998,6 @@ function renderApiKey(d){
   OAI_KEY = d.key || '';
   const host = d.host || location.hostname;
   document.getElementById('oai-url').value = 'http://'+host+':'+d.port+'/v1';
-  const tg = document.getElementById('oai-public-toggle');
-  if(tg) tg.checked = !!d.oai_public;
-  const pubWrap = document.getElementById('oai-public-wrap');
-  if(d.oai_public && d.machine){
-    document.getElementById('oai-public-url').value = 'https://'+d.machine+'.oai.ajean.link/v1';
-    pubWrap.style.display = '';
-  } else {
-    pubWrap.style.display = 'none';
-  }
   const inp=document.getElementById('oai-key');
   if(!d.set){ inp.value=t('settings.apikey.none_open_server'); inp.style.opacity=.6; }
   else { inp.style.opacity=1; inp.value = OAI_REVEAL ? OAI_KEY : d.masked; }
@@ -8413,22 +8077,6 @@ async function apiKeyAction(action){
   OAI_REVEAL=(action==='generate'); 
   toast(t('settings.applying'));
   renderApiKey(await jpost('/api/apikey', {action}));
-}
-async function toggleOAIPublic(){
-  const cb = document.getElementById('oai-public-toggle');
-  const on = cb.checked;
-  if(on){
-    let linked = false;
-    try{ const s = await jget('/api/link/status'); linked = !!(s && s.linked); }catch(e){}
-    if(!linked){
-      cb.checked = false;
-      await askAlert(t('settings.oai.public_needs_remote_msg'), {title:t('settings.oai.public_needs_remote_title')});
-      return;
-    }
-  }
-  await jpost('/api/oai/public', {enabled:on});
-  toast(on ? t('settings.oai.public_on') : t('settings.oai.public_off'));
-  loadApiKey();
 }
 async function apiKeySet(){
   const k = await askPrompt(t('settings.apikey.set_prompt_msg'), {title:t('settings.apikey.set_prompt_title'), placeholder:'sk-…'});
@@ -12277,98 +11925,6 @@ async function deleteMcp(){
   loadMCP();
   toast(t('mcp.server_deleted'));
 }
-const AJEAN_APP_ORIGIN = 'https://app.ajean.link';
-function renderRemote(d){
-  const off = document.getElementById('remote-off'), on = document.getElementById('remote-on');
-  const perks = document.getElementById('remote-perks-mini');
-  const badge = document.getElementById('remote-badge');
-  if(!d || !d.linked){
-    off.style.display=''; on.style.display='none';
-    if(perks) perks.style.display='none'; 
-    setBadge(badge, false, t('remote.not_connected'));
-    return;
-  }
-  off.style.display='none'; on.style.display='';
-  if(perks) perks.style.display=''; 
-  document.getElementById('remote-url').value = d.machineURL || '';
-  const st = document.getElementById('remote-status');
-  st.textContent = d.active ? t('remote.online_status') : t('remote.tunnel_stopped'); st.classList.toggle('on', !!d.active);
-  const sb = document.getElementById('remote-start');
-  if(sb){ sb.style.display = d.active ? 'none' : ''; }
-  setBadge(badge, d.active ? true : 'warn', d.active ? t('remote.connected') : t('remote.stopped'));
-}
-async function loadRemote(){
-  const det = document.getElementById('remote-details');
-  if(location.hostname === 'app.ajean.link'){
-    if(det) det.style.display='';
-    const off=document.getElementById('remote-off'); if(off) off.style.display='none';
-    const on=document.getElementById('remote-on'); if(on) on.style.display='';
-    const url=document.getElementById('remote-url'); if(url) url.value=location.origin;
-    const st=document.getElementById('remote-status');
-    if(st){ st.textContent=t('remote.online_status'); st.classList.add('on'); }
-    const sb=document.getElementById('remote-start'); if(sb) sb.style.display='none';
-    const fc=document.getElementById('remote-firstconn'); if(fc) fc.style.display='none';
-    const bk=document.getElementById('backup-block'); if(bk) bk.style.display='none';
-    const perks=document.getElementById('remote-perks-mini'); if(perks) perks.style.display='';
-    setBadge(document.getElementById('remote-badge'), true, t('remote.connected'));
-    return;
-  }
-  try{ renderRemote(await jget('/api/link/status')); }catch(e){ renderRemote(null); }
-}
-function remoteConnect(){
-  const params = new URLSearchParams({ origin: window.location.origin, host: window.location.hostname || t('remote.this_server') });
-  const url = AJEAN_APP_ORIGIN + '/connect.html?' + params.toString();
-  const pop = window.open(url, 'ajean-connect', 'width=440,height=640');
-  if(!pop){ toast(t('remote.allow_popups')); return; }
-  async function onMsg(ev){
-    if(ev.origin !== AJEAN_APP_ORIGIN) return;
-    const d = ev.data || {};
-    if(d.type !== 'ajean-link' || !d.token) return;
-    window.removeEventListener('message', onMsg);
-    try{
-      const r = await jpost('/api/link/connect', { token: d.token });
-      if(r && r.linked){
-        toast('✓ '+t('remote.remote_access_connected'));
-        if(r.serviceErr){ toast(t('remote.token_saved_service_prefix')+r.serviceErr+')'); }
-        loadRemote();
-      } else {
-        toast((r && r.error) || t('remote.connection_failed'));
-      }
-    }catch(e){ toast(t('remote.error_prefix')+e); }
-  }
-  window.addEventListener('message', onMsg);
-}
-async function remoteStart(){
-  const b = document.getElementById('remote-start');
-  if(b){ b.disabled = true; b.textContent = t('remote.starting'); }
-  try{
-    const r = await jpost('/api/link/start', {});
-    if(r && r.active){ toast('✓ '+t('remote.tunnel_started')); }
-    else { toast((r && r.error) || t('remote.tunnel_did_not_start')); }
-  }catch(e){ toast(t('remote.error_prefix')+e); }
-  if(b){ b.disabled = false; b.textContent = t('remote.start_tunnel_btn'); }
-  loadRemote();
-}
-async function remoteDisconnect(){
-  const ok = await askConfirm(t('remote.confirm_disconnect'), {title:t('remote.remote_access_title'), okLabel:t('remote.disconnect_btn')});
-  if(!ok) return;
-  try{ await jpost('/api/link/disconnect', {}); toast(t('remote.remote_access_cut')); loadRemote(); }
-  catch(e){ toast(t('remote.error_prefix')+e); }
-}
-async function openPairModal(){
-  const err = document.getElementById('pair-err');
-  const code = document.getElementById('pair-code'), fp = document.getElementById('pair-fp');
-  document.getElementById('pair-url').textContent = document.getElementById('remote-url').value || '';
-  err.hidden = true; code.textContent = '…'; fp.textContent = '…';
-  showModal('pair-modal');
-  try{
-    const r = await jpost('/api/link/paircode', {});
-    if(r && r.code){ code.textContent = r.code; fp.textContent = r.fingerprint || '-'; return; }
-    err.textContent = (r && r.error) || t('remote.code_unavailable');
-  }catch(e){ err.textContent = t('remote.error_prefix') + e; }
-  err.hidden = false; code.textContent = '-'; fp.textContent = '-';
-}
-function closePairModal(){ hideModal('pair-modal'); }
 let bridgeEtat = null;
 function renderBridge(d){
   bridgeEtat = d;

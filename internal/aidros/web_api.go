@@ -374,7 +374,10 @@ func handleReasoning(w http.ResponseWriter, r *http.Request) {
 	// écriture, un preset MoE qui ne porte pas REASONING_EFFORT repartait au
 	// défaut à chaque bascule : la clé n'est PAS dans preservedKeys (mesuré,
 	// backend_presets.go:281-284 — MEM_MODE, CUDA_VISIBLE_DEVICES, HOST,
-	// MEM_ENCRYPTED, BACKUP_AUTO, COMPACT, COMPACT_MAX, COMPACT_FRAC, MACHINES).
+	// MEM_ENCRYPTED, COMPACT, COMPACT_MAX, COMPACT_FRAC, MACHINES).
+	// Cette liste est lue ICI à chaque fois qu'on s'en sert : BACKUP_AUTO y
+	// figurait encore le 22/11 et en est sorti avec le relais ; laisser la
+	// phrase d'hier aurait fait croire à un réglage vivant.
 	// Ce rétabli-là avait SAUTÉ à la fusion 0.20.0 : en v0.18.17 ce même
 	// handleReasoning appelait moePersistEffort juste après SetConfigKey
 	// (web_api.go:340, mesuré), et la campagne de rétablis du 15/11 (93c24d0) a
@@ -885,43 +888,15 @@ func handleAPIKey(w http.ResponseWriter, r *http.Request) {
 		"masked": maskAPIKey(k),
 		"port":   LLMPort(),
 		"host":   localIP(),
-		// Accès OpenAI PUBLIC via ajean.link (passthrough SNI, VPS aveugle) : si
-		// activé, l'URL publique est https://<machine>.oai.ajean.link/v1.
-		"oai_public": oaiPublicEnabled(),
-		"machine":    machineID(),
-	})
-}
-
-// handleOAIPublic pilote le drapeau d'accès OpenAI public (exposition via
-// ajean.link). GET renvoie l'état ; POST {enabled} l'active/coupe en direct
-// (aucun redémarrage : le démux du tunnel relit le drapeau à chaque connexion).
-func handleOAIPublic(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		var req struct {
-			Enabled *bool `json:"enabled"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
-			return
-		}
-		if req.Enabled != nil {
-			if err := setOAIPublic(*req.Enabled); err != nil {
-				sendJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
-				return
-			}
-		}
-	}
-	sendJSON(w, 200, map[string]any{
-		"ok":      true,
-		"enabled": oaiPublicEnabled(),
-		"machine": machineID(),
+		// « oai_public » et « machine » sont retirés : l'accès OpenAI PUBLIC
+		// était <machine>.oai.ajean.link, servi par le relais. L'interface ne
+		// lit plus ni l'un ni l'autre depuis le retrait.
 	})
 }
 
 // localIP best-effort renvoie l'IPv4 LAN primaire de la machine (l'IP source du
 // trafic sortant), ou "localhost" à défaut. Sert à annoncer l'endpoint OpenAI
-// avec une adresse correcte sur le réseau local MÊME quand l'UI est atteinte via
-// le tunnel ajean.link (où location.hostname serait le domaine du relais, faux).
+// avec une adresse correcte sur le réseau local.
 func localIP() string {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
@@ -1281,69 +1256,6 @@ func handleMemAddKey(w http.ResponseWriter, r *http.Request) {
 func handleMemLock(w http.ResponseWriter, r *http.Request) {
 	clearMemDEK()
 	sendJSON(w, 200, map[string]any{"ok": true, "health": memHealth()})
-}
-
-// --- Sauvegarde ajean.link ----------------------------------------------------
-
-// handleBackupStatus renvoie l'état de la sauvegarde : liaison configurée ?
-// auto activé ? dernière sauvegarde ? versions distantes (best-effort).
-func handleBackupStatus(w http.ResponseWriter, r *http.Request) {
-	res := map[string]any{
-		"linked": backupLinked(),
-		"auto":   backupAutoEnabled(),
-		"last":   backupLast(),
-	}
-	if backupLinked() {
-		if versions, err := relayBackupList(); err == nil {
-			res["versions"] = versions
-		} else {
-			res["error"] = err.Error()
-		}
-	}
-	sendJSON(w, 200, res)
-}
-
-// handleBackupNow lance une sauvegarde immédiate. Aucun mot de passe : le paquet
-// est chiffré avec la clé de la mémoire (déjà ouverte).
-func handleBackupNow(w http.ResponseWriter, r *http.Request) {
-	id, err := RunBackupNow()
-	if err != nil {
-		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
-		return
-	}
-	sendJSON(w, 200, map[string]any{"ok": true, "id": id})
-}
-
-// handleBackupRestore restaure une sauvegarde. Corps : {id, machine, secret}.
-func handleBackupRestore(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		ID      string `json:"id"`
-		Machine string `json:"machine"`
-		Secret  string `json:"secret"`
-	}
-	_ = json.NewDecoder(r.Body).Decode(&req)
-	if err := RestoreBackup(req.ID, req.Machine, req.Secret); err != nil {
-		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
-		return
-	}
-	sendJSON(w, 200, map[string]any{"ok": true})
-}
-
-// handleBackupAuto active/désactive la sauvegarde automatique. Corps : {on}.
-func handleBackupAuto(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		On bool `json:"on"`
-	}
-	_ = json.NewDecoder(r.Body).Decode(&req)
-	val := ""
-	if req.On {
-		val = "1"
-	}
-	if err := SetConfigKey("BACKUP_AUTO", val); err != nil {
-		sendJSON(w, 400, map[string]any{"ok": false, "error": err.Error()})
-		return
-	}
-	sendJSON(w, 200, map[string]any{"ok": true, "auto": backupAutoEnabled()})
 }
 
 // handleMemSnapshots : GET liste les snapshots, POST {id} en restaure un.

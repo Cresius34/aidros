@@ -68,24 +68,12 @@ func cmdApp(args []string) error {
 	}
 
 	// UN SEUL process propriétaire de la conversation, comme le service ajean-ui
-	// sous Linux : l'app sert l'UI locale ET le tunnel avec le MÊME mux. Deux
-	// process qui servent la conversation (objet en mémoire persisté dans
-	// conversation.json) donnent deux fils divergents entre le local et
-	// app.ajean.link — le bug qu'on a vécu avec le worker détaché.
-	appOwnsLink = true
+	// sous Linux : l'app sert l'UI locale elle-même. Deux process qui servent la
+	// conversation (objet en mémoire persisté dans conversation.json) donnent
+	// deux fils divergents entre le local et l'app — le bug qu'on a vécu avec le
+	// worker détaché.
 	appWebMux = newWebMux()
 	go func() { _ = http.Serve(ln, appWebMux) }()
-
-	go func() {
-		if readLinkToken() == "" {
-			return
-		}
-		// Worker détaché rescapé (version antérieure, autre copie de l'app) : il
-		// possède SA propre conversation et écrase la nôtre. On le supprime avant
-		// de prendre la main.
-		killForeignUIWorker()
-		startAppLink(appWebMux)
-	}()
 
 	// Relance après mise à jour : l'ancienne fenêtre est encore ouverte et se
 	// reconnecte seule. En rouvrir une donnait deux fenêtres AJEAN côte à côte.

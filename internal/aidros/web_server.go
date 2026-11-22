@@ -55,22 +55,6 @@ func cmdWeb(args []string) error {
 		fmt.Printf("%s API protégée par clé (Authorization: Bearer …)\n", green("[ok]"))
 	}
 
-	// Accès distant : le tunnel vers le relais est ouvert ICI, dans le process qui
-	// sert déjà l'UI, et avec le MÊME mux. C'est la condition d'une conversation
-	// unique — elle vit en mémoire (voir chat_conversation.go), donc deux process
-	// qui la servent, c'est deux fils qui divergent et s'écrasent l'un l'autre.
-	// Sans jeton enregistré, startAppLink ne fait rien : l'UI locale suffit.
-	appOwnsLink = true
-	appWebMux = mux
-	if readLinkToken() != "" {
-		killForeignUIWorker() // rescapé d'une version antérieure ou d'une autre copie
-		fmt.Printf("%s connexion au relais %s …\n", cyan("[link]"), relayURL())
-		if fp := e2eFingerprint(); fp != "" {
-			fmt.Printf("%s empreinte E2E : %s   (code d'appairage : aidros link code)\n", green("[e2e]"), bold(fp))
-		}
-		fmt.Printf("%s front OpenAI public prêt (activation en direct via l'UI ; état: %v)\n", green("[oai]"), oaiPublicEnabled())
-		startAppLink(mux)
-	}
 	// Au démarrage de la machine : le moteur tiers du preset actif
 	// (EXTERNAL_SERVICE) n'est pas « enabled », c'est ajean qui le relance.
 	if s := externalServiceOf(ReadConfig()); s != "" {
@@ -138,9 +122,6 @@ func newWebMux() *http.ServeMux {
 	// La clé de pilotage n'est plus stockée en clair (juste son empreinte) : on
 	// convertit une ancienne valeur en clair une fois pour toutes.
 	migrateWebKeyToHash()
-	// Boucle de sauvegarde automatique vers ajean.link (no-op tant que non activée
-	// / non liée / non armée depuis le démarrage).
-	StartBackupScheduler()
 	// Allègement sans perte des anciennes conversations (tâche de fond, une fois).
 	startSlimArchives()
 	// Index plein-texte des conversations archivées (#98), rattrapage en fond.
@@ -253,12 +234,10 @@ func newWebMux() *http.ServeMux {
 	api("/api/agent/compact", handleCompactToggle)
 	api("/api/agent/prewarm", handlePrewarmToggle)
 	api("/api/apikey", handleAPIKey)
-	api("/api/oai/public", handleOAIPublic)
-	api("/api/link/status", handleLinkStatus)         // état de l'accès distant (ajean.link)
-	api("/api/link/connect", handleLinkConnect)       // clé de liaison remise par connect.html → aidros link
-	api("/api/link/start", handleLinkStart)           // (re)démarre le tunnel avec la clé déjà enregistrée
-	api("/api/link/disconnect", handleLinkDisconnect) // arrête le lien + oublie la clé
-	api("/api/link/paircode", handleLinkPairCode)     // code d'appairage + empreinte pour la 1re connexion
+	// « Accès OpenAI public » (oai_public) vivait SOUS le relais : le front TLS
+	// n'était servi qu'à l'intérieur du tunnel, et l'interface refusait
+	// l'interrupteur tant que le lien n'était pas actif. Le relais retiré, la
+	// route n'a plus d'arrière. La porte était <machine>.oai.ajean.link/v1.
 	api("/api/internet", handleInternet)
 	api("/api/computer", handleComputer)
 	api("/api/mcp", handleMCP)
@@ -311,17 +290,16 @@ func newWebMux() *http.ServeMux {
 	api("/api/mem", handleMem)
 	api("/api/mem/save", handleMemSave)
 	api("/api/mem/delete", handleMemDelete)
-	api("/api/mem/health", handleMemHealth)         // état chiffrement/verrou/pages/snapshots
-	api("/api/mem/encrypt", handleMemEncrypt)       // active le chiffrement (renvoie la clé de récupération)
-	api("/api/mem/decrypt", handleMemDecrypt)       // remet la mémoire en clair
-	api("/api/mem/unlock", handleMemUnlock)         // déverrouille (mot de passe ou clé de récupération)
-	api("/api/mem/addkey", handleMemAddKey)         // ajoute un wrap (ex. clé d'API) au coffre déjà ouvert
-	api("/api/mem/lock", handleMemLock)             // reverrouille (purge la DEK de la RAM)
-	api("/api/mem/snapshots", handleMemSnapshots)   // liste + restauration des snapshots locaux
-	api("/api/backup/status", handleBackupStatus)   // état sauvegarde ajean.link
-	api("/api/backup/now", handleBackupNow)         // sauvegarde immédiate (abonné)
-	api("/api/backup/restore", handleBackupRestore) // restauration depuis le relais
-	api("/api/backup/auto", handleBackupAuto)       // active/désactive l'auto
+	api("/api/mem/health", handleMemHealth)       // état chiffrement/verrou/pages/snapshots
+	api("/api/mem/encrypt", handleMemEncrypt)     // active le chiffrement (renvoie la clé de récupération)
+	api("/api/mem/decrypt", handleMemDecrypt)     // remet la mémoire en clair
+	api("/api/mem/unlock", handleMemUnlock)       // déverrouille (mot de passe ou clé de récupération)
+	api("/api/mem/addkey", handleMemAddKey)       // ajoute un wrap (ex. clé d'API) au coffre déjà ouvert
+	api("/api/mem/lock", handleMemLock)           // reverrouille (purge la DEK de la RAM)
+	api("/api/mem/snapshots", handleMemSnapshots) // liste + restauration des snapshots locaux
+	// Les quatre routes /api/backup/* parlaient du RELAIS (sauvegarde vers
+	// ajean.link, versions distantes, restauration depuis le relais). La
+	// sauvegarde LOCALE est intacte : c'est /api/mem/snapshots, juste au-dessus.
 	api("/api/switch", handleSwitch)
 	api("/api/loadflags/migrate", handleLoadFlagsMigrate) // nettoie --mlock/--no-mmap → --load-mode (llama.cpp récent)
 	api("/api/start", svcHandler("start"))
@@ -369,9 +347,10 @@ func newWebMux() *http.ServeMux {
 	api("/api/chat/state", handleChatState)                    // instantané léger {seq, generating, ctx_used}
 	api("/api/chat/tool-result", handleToolResult)             // résultat complet d'un outil, chargé à la demande (bouton « voir plus »)
 	api("/api/chat/export", handleChatExport)                  // téléchargement du fil (?format=md|json)
-	// /api/e2e/chat s'authentifie LUI-MÊME (e2eAuthOpenReq) : pas de requireWebAuth
-	// (sinon 401, l'injection de clé ayant disparu). Le canal E2E EST l'auth.
-	mux.HandleFunc("/api/e2e/chat", handleE2EChat)
+	// La route /api/e2e/chat est retirée avec le relais : c'était le chat de
+	// l'interface DU RELAIS (app.ajean.link), chiffré de bout en bout et
+	// auto-authentifié par le canal lui-même. Notre interface locale parle par
+	// /api/chat, en clair sur la boucle locale, verrouillée par la clé.
 	// Notifications Web Push : le serveur pousse une notif à la fin d'un tour
 	// utilisateur (push.go), même app fermée / iPhone verrouillé.
 	api("/api/push/key", handlePushKey)                 // clé publique VAPID (pour s'abonner)

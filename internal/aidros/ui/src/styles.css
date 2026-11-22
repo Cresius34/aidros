@@ -669,17 +669,6 @@ details[open]>summary::after{transform:rotate(45deg)}
    besoin de reprendre de l'air : le titre en a déjà donné. */
 details>summary+.subhead{margin-top:4px}
 .io-group{margin-top:8px}
-/* AJEAN LINK — mise en avant des avantages (état non connecté) + rappel discret
-   (état connecté). Monochrome : accent noir/blanc, aucune couleur en dur. */
-.link-perks-head{font-size:13px;font-weight:600;color:var(--text);margin:2px 0 10px}
-.link-perks{display:flex;flex-direction:column;gap:11px;margin:0 0 12px}
-.link-perk{display:flex;gap:10px;align-items:flex-start}
-.link-perk-i{flex:none;width:27px;height:27px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--accent-bg);color:var(--accent)}
-.link-perk-i svg{width:15px;height:15px}
-.link-perk-t{font-size:12.5px;font-weight:600;color:var(--text)}
-.link-perk-d{font-size:11.5px;line-height:1.45;color:var(--dim);margin-top:1px}
-.link-price{font-size:11px;color:var(--dim);margin-top:8px}
-.link-perks-mini{font-size:11px;color:var(--dim);line-height:1.5;margin:10px 2px 0}
 
 /* --- Carte de liste --- */
 /* overflow VISIBLE : les infobulles (« ? ») sont positionnées en absolu par
@@ -2941,22 +2930,6 @@ button.th-head:hover{background:var(--t1)}
 .slist>.switchrow.sw-action .sw-sub{font-weight:400}
 .slist>.switchrow.sw-action.danger,.slist>.switchrow.sw-action.danger .sw-ai{color:var(--err)}
 .slist>.switchrow.sw-action.danger:hover{background:color-mix(in srgb,var(--err) 9%,transparent);color:var(--err)}
-/* Fenêtre « Connecter un appareil » : trois étapes numérotées */
-.pair-body{display:flex;flex-direction:column;gap:18px}
-.pair-step{display:flex;gap:12px;align-items:flex-start}
-.pair-n{flex:none;width:24px;height:24px;border-radius:50%;background:var(--t2);color:var(--text);font-size:12px;font-weight:600;
-  display:flex;align-items:center;justify-content:center}
-.pair-c{flex:1;min-width:0;padding-top:2px}
-.pair-t{font-size:13px;color:var(--text);margin-bottom:6px}
-.pair-val{display:flex;align-items:center;gap:6px;padding:4px 4px 4px 12px;border-radius:10px;background:var(--t1)}
-.pair-url{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pair-fp{padding:9px 12px;border-radius:10px;background:var(--t1);font-family:var(--mono);font-size:13.5px;letter-spacing:.06em;color:var(--text)}
-.pair-code{flex:1;font-family:var(--mono);font-size:22px;font-weight:600;letter-spacing:.12em;color:var(--text);padding:4px 0}
-.pair-note{font-size:11.5px;color:var(--dim);margin-top:6px}
-.pair-err{font-size:12.5px;color:var(--err)}
-.pair-val .sw-ic{flex:none;width:32px;height:32px;min-height:32px;margin:0;padding:0;display:flex;align-items:center;justify-content:center;border:none;
-  border-radius:8px;background:transparent;color:var(--dim);box-shadow:none;cursor:pointer;transition:background .15s ease,color .15s ease}
-.pair-val .sw-ic:hover{background:var(--t2);color:var(--text)}
 
 /* The MoE panel keeps engine controls; this native editor changes its memory. */
 #modal.kind-moe-memory #m-engine-row,

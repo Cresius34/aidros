@@ -220,9 +220,6 @@ var parallelBlockedRoutes = []struct {
 	{"/api/update/", "Mise à jour désactivée : cette version portable de Cresius se met à jour à la main (le binaire est livré avec son patch)."},
 	{"/api/network", "Exposition du moteur sur le réseau désactivée dans cette version portable : le seul port ouvert vers l'extérieur est celui du pont Aidros↔Aidros (page Réglages, carte « Pont Aidros ↔ Aidros »), verrouillé par la clé API de la machine. Le port du moteur reste sur cette machine."},
 	{"/api/cloud/", "GPU cloud désactivé dans cette version portable."},
-	{"/api/link/", "Accès distant ajean.link désactivé dans cette version portable : rien ne sort de cette machine hors du réseau local."},
-	{"/api/oai/", "Exposition publique (ajean.link) désactivée dans cette version portable."},
-	{"/api/backup/", "Sauvegarde à distance désactivée dans cette version portable."},
 }
 
 func parallelHTTPHandler(next http.Handler) http.Handler {
@@ -264,11 +261,16 @@ func parallelHTTPHandler(next http.Handler) http.Handler {
 // infobulle « Aidros », mesuré le 22/11.
 //
 // ⚠ Ce n'est PAS une porte. Mesuré : `r.URL.Query()` n'est appelé nulle part
-// sur l'interface, et le seul URLSearchParams du dépôt (13-remote.js:60)
-// FABRIQUE un paramètre, il ne lit pas celui-ci. Le mot décore la barre
+// sur l'interface, et le seul URLSearchParams du dépôt FABRIQUE un paramètre,
+// il ne lit pas celui-ci. Le mot décore la barre
 // d'adresse pour l'œil humain, et porte le millésime à côté. Donc le renommer
 // ne casse aucune logique — mais trois fichiers reconstruisent la même chaîne
 // (Lancer-Test.ps1:11, smoke_ui.py:74) et suivent ici.
+//
+// Le porteur de cet URLSearchParams s'appelait 13-remote.js ; il est parti le
+// 22/11 avec « Ajean Link ». Le filet (url_ouverture_test.go) balaie
+// désormais le DOSSIER et non une liste de noms, pour ne pas rougir sur la
+// disparition d'un fichier — la leçon est dans ce test.
 //
 // ⚠ À NE PAS fondre avec l'IDENTIFIANT DU DOM du badge,
 // « memory-test-build » (uiBadgeMarker ci-dessous) : ce n'est pas la même

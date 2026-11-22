@@ -106,12 +106,8 @@ func Main() {
 		mustExit(cmdJeanSleepTest(args))
 	case "web":
 		mustExit(cmdWeb(args))
-	case "link":
-		mustExit(cmdLink(args))
 	case "ui":
 		mustExit(cmdUI(args))
-	case "oai":
-		mustExit(cmdOAI(args))
 	case "bridge":
 		mustExit(cmdParallelBridge(args))
 	case "peer":
@@ -199,12 +195,6 @@ Interaction:
   memory [off|ondemand|always|search|status]  mode mémoire de l'IA
   internet [on|off|status]
                                 accès web de l'IA (moteur intégré)
-
-Accès distant (ajean.link) :
-  link <token>                  enregistre le jeton et ouvre le tunnel
-  link code                     code d'appairage (10 min, usage unique) pour le portail
-  link newid                    change l'identifiant de la machine (si l'ancien a fuité)
-  link status | logout          état du jeton / l'oublier
 
 Moteur llama.cpp (livré avec Aidros : une version précise, testée, installée
 automatiquement ; elle change avec les mises à jour d'Aidros) :

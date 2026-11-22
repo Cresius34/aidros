@@ -197,13 +197,52 @@ func TestParallelProfileBlocksProductionControls(t *testing.T) {
 			t.Fatal(cmd)
 		}
 	}
-	for _, path := range []string{"/api/update/apply", "/api/network", "/api/cloud/accounts/add", "/api/link/start"} {
+	for _, path := range []string{"/api/update/apply", "/api/network", "/api/cloud/accounts/add"} {
 		hit := false
 		h := parallelHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { hit = true }))
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, httptest.NewRequest("POST", path, strings.NewReader("{}")))
 		if hit || w.Code != 403 {
 			t.Fatalf("commande non bloquée %s : %d", path, w.Code)
+		}
+	}
+	// Les routes du relais « Ajean Link » ne sont plus BLOQUÉES : elles sont
+	// RETIRÉES (ordre de l'humain du 22/11, « une relique, plus rien à faire
+	// dans notre code github »). Un garde portable qui les attendrait en 403
+	// rougirait sur une route que le mux ne connaît plus — le middleware
+	// laisse passer, le mux répond 404. Deux promesses distinctes, donc deux
+	// filets distincts : le 403 ci-dessus pour ce qui reste et se refuse ici,
+	// le 404 ci-dessous pour ce qui n'existe plus nulle part.
+	//
+	// ⚠ Ce second filet ouvre le VRAI mux, donc réveille engineAutoInstall()
+	// sur un home neuf : le garde engineDownloadBase posé ce matin (voir
+	// web_devices_strata_test.go:185) est obligatoire ici aussi, sinon le test
+	// dépend de la machine qui le joue.
+	t.Setenv("AJEAN_HOME", t.TempDir())
+	base := engineDownloadBase
+	engineDownloadBase = httptest.NewServer(http.NotFoundHandler()).URL
+	t.Cleanup(func() { engineDownloadBase = base })
+	mux := newWebMux()
+	for _, path := range []string{"/api/link/status", "/api/link/connect", "/api/link/start",
+		"/api/link/disconnect", "/api/link/paircode", "/api/oai/public",
+		"/api/backup/status", "/api/backup/now", "/api/backup/restore", "/api/backup/auto",
+		"/api/e2e/chat"} {
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("POST", path, strings.NewReader("{}")))
+		if w.Code != http.StatusNotFound {
+			t.Errorf("route du relais encore servie %s : %d (attendu 404)", path, w.Code)
+		}
+	}
+	// Contre-épreuve, dans l'autre sens : une route QUI DOIT SURVIVRE ne rend
+	// surtout pas 404. Sans elle, le filet ci-dessus passerait même si le mux
+	// entier était vide — un 404 général rendrait un vert qui ne vérifie rien.
+	// /api/apikey est la voisine directe : elle logeait dans le même bloc, et
+	// c'est la clé qui verrouille le pont Aidros↔Aidros.
+	for _, path := range []string{"/api/apikey", "/api/presets", "/api/internet"} {
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("POST", path, strings.NewReader("{}")))
+		if w.Code == http.StatusNotFound {
+			t.Errorf("route vivante tombée avec le relais : %s rend 404", path)
 		}
 	}
 	for _, path := range []string{"/api/presets", "/api/preset/save", "/api/preset/delete", "/api/start", "/api/stop", "/api/restart", "/api/llamacpp", "/api/llamacpp/install", "/api/llamacpp/update", "/api/llamacpp/prebuilt", "/api/llamacpp/use", "/api/switch", "/api/config"} {

@@ -384,68 +384,6 @@ async function toggleMemEncrypt(){
     toast(t('settings.encryption_off')); loadMem();
   }
 }
-// --- Sauvegarde ajean.link ---------------------------------------------------
-async function loadBackup(){
-  const block=document.getElementById('backup-block'); if(!block) return;
-  let s; try{ s=await jget('/api/backup/status'); }catch(e){ block.style.display='none'; return; }
-  if(!s.linked){ block.style.display='none'; return; } // réservé aux serveurs liés à ajean.link
-  block.style.display='';
-  document.getElementById('backup-auto-toggle').checked=!!s.auto;
-  setBadge('backup-badge', !!s.auto, s.auto?t('settings.backup.auto_badge'):t('settings.backup.manual_badge'));
-  const st=document.getElementById('backup-status');
-  let msg='';
-  if(s.last){ const d=new Date(s.last); msg=t('settings.backup.last_backup_prefix')+(isNaN(d)?s.last:d.toLocaleString()); }
-  else msg=t('settings.backup.none_yet');
-  if(Array.isArray(s.versions)){
-    const mine = s.versions.filter(v=>v.this).length;
-    msg += ' · '+mine+' '+t('settings.backup.versions_this_machine');
-    if(s.versions.length > mine) msg += ' · '+s.versions.length+' '+t('settings.backup.versions_total');
-  }
-  if(s.error) msg+='\n'+s.error;
-  st.textContent=msg; st.style.whiteSpace='pre-line';
-}
-async function toggleBackupAuto(){
-  const on=document.getElementById('backup-auto-toggle').checked;
-  await jpost('/api/backup/auto',{on});
-  if(on) await askAlert(t('settings.backup.auto_enabled_msg'),{title:t('settings.backup.auto_enabled_title')});
-  loadBackup();
-}
-async function backupNow(){
-  // Aucun mot de passe : le paquet est chiffré avec la clé de ta mémoire (déjà
-  // ouverte). La restauration se fera avec ta clé d'API.
-  toast(t('settings.backup_in_progress'));
-  let r; try{ r=await jpost('/api/backup/now',{}); }catch(e){ await askAlert(t('common.failed_prefix')+e); return; }
-  if(!r.ok){ await askAlert(t('common.failed_prefix')+(r.error||t('common.unknown'))); return; }
-  toast(t('settings.backup.sent')); loadBackup();
-}
-// Libellé d'une sauvegarde : machine d'origine + date.
-function backupLabel(v){
-  const when = v.when ? new Date(v.when).toLocaleString() : v.id;
-  const who = v.this ? t('settings.backup.this_machine')
-            : (v.machineName || (v.machine ? v.machine.slice(0,8) : t('settings.backup.old_backup')));
-  return who+' · '+when;
-}
-async function backupRestore(){
-  let s; try{ s=await jget('/api/backup/status'); }catch(e){ await askAlert(t('settings.backup.relay_unreachable')); return; }
-  const vers=(s.versions||[]);
-  if(!vers.length){ await askAlert(t('settings.backup.none_available')); return; }
-  // Plusieurs machines sur le compte : on choisit explicitement la sauvegarde.
-  // Présélection : la plus récente de CETTE machine, sinon la plus récente.
-  const def = vers.find(v=>v.this) || vers[0];
-  const key = v => (v.machine||'')+'/'+v.id;
-  if(!await askConfirm(t('settings.backup.restore_choose_msg'),{title:t('settings.backup.restore_title'),okText:t('settings.backup.restore_title'),danger:true,
-      choices: vers.map(v=>({value:key(v), label:backupLabel(v)})), choice: key(def)})) return;
-  const pick = vers.find(v=>key(v)===askChoice()) || def;
-  // Boucle : une clé fausse redemande tout de suite.
-  while(true){
-    const secret=await askPrompt(t('settings.backup.restore_secret_prompt'),{title:t('settings.backup.restore_title'),placeholder:t('settings.backup.restore_secret_placeholder')});
-    if(!secret) return; // annulé
-    toast(t('settings.backup.restoring'));
-    let r; try{ r=await jpost('/api/backup/restore',{id:pick.id,machine:pick.machine||'',secret}); }catch(e){ await askAlert(t('common.failed_prefix')+e); return; }
-    if(r.ok){ await askAlert(t('settings.backup.restore_done_msg'),{title:t('settings.backup.restore_done_title')}); loadMem(); return; }
-    await askAlert((r.error&&r.error.indexOf('incorrecte')>=0)?t('settings.wrong_key'):(t('common.failed_prefix')+(r.error||t('common.unknown'))),{title:t('settings.refused_title')});
-  }
-}
 // Mémoire + accès internet sont des sous-réglages du mode agent : sans agent, ni
 // les outils mem_* ni les outils web ne sont fournis (voir globalCaps côté Go). On
 // grise donc ces blocs quand l'agent est off pour que l'UI ne mente pas.
@@ -615,21 +553,10 @@ function copyApiKey(){ copyText(OAI_KEY, OAI_KEY?t('settings.apikey.copied'):t('
 function renderApiKey(d){
   OAI_KEY = d.key || '';
   // URL de l'endpoint : llama-server tourne sur d.port (≠ port de l'UI web).
-  // On prend l'hôte annoncé par le serveur (IP LAN détectée côté Go) : dans le
-  // tunnel ajean.link, location.hostname serait le domaine du relais (faux) —
-  // l'accès OpenAI reste TOUJOURS l'adresse locale de la machine.
+  // On prend l'hôte annoncé par le serveur (IP LAN détectée côté Go) :
+  // l'accès OpenAI reste l'adresse locale de la machine.
   const host = d.host || location.hostname;
   document.getElementById('oai-url').value = 'http://'+host+':'+d.port+'/v1';
-  // Endpoint PUBLIC (ajean.link) : affiché seulement si l'accès public est activé.
-  const tg = document.getElementById('oai-public-toggle');
-  if(tg) tg.checked = !!d.oai_public;
-  const pubWrap = document.getElementById('oai-public-wrap');
-  if(d.oai_public && d.machine){
-    document.getElementById('oai-public-url').value = 'https://'+d.machine+'.oai.ajean.link/v1';
-    pubWrap.style.display = '';
-  } else {
-    pubWrap.style.display = 'none';
-  }
   const inp=document.getElementById('oai-key');
   if(!d.set){ inp.value=t('settings.apikey.none_open_server'); inp.style.opacity=.6; }
   else { inp.style.opacity=1; inp.value = OAI_REVEAL ? OAI_KEY : d.masked; }
@@ -739,24 +666,6 @@ async function apiKeyAction(action){
   OAI_REVEAL=(action==='generate'); // révèle la clé fraîche pour qu'on puisse la copier
   toast(t('settings.applying'));
   renderApiKey(await jpost('/api/apikey', {action}));
-}
-async function toggleOAIPublic(){
-  const cb = document.getElementById('oai-public-toggle');
-  const on = cb.checked;
-  // L'accès OpenAI public passe par ajean.link (<machine>.oai.ajean.link) : il exige
-  // que l'accès distant soit activé sur ce serveur. Sinon, on annule et on explique.
-  if(on){
-    let linked = false;
-    try{ const s = await jget('/api/link/status'); linked = !!(s && s.linked); }catch(e){}
-    if(!linked){
-      cb.checked = false;
-      await askAlert(t('settings.oai.public_needs_remote_msg'), {title:t('settings.oai.public_needs_remote_title')});
-      return;
-    }
-  }
-  await jpost('/api/oai/public', {enabled:on});
-  toast(on ? t('settings.oai.public_on') : t('settings.oai.public_off'));
-  loadApiKey();
 }
 async function apiKeySet(){
   const k = await askPrompt(t('settings.apikey.set_prompt_msg'), {title:t('settings.apikey.set_prompt_title'), placeholder:'sk-…'});

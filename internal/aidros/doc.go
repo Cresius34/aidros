@@ -16,9 +16,18 @@
 //	              vérifiée, sonde des variantes, erreurs du journal
 //	backend_*     GPU, serve (ExecStart), modèles et téléchargements, catalogue,
 //	              presets, configuration
-//	relay_*       accès distant ajean.link : tunnel, chiffrement E2E, appairage
+//	ui_service.go service de l'interface (unité systemd « ajean-ui », ou worker
+//	              détaché sur macOS/Windows) : cmdUI, start/stop/status
 //	sys_*         intégration OS : install, services, plateforme, process, tray,
 //	              splash, tty, auto-update
+//
+// « Ajean Link » — l'accès distant via le relais ajean.link (tunnel sortant,
+// chiffrement bout en bout, appairage, exposition publique OpenAI, sauvegarde
+// sur le relais) — est SORTI du dépôt le 22/11/2026, sur l'ordre de l'humain :
+// « elle n'a plus rien à faire dans notre code github ». Il reste une relique
+// de notre côté, lisible dans l'histoire Git (branche link-relique, étiquette
+// avant le retrait). Ne pas le redessiner depuis la mémoire : relire la
+// branche.
 //
 // Les suffixes _windows/_linux/_darwin/_unix/_other portent les contraintes de
 // compilation par OS.
