@@ -1,105 +1,121 @@
-# AJEAN
+# Aidros
 
 **English** · [Français](README.fr.md)
 
-![AJEAN web interface](docs/ui.png)
+![Aidros, the web interface](docs/ui.png)
 
-> **Derived project, personal use.** This repository is a **fork** of
-> [**nathaninline/ajean**](https://github.com/nathaninline/ajean), created and maintained by
-> **nathaninline** — the upstream project, and the only source of published AJEAN releases.
-> Everything below describes AJEAN **in general**. This fork carries a **private patch line**
-> (**0.18.17.1 Cresius**, built on upstream `v0.18.17`) for one specific machine: the
-> **Strata** MoE engine on AMD (context size, KV quantization, VRAM reserve, AMD vision),
-> a **model catalogue read from the engine** instead of copied by hand — the Engine screen
-> shows the families and sizes the installed engine really knows, with their measured costs
-> and the reason when one of them is ruled out —,
-> EmbeddingGemma 2 semantic memory, the **Ajean↔Ajean bridge** (two Ajean instances on one
-> local network talking to each other, each keeping its own brain), call
-> de-duplication and a tunable compaction threshold. Those additions
-> are **not** upstream releases, are
-> **not** tested elsewhere, and are **not** guaranteed to work anywhere else. To install
-> AJEAN, use the releases published on
-> [nathaninline/ajean](https://github.com/nathaninline/ajean/releases/latest).
-> The MoE engine used here comes from [Niko1221/Strata](https://github.com/Niko1221/Strata).
-> What exactly this repository changes: [NOTICE.md](NOTICE.md).
+> **Aidros runs its own line.** Following a change of direction in the original
+> project, Aidros carries on as its own product, with its own releases. It
+> descends from [**nathaninline/ajean**](https://github.com/nathaninline/ajean),
+> created and maintained by **nathaninline**, whose base it keeps and follows.
+>
+> What Aidros adds, and what this repository is for: a **Mixture-of-Experts
+> engine** ([**Strata**](https://github.com/Niko1221/Strata)) installed and
+> driven on **AMD and NVIDIA** cards, a model **catalogue read from the engine
+> itself** rather than copied by hand, **EmbeddingGemma 2** semantic memory, the
+> **Aidros↔Aidros bridge** (two instances on one local network talking to each
+> other, each keeping its own brain), tool-call de-duplication, a tunable
+> compaction threshold, and an honest warning when the engine on disk and the
+> one a preset asks for disagree.
+>
+> Everything is described below. What exactly this repository changes:
+> [NOTICE.md](NOTICE.md).
 
-**Run your own AI at home.** AJEAN is a single program that turns a computer with a graphics card (or a plain CPU) into a complete AI assistant: a chat interface, memory, tools, web access, scheduled tasks, and access from your phone, with nothing leaving your machine.
+**Run your own AI at home, and tinker inside it.** Aidros is a single program
+that turns a computer with a graphics card (or a plain CPU) into a complete AI
+assistant: a chat interface, memory, tools, web access, scheduled tasks, and
+access from your phone — with nothing leaving your machine.
 
-AJEAN handles everything around the model. The model itself runs on [llama.cpp](https://github.com/ggml-org/llama.cpp), which AJEAN installs and keeps up to date for you.
+Aidros is built to be **taken apart**. The engine, the model, the context size,
+the cache, the GPUs, the reasoning effort, the memory settings, the tools, the
+tasks: everything is a setting you can reach, from the interface or from a
+command. It is meant to be a capable toolbox you can reach into, not a product
+that does a bit of everything and lets you touch none of it.
 
-- **One file, no dependencies.** No Docker, no Python, no runtime to install. Linux, Windows and macOS.
-- **An assistant, not just a model.** It remembers, organizes work into projects, runs commands, reads the web, drives a browser, and works on its own on a schedule.
-- **Your data stays yours.** Everything runs on your machine. Memory and conversations can be encrypted at rest, and remote access is encrypted end to end.
-- **Use it from anywhere.** The same conversations on your computer and your phone, live.
-- **Plugs into your tools.** An OpenAI-compatible endpoint for any third-party app.
+The model itself runs on [llama.cpp](https://github.com/ggml-org/llama.cpp) or
+on [Strata](https://github.com/Niko1221/Strata), and Aidros handles
+everything around it. Nothing is sent to anyone else's servers: no account, no
+subscription, no quota.
 
 ---
 
 ## Contents
 
 - [Install](#install)
-- [Using AJEAN](#using-ajean)
+- [Using Aidros](#using-aidros)
 - [What the AI can do](#what-the-ai-can-do)
-- [Models and engine](#models-and-engine)
+- [Engines and models](#engines-and-models)
+- [Two machines that know each other](#two-machines-that-know-each-other)
 - [Access from anywhere](#access-from-anywhere)
 - [Your data](#your-data)
 - [Reference](#reference)
 - [Build from source](#build-from-source)
+- [License](#license)
 
 ---
 
 ## Install
 
-Download the file for your system from the [latest release](https://github.com/nathaninline/ajean/releases/latest):
+Download the file for your system from the
+[latest release](https://github.com/Cresius34/aidros/releases/latest) of this
+repository:
 
 | System | File |
 |---|---|
-| Windows | `ajean-windows.exe` (`ajean-windows-arm.exe` for ARM) |
-| macOS | `ajean-macos-arm.zip` (Apple Silicon), `ajean-macos.zip` (Intel) |
-| Linux | `ajean-linux` (`ajean-linux-arm` for ARM) |
+| Windows | `aidros-windows.exe` (`aidros-windows-arm.exe` for ARM) |
+| macOS | `aidros-macos-arm.zip` (Apple Silicon), `aidros-macos.zip` (Intel) — a real `Aidros.app` bundle, ad-hoc signed |
+| Linux | `aidros-linux` (`aidros-linux-arm` for ARM) — the bare binary, no archive |
+
+Every release ships a `SHA256SUMS` file, and Aidros verifies its own updates
+against it before installing one.
 
 ### Windows
 
-Double-click `ajean-windows.exe`. AJEAN installs itself, adds its shortcuts, and opens in its own window, with an icon in the notification area (*Open AJEAN* / *Quit*). Running a newer file later updates the installed copy.
-
-Then, in the interface:
-
-1. The llama.cpp engine installs itself on first launch (one to two minutes depending on the graphics card): there is nothing to choose.
-2. **Presets** section: create a preset, pick or download a model (any direct `.gguf` link, for example from Hugging Face).
+Double-click `aidros-windows.exe`. Aidros installs itself, adds its shortcuts,
+and opens in its own window, with an icon in the menu bar or the system tray.
+Nothing else to do.
 
 ### macOS
 
-Unzip, drag **AJEAN.app** into *Applications*, then **right-click and Open** the first time (the app is only ad-hoc signed). AJEAN opens in its own window and lives in the menu bar. The engine installs itself; then add a model as on Windows.
-
-For command-line use, take the bare binary `ajean-macos-arm` / `ajean-macos` instead of the app.
+Unzip, drag **Aidros.app** into Applications, then **right-click and Open** the
+first time (the app is only ad-hoc signed). Aidros opens in its own window and
+lives in the menu bar. The engine installs itself; then add a model as on
+Windows. For command-line use, take the bare binary `aidros-macos-arm` /
+`aidros-macos` instead of the app.
 
 ### Linux (server)
 
 ```bash
-curl -L -o ajean https://github.com/nathaninline/ajean/releases/latest/download/ajean-linux
-chmod +x ajean && sudo mv ajean /usr/local/bin/ajean
+curl -L -o aidros https://github.com/Cresius34/aidros/releases/latest/download/aidros-linux
+chmod +x aidros && sudo mv aidros /usr/local/bin/aidros
 
-sudo ajean install        # services, permissions, folders
-ajean edit                # set MODEL=/path/to/model.gguf
-ajean start               # starts the model
-ajean ui start            # interface at http://<host>:8090
+sudo aidros install        # services, permissions, folders
+aidros edit                # set MODEL=/path/to/model.gguf
+aidros start               # starts the model
+aidros ui start            # interface at http://<host>:8090
 ```
 
-The llama.cpp engine is downloaded on first start, in the variant that fits the machine: only the graphics driver is required (no `git`, `cmake` or CUDA toolkit). `ajean engine` shows what is installed; to force a variant: `ajean engine repair --variant=vulkan` (or `cuda`, `rocm`, `cpu`, `auto`).
+The engine is downloaded on first start, in the variant that fits the machine:
+only the graphics driver is required (no `git`, `cmake` or CUDA toolkit).
+`aidros engine` shows what is installed; to force a variant:
+`aidros engine repair --variant=vulkan` (or `cuda`, `rocm`, `cpu`, `auto`).
 
-On Linux, AJEAN runs as **two services**: `ajean-engine` runs the model, `ajean-ui` serves the interface, remote access and the OpenAI endpoint. Restarting the interface is instant and never reloads the model.
+On Linux, Aidros runs as **two services**: `ajean-engine` runs the model,
+`ajean-ui` serves the interface and the OpenAI endpoint. Restarting the
+interface is instant and never reloads the model.
 
 ### Updating
 
 ```bash
-ajean update
+aidros update
 ```
 
-Or the update button in the interface. Each release is verified against its published checksums before it is installed.
+Or the update button in the interface. Aidros looks for releases of **this
+repository**, so it updates from Aidros, not from anywhere else.
 
 ---
 
-## Using AJEAN
+## Using Aidros
 
 ### Two chat modes
 
@@ -110,156 +126,252 @@ Pick a mode from the button on the left of the input bar.
 | **Project** | real work that spans several conversations | memory, trackers, web, browser, MCP, tasks |
 | **Jean** | a personal assistant that knows you | its own memory, reminders, a single ongoing conversation |
 
-A conversation keeps the mode it started in. Tools rely on **agent mode**, which is on by default; `ajean agent off` turns it off (the model then answers without tools).
-
-**Voice dictation.** The microphone button to the right of the mode selector records your voice and inserts the text in the input. Transcription goes through an OpenAI-compatible Whisper API (Groq by default), set in Settings > Voice dictation; without a key, the browser's own dictation is used.
+A conversation keeps the mode it started in. Tools rely on **agent mode**, which
+is on by default; `aidros agent off` turns it off (the model then answers without
+touching your machine).
 
 ### Projects
 
-A project is a workspace with **its own memory and its own conversations**, isolated from the others: one for your mailbox automation, one for a piece of software, one for your notes. Switch project from the bubble in the input bar.
-
-Each project has:
-
-- **A memory**: Markdown pages the AI reads and writes across conversations, with an index kept up to date automatically.
-- **Trackers**: dated data that keeps growing (a weekly subscriber count, a weight, a revenue figure). The AI browses them level by level instead of loading everything.
-- **A description**, given to the AI at the start of every conversation (context, constraints, tone).
-- **Options** in its *⋯* menu: name and description, its memory, its trackers.
+A project is a folder, a body of memory, a workspace and a set of trackers.
+Switching project switches all of it at once. The AI works in a disposable
+workspace and never touches your files by accident.
 
 ### Jean, personal assistant
 
-Jean is an assistant that remembers **you** over time, in a single conversation that never ends. Open it from the mode menu: it gets a full-screen view with its avatar.
-
-- **Its own memory**: a short profile (name, family, preferences, habits), *fiches* (procedures, recipes, guides kept in full), and a journal where every exchange is logged and searchable. The *Jean memory* window lets you review, edit or delete all of it.
-- **Reminders and tasks**: ask Jean to remind you of something, and the reminder arrives as a message from Jean, with a notification.
-- **A separate workspace**: Jean cannot modify your projects' scripts, files or memory. It can read them, to see how something was done, and rebuild what it needs in its own space.
-- **A fresh start after a break**: after 3 hours without a message, the model's context starts over. The thread on screen and the journal stay. Set `JEAN_IDLE_HOURS` to change the delay (`0` = never).
+Jean is a mode, not a separate program: the same interface, the same engine, and
+a memory that is about you rather than about a task. It keeps reminders, and it
+can be given rules that survive every conversation.
 
 ### History
 
-The clock icon at the top of the side menu switches to the history. It follows what you are doing: the active project's conversations in Project mode, Jean's conversation in Jean mode. Search covers every conversation. Conversations can be renamed, pinned as favorites, moved to another project, and exported to Markdown or JSON.
-
-Conversations live on the server, so they are the **same on every device**, live: start a question on your computer, read the answer on your phone. Closing the browser never stops a reply.
+Every conversation is kept, searchable, and can be resumed. Long conversations
+are summarized as they go (see [Long conversations](#what-the-ai-can-do)), and
+the summary keeps the things that mattered rather than the things that were
+loudest.
 
 ### In the terminal
 
-```bash
-ajean chat
-```
-
-A lightweight chat in the terminal, independent from the web interface, with three tools (`bash`, `write`, `edit`) that work **in the folder where you run it**. Handy for working on a project directory.
+Everything the interface does, the command line does too: `aidros chat`,
+`aidros engine status`, `aidros switch`, `aidros peer list`. Useful over SSH, and
+useful in a script.
 
 ---
 
 ## What the AI can do
 
-These tools are given to the model as long as agent mode is on (it is by default).
+These tools are given to the model as long as agent mode is on (it is by
+default).
 
-**Terminal and files.** The AI runs commands (bash, or `cmd.exe` on Windows) and writes or edits files. It works in a disposable **workspace**; scripts worth keeping go into a separate **scripts** folder that a cleanup never touches.
+**Terminal and files.** The AI runs commands (bash, or `cmd.exe` on Windows) and
+writes or edits files. It works in a disposable **workspace**; scripts worth
+keeping go into a separate **scripts** folder that a cleanup never touches.
 
-**Memory.** Per project, four settings: *injected* (the index is loaded up front), *search* (the AI looks things up when needed, lighter on context), *on demand* (only when you ask), or *off*.
+**Memory, with embeddings.** Memory is kept per project, as pages, and is
+indexed by [EmbeddingGemma 2](https://huggingface.co/google/embeddinggemma-2)
+so the AI can search it by meaning and not only by keyword. Four settings:
+*injected* (the index is loaded up front), *search* (the AI looks things up when
+needed, lighter on context), *on demand* (only when you ask), or *off*. The
+embedding engine runs on your machine, and a watchdog keeps it alive.
 
-**Web.** `web_search`, `web_open`, `web_read` and `web_grep`, with the built-in engine: nothing to install. It reads pages served as HTML, without running their JavaScript.
+**Trackers.** Dated data that piles up: counters, readings, a running follow-up.
+The AI writes them, and you browse them by level — a year, a month, one point —
+instead of reading one long note.
+
+**Web.** `web_search`, `web_open`, `web_read` and `web_grep`, with the built-in
+engine: nothing to install. It reads pages served as HTML, without running their
+JavaScript.
 
 ```bash
-ajean internet on
+aidros internet on
 ```
 
-**Browser control.** With `ajean computer on`, the AI drives a real Chrome, Chromium or Edge on the machine: open a page, click, type, scroll. It targets elements through the accessibility tree, so it works even with small text-only models. You see a live preview while it browses.
+**Browser control.** With `aidros computer on`, the AI drives a real Chrome,
+Chromium or Edge on the machine: open a page, click, type, scroll. It targets
+elements through the accessibility tree, so it works even with small text-only
+models. You see a live preview while it browses.
 
-**Images.** Attach an image to a message, and a multimodal model sees it and can use it. Images are resized before being sent.
+**Images in.** Attach an image to a message, and a multimodal model sees it and
+can use it. Images are resized before being sent.
 
-**Files.** Send files to the AI from the chat (up to 1 GB each), and download the files it creates with a click.
+**Files.** Send files to the AI from the chat (up to 1 GB each), and download
+the files it creates with a click.
 
-**MCP servers.** Plug in any [Model Context Protocol](https://modelcontextprotocol.io) server (files, databases, mail, APIs) from the interface, over stdio or HTTP. The format is the one used by Claude Desktop, so an existing configuration copies over as is. Servers and individual tools can be switched on and off.
+**MCP servers.** Plug in any [Model Context Protocol](https://modelcontextprotocol.io)
+server (files, databases, mail, APIs) from the interface, over stdio or HTTP. The
+format is the one used by Claude Desktop, so an existing configuration copies
+over as is. Servers and individual tools can be switched on and off.
 
-**Scheduled tasks.** The AI works on its own, at the frequency you choose (every N minutes, hours or days, or a cron expression): check a mailbox, summarize news, follow a figure. A task can also be a **script only**, run without loading the model. Each task chooses its project, its preset, and whether it may use memory and the web. A master switch pauses everything.
+**Scheduled tasks.** The AI works on its own, at the frequency you choose (every
+N minutes, hours or days, or a cron expression): check a mailbox, summarize
+news, follow a figure. A task can also be a **script only**, run without loading
+the model at all — no tokens, no conversation. Each task chooses its project,
+its preset, and whether it may use memory and the web. A master switch pauses
+everything.
 
-**Notifications.** Get notified when a reply is ready, even with the app closed or the phone locked. On iPhone, add AJEAN to the home screen first.
+**Applications.** Aidros can keep small one-file HTML/JS apps of its own, served
+on its own port: a dashboard, a form, a viewer over data the AI has collected.
+The AI writes them, and they run beside it.
 
-**Long conversations.** When the context fills up, older turns are summarized automatically. Long tool results are archived and can be recalled by the AI when needed, so nothing is truly lost.
+**Notifications.** Get notified when a reply is ready, even with the app closed
+or the phone locked. On iPhone, add Aidros to the home screen first.
+
+**Long conversations.** When the context fills up, older turns are summarized
+automatically. `COMPACT_FRAC` sets the threshold as a percentage, per machine.
+Long tool results are archived and can be recalled by the AI when needed, so
+nothing is truly lost. A summarized turn is carried as **data, not as
+instruction**: a one-off order given while chatting does not come back to boss
+the AI around later.
 
 ---
 
-## Models and engine
+## Engines and models
 
 ### Presets
 
-A preset is a complete model configuration: model file, context size, GPU layers, KV cache, sampling, reasoning, speculative decoding, vision. Switching preset reloads the model, from the interface or with `ajean switch`. Presets are edited in the interface; `.gguf` files can live on any disk.
+A preset is a complete model configuration: model file, context size, GPU
+layers, KV cache, sampling, reasoning effort, speculative decoding, vision.
+Switching preset reloads the model, from the interface or with `aidros switch`.
+Presets are edited in the interface; model files can live on any disk.
 
 A preset runs in one of three ways:
 
 | Execution | What it does |
 |---|---|
-| **Local** | the llama.cpp shipped with AJEAN loads a `.gguf` on your GPUs (choose which ones per preset) |
+| **Local** | the engine shipped with Aidros loads a `.gguf` on your GPUs (choose which ones per preset) |
 | **API** | any OpenAI-compatible endpoint |
-| **Service** | a command of your choice (vLLM, another `llama-server`, TabbyAPI, a script…) that exposes an OpenAI API on this machine. AJEAN runs it in its engine service, in place of llama.cpp (start, stop, log, restart on failure), and uses its API. The address is read from the `--port` of the command; the model is the first one the API lists. |
+| **Service** | a command of your choice (vLLM, another `llama-server`, TabbyAPI, a script…) that exposes an OpenAI API on this machine. Aidros runs it in its engine service, in place of the engine (start, stop, log, restart on failure), and uses its API. |
 
-**Downloading a model.** In the preset editor, the "Download a model" field searches Hugging Face directly: type a name ("qwen", "gemma"…), pick a repository then a quantization, and AJEAN downloads it. A direct link to a `.gguf` still works.
+**Downloading a model.** In the preset editor, the "Download a model" field
+searches Hugging Face directly: type a name ("qwen", "gemma"…), pick a
+repository then a quantization, and Aidros downloads it. A direct link to a
+`.gguf` still works.
 
-### Engine
+### llama.cpp, the way Ollama does it
 
-AJEAN runs **llama.cpp**, and works the way Ollama does: each AJEAN version ships **one specific llama.cpp version**, tested with it. There is no engine to choose and no engine update to run.
+Aidros ships **one specific llama.cpp version**, tested with it. There is no
+engine to choose and no engine update to run.
 
-- **Automatic install**: the official `llama-server` of that version is downloaded on first launch and verified against the SHA-256 digest recorded in AJEAN.
-- **Variant picked for the machine**: CUDA (NVIDIA), ROCm (AMD on Linux), Vulkan (AMD, Intel), Metal (Mac) or CPU. Each variant is tried in a separate process; if it does not start or sees no graphics card, AJEAN moves to the next one, down to CPU. The CUDA libraries ship with the engine: only the driver is required.
-- **Updated with AJEAN**: the engine only changes when an AJEAN update brings a new llama.cpp version; it is then replaced at the next start.
-- **Troubleshooting**: the **Engine** section shows the version and variant, and offers to repair it (download it again) or to force a variant.
+- **Automatic install**: the official `llama-server` of that version is
+  downloaded on first launch and verified against the SHA-256 digest recorded in Aidros.
+- **Variant picked for the machine**: **CUDA (NVIDIA)**, **ROCm (AMD)**,
+  **Vulkan (AMD, Intel, and anything else)**, **Metal (Apple)** or **CPU**. Each
+  variant is tried in a separate process; if it does not start or sees no
+  graphics card, Aidros moves to the next one, down to CPU. The CUDA libraries
+  ship with the engine: only the driver is required.
+- **Updated with Aidros**: the engine only changes when an Aidros update brings
+  a new llama.cpp version; it is then replaced at the next start.
+- **Troubleshooting**: the **Engine** section shows the version and variant, and
+  offers to repair it (download it again) or to force a variant.
 
-The engines of earlier versions (local build, custom forks, ExLlamaV3, AJEAN MoE) were removed in 0.20. See [docs/moteur.md](docs/moteur.md) (in French).
+### Strata MoE, the engine that knows its own catalogue
 
-**Third-party engine (Linux).** An External API preset can name a systemd unit with `EXTERNAL_SERVICE=ajean-<name>`. AJEAN starts it when you switch to the preset, stops it when you switch away, and waits for the GPUs to be released before loading the next model. Give the unit `Conflicts=ajean-engine.service`.
+On a machine with enough memory, Aidros can install and drive
+[**Strata**](https://github.com/Niko1221/Strata), a Mixture-of-Experts engine,
+in one click: sources and prebuilt engine, verified by SHA-256.
+
+- **AMD and NVIDIA.** The engine is installed for the card you have. On AMD the
+  HIP runtime is used, with a VRAM reserve you set so the engine leaves room for
+  the desktop; on NVIDIA it is CUDA.
+- **The catalogue comes from the engine.** The Engine screen lists the families
+  and sizes the installed engine really knows, with their measured cost, whether
+  they fit this machine, and **the reason** when one of them is ruled out. It is
+  read from the engine, not copied by hand into Aidros, so it cannot go stale.
+- **The version is per machine, and it warns instead of refusing.** A preset
+  names the engine version it wants; the engine on disk declares the one it is
+  (in its `BUILD.json`). When the two disagree, the preset is marked in red and
+  says why, **and still starts**: one Aidros build can serve several engine
+  versions, so changing the engine on a machine no longer costs a rebuild.
+- **Vision, when the model was prepared for it.** `MOE_VISION` is chosen when
+  the model is prepared, and the interface says so rather than failing later.
+
+See [docs/moteur.md](docs/moteur.md) (in French) for the details.
+
+---
+
+## Two machines that know each other
+
+The **Aidros↔Aidros bridge** connects two Aidros instances on one local network.
+It is **free, local and decentralised**: there is no server of anyone else's in
+the middle, no account, no relay, nothing to pay for, and no third party who
+could see your traffic. Each side keeps **its own brain** — its own memory, its
+own project, its own model — so a conversation between two Aidros is a channel
+between two assistants, not one assistant with a borrowed memory.
+
+Over the bridge, one machine can:
+
+- **ask the other something**, and get an answer from its own model, with its
+  own tools and its own logs;
+- **read its files**, and **send files to it** through the bridge, in either
+  direction;
+- **drive it**: pick which preset it runs, switch preset, turn agent mode on or
+  off — three doors on the bridge card. Useful when a model is stuck on one
+  machine and you are sitting at the other;
+- **hand over work**: a project, a conversation, a model available on one side
+  can be lent to the other.
+
+Two things worth knowing, because they are the honest parts: switching a preset
+**restarts** that instance, so its bridge goes down for the length of the
+restart; and the bridge answers with the **local model**, so on a machine whose
+engine is stopped, the conversation part of the bridge is silent — control
+(presets, mode, files) keeps answering.
+
+The bridge speaks its own small protocol (`X-Aidros-*` headers) and accepts both
+spellings of the header name, so an older neighbour is not left out.
 
 ---
 
 ## Access from anywhere
 
-### ajean.link
+**On your own network.** `aidros network on` makes the interface and the OpenAI
+endpoint reachable on the LAN. Nothing leaves your network.
 
-`ajean link <token>` (or the *Remote access* panel) connects your server to the [ajean.link](https://ajean.link) relay through an **outbound** connection: no port to open, works behind any router or CGNAT. You then use AJEAN from [app.ajean.link](https://app.ajean.link), on any device.
+**OpenAI-compatible endpoint.** Any tool that speaks the OpenAI API can use your
+model over your network: base URL, your API key, done. Scripts, IDEs, other chat
+clients, and the other Aidros on the network.
 
-It is an optional paid service (4.80 EUR/month). Everything else in AJEAN is and will stay open source and free.
-
-**The relay is blind.** It carries your data without being able to read it:
-
-- everything (chat and settings) is encrypted end to end between your browser and your server (X25519, AES-GCM);
-- the key is derived from your password (OPAQUE) and never leaves the browser;
-- each browser is paired once with a single-use code (`ajean link code`), and requests cannot be forged or replayed;
-- the web app is served from an independent origin (GitHub Pages), so the relay cannot inject code.
-
-The relay only sees technical metadata (machine online, loaded model, VRAM), never your conversations.
-
-**Backups (subscribers).** Memory, presets and settings can be backed up to ajean.link, by hand or daily. They are encrypted on your server first: the relay only stores an unreadable blob.
-
-### OpenAI-compatible endpoint
-
-Any tool that speaks the OpenAI API can use your model:
-
-- **on your network**: `ajean network on` makes the endpoint reachable on the LAN;
-- **on the internet**: an opt-in public address `https://<machine>.oai.ajean.link/v1`, authenticated with your API key. TLS ends on your machine; the relay only passes encrypted traffic through.
+Remote access through a relay (for when you are out and cannot open a port) is a
+separate matter, and belongs to the upstream project rather than to Aidros. It
+is not currently offered here; the code for it is kept, and will be looked at
+again.
 
 ---
 
 ## Your data
 
-Everything lives under **`$AJEAN_HOME`**: `/etc/ajean` on Linux, `%ProgramData%\ajean` on Windows, `/etc/ajean` or `~/Library/Application Support/ajean` on macOS. `ajean where` shows the exact paths.
+Everything lives under **`$AJEAN_HOME`**: `/etc/ajean` on Linux,
+`%ProgramData%\Aidros` on Windows (an older install under `ajean` is still
+found and used), `/etc/ajean` or `~/Library/Application Support/Aidros` on
+macOS. `aidros where` shows the exact paths.
 
 | | |
 |---|---|
 | `ajean.db` | settings, conversations, keys (a single [bbolt](https://github.com/etcd-io/bbolt) database) |
 | `presets/` | one `.env` file per preset |
 | `memory/` | memory pages, one folder per project |
-| `models/` | `.gguf` files |
-| `backends/` | the llama.cpp engine (`backends/engine/`) |
+| `models/` | model files |
+| `backends/` | the engine (`backends/engine/`) |
+| `logs/` | engine logs, one per backend |
 | `workspace/` | the AI's disposable working folder |
 | `scripts/` | the scripts the AI keeps |
 
-**Encryption at rest** (optional, one switch in the settings) encrypts memory and conversations with AES-256. The key is your access key to the interface: it lives only in your browsers, the server keeps just its fingerprint. A **recovery key** is given when you turn it on. A snapshot is taken before every switch, so nothing can be lost.
+**Encryption at rest** (optional, one switch in the settings) encrypts memory
+and conversations with AES-256. The key is your access key to the interface: it
+lives only in your browsers, the server keeps just its fingerprint. A **recovery
+key** is given when you turn it on. A snapshot is taken before every switch, so
+nothing can be lost.
+
+No telemetry. Aidros makes no request that reports anything about you; the only
+calls it makes on its own are to check for a new release, and to download a
+model you asked for.
 
 ---
 
 ## Reference
 
 ### Commands
+
+What `aidros help` prints, in full. The two services are `ajean-engine` (the
+model) and `ajean-ui` (the interface, the OpenAI endpoint).
 
 ```
 Engine (ajean-engine)
@@ -268,106 +380,98 @@ Engine (ajean-engine)
   enable | disable              start on boot
   edit                          edit the configuration in $EDITOR
   switch [N]                    change preset
-  test | bench [N]              check the model answers / measure speed
-  vram | gpu [index...]         GPU memory / choose the GPUs (gpu all = all)
-  set-api-key [key]             protect the model's API
-  network [on|off|status]       OpenAI endpoint on the local network
+  test | bench [N]              check the model answers / measure tok/s
+  vram                          GPU and VRAM usage
+  gpu [index...]                list GPUs / choose which to use (gpu all = all)
+  set-api-key [key]             protect the engine with a Bearer key
+  network [on|off|status]       expose the OpenAI endpoint on the LAN
 
 Interface (ajean-ui)
-  ui [start|stop|restart|status]
-  web [PORT]                    serve the interface in the foreground (default :8090)
-  set-web-key [key]             protect the control API
+  ui [start|stop|restart|status]  drive the interface service
+  web [PORT]                      serve the interface in the foreground (:8090)
+  set-web-key [key]               protect the control API
 
-AI
-  chat                          terminal chat (tools in the current folder)
-  export [options] [file]       export the conversation (--json, --last N...)
-  agent [on|off|status]         give the AI its tools
-  computer [on|off|status]      browser control
-  memory [off|ondemand|always|search|status]
-  internet [on|off|status]
+The AI's tools
+  chat [system-prompt]          streamed chat in the terminal
+  export [options] [file]       export the interface's conversation
+  agent [on|off|status]         give the AI its tools (shell, files, memory)
+  computer [on|off|status]      let the AI drive a local Chrome
+  internet [on|off|status]      let the AI use the web
+  memory [off|ondemand|always|search|status]   the AI's memory mode
 
-Remote access (ajean.link)
-  link <token> | link code | link status | link logout | link newid
+The Aidros↔Aidros bridge
+  bridge [status|on|off|serve]  this machine's side of the bridge
+  peer [list|add|rm|ask|files|send|get|drop]   the other machines
 
-llama.cpp engine (shipped with AJEAN)
-  engine                  shipped version, installed variant
-  engine install | repair [--variant=auto|cuda|rocm|vulkan|cpu]
+Engine shipped with Aidros (one tested version, installed on its own)
+  engine                        version, variant (CUDA/ROCm/Vulkan/Metal/CPU)
+  engine install                install it now (else: on first start)
+  engine repair [--variant=auto|cuda|rocm|vulkan|cpu]
 
-Installation
-  install | uninstall | update [--check] | where | version
+Machine
+  where                         every path Aidros uses
+  install | uninstall
+  update [--check]              check and install an update
+  version                       the version you are running
 ```
 
 ### Configuration keys
 
-`ajean edit` opens the active configuration as `key=value`:
+Set with `aidros edit`, or in the settings. The keys that matter most: `MODEL`,
+`BIN`, `CTX`, `NGL`, `KV`, `PORT`, `HOST`, `REASONING_EFFORT`, `COMPACT`,
+`COMPACT_MAX`, `COMPACT_FRAC`, `MEM_MODE`, `MEM_ENCRYPTED`, `BACKUP_AUTO`,
+`MACHINES`, `CUDA_VISIBLE_DEVICES`. A MoE preset adds `ENGINE=moe`,
+`MOE_RUNTIME`, `MOE_MODEL`, `MOE_BACKEND`, `MOE_KV`, `MOE_SPEC`, `MOE_VISION`,
+`MOE_VRAM_RESERVE`, `MOE_HELPER`.
 
-| Key | Meaning | Default |
-|---|---|---|
-| `MODEL` | `.gguf` file name or path | none |
-| `HOST` / `PORT` | engine address and port | `0.0.0.0` / `8080` |
-| `CTX` | context size | `32768` |
-| `NGL` | layers on the GPU | `999` |
-| `BATCH` / `UBATCH` | batch sizes | `2048` / `512` |
-| `THREADS` / `THREADS_BATCH` | CPU threads | auto |
-| `KV_TYPE` (`_K` / `_V`) | KV cache quantization | none |
-| `CUDA_VISIBLE_DEVICES` | GPUs used | all |
-| `REASONING` | `on` / `off` / `auto` / `deepseek` | none |
-| `REASONING_BUDGET` | thinking token cap (`-1` = unlimited) | `-1` |
-| `REASONING_EFFORT` | `low` / `medium` / `high`, depending on the model | none |
-| `COMPACT` | automatic context compaction (`off` to disable) | on |
-| `MEM_MODE` | default memory mode (projects can override it) | `always` |
-| `JEAN_IDLE_HOURS` | hours of silence before Jean starts a fresh context (`0` = never) | `3` |
-| `EXTRA_ARGS` | added as is to the llama-server command line | none |
+Some keys are **per machine** and survive a preset switch (`MEM_MODE`, `HOST`,
+`MEM_ENCRYPTED`, `BACKUP_AUTO`, `COMPACT`, `COMPACT_MAX`, `COMPACT_FRAC`,
+`MACHINES`, `CUDA_VISIBLE_DEVICES`) — the list is `preservedKeys` in
+`backend_presets.go`. A preset that explicitly sets one of them still wins:
+`CUDA_VISIBLE_DEVICES` and `HOST` are only kept if the incoming preset does not
+name them.
 
 ### Environment variables
 
-| Variable | Role | Default |
-|---|---|---|
-| `AJEAN_HOME` | data folder | see [Your data](#your-data) |
-| `AJEAN_MODEL_DIRS` | extra model folders (`:` separated, `;` on Windows) | none |
-| `AJEAN_SERVICE` | name of the engine unit | `ajean-engine` |
-| `AJEAN_CHROME` | browser used for browser control | auto-detected |
-| `AJEAN_DL_CONNS` | parallel connections for model downloads (max 16) | `8` |
-| `HF_TOKEN` | Hugging Face token for private models | none |
-| `EDITOR` | editor for `ajean edit` | `nano` / `notepad` |
+`AJEAN_HOME` moves the whole data folder. `AJEAN_SERVICE` names the engine
+service, which is how a machine runs a service that is not llama.cpp.
 
 ### Control API
 
-The interface service exposes an HTTP API. Protect it with `ajean set-web-key`, then send `Authorization: Bearer <key>` with every `/api/*` call.
-
-| Method | Endpoint | Role |
-|---|---|---|
-| GET | `/api/ping` | connectivity and key check |
-| GET | `/api/status` · `/api/vram` | service state · GPUs |
-| GET | `/api/presets` | presets, with the active one |
-| POST | `/api/start` · `/api/stop` · `/api/restart` | drive the engine |
-| POST | `/api/chat` `{"messages":[...]}` | chat (SSE stream) |
-
-The key travels in the clear over HTTP: for public exposure, put HTTPS in front or use ajean.link.
+The interface is a small HTTP API with the same keys as the buttons
+(`/api/status`, `/api/presets`, `/api/peers`, `/api/tasks`, `/api/update`…),
+authenticated with your API key. Anything you can click, a script can call.
 
 ---
 
 ## Build from source
 
-Go 1.25 or later. AJEAN is pure Go; the interface is embedded in the binary.
+You need [Go](https://go.dev) 1.25 or newer. Nothing else: the interface ships
+as files in the repository, and the engine is downloaded at run time.
 
 ```bash
-git clone https://github.com/nathaninline/ajean.git
-cd ajean
-CGO_ENABLED=0 go build -o aidros ./cmd/aidros   # Linux, Windows
-go build -o aidros ./cmd/aidros                 # macOS (the menu bar icon needs CGO)
+git clone https://github.com/Cresius34/aidros && cd aidros
+go generate ./internal/aidros   # assembles the interface
+go build -o aidros ./cmd/aidros
 ```
 
-**Layout**
+- `cmd/aidros/` : the entry point, the icon and the Windows version info.
+- `internal/aidros/` : all the code.
+- `internal/aidros/ui/` : the interface (`src/` is the source, `index.html` is
+  generated — do not edit it by hand).
+- `tools/` : the assembler, the installers, the test helpers.
 
-- `cmd/aidros/`: entry point and Windows resources.
-- `internal/ajean/`: all the code, files grouped by prefix (`web_*`, `chat_*`, `llm_*`, `backend_*`, `relay_*`, `sys_*`, `mcp_*`, `jean_*`); a map in `doc.go`.
-- `internal/ajean/ui/`: the web interface. `index.html` is **generated**: edit `ui/src/`, then run `go generate ./internal/ajean`.
-- `tools/`: build helpers (`assemble-ui`, `gen-icon`, `verify-i18n`).
+`go generate` then `go test ./...` is what CI runs, along with `gofmt`,
+`go vet` and `staticcheck`.
 
-The interface is available in English and French; see [docs/TRANSLATING.md](docs/TRANSLATING.md) to add a language.
+---
 
 ## License
 
-[MIT](LICENSE). The embedded `marked.min.js` is [Marked](https://github.com/markedjs/marked), also MIT.
+MIT, as upstream AJEAN. See [LICENSE](LICENSE).
 
+This fork is maintained for a small number of machines and is **not** an
+official release of AJEAN: our patch line is tested on the hardware we run it
+on, and we say so plainly rather than promising it works everywhere. The
+upstream project remains the origin of the base, and its author is who to thank
+for it.
