@@ -265,6 +265,46 @@ func parallelHTTPHandler(next http.Handler) http.Handler {
 	})
 }
 
+// uiOpenQueryParam : le MOT que l'URL d'ouverture affiche avant le millésime,
+// dans la barre d'adresse (« …/?aidros-main=1.0.0 »).
+//
+// Il s'appelait « memory-test » depuis la preuve d'embeddings (l'époque où ce
+// build servait à essayer un moteur de mémoire). L'application qu'il ouvre
+// depuis s'appelle Aidros : l'adresse criait donc « test de mémoire » sous un
+// titre « Aidros » — le même décalage que le raccourci « AJEAN » sous une
+// infobulle « Aidros », mesuré le 22/11.
+//
+// ⚠ Ce n'est PAS une porte. Mesuré : `r.URL.Query()` n'est appelé nulle part
+// sur l'interface, et le seul URLSearchParams du dépôt (13-remote.js:60)
+// FABRIQUE un paramètre, il ne lit pas celui-ci. Le mot décore la barre
+// d'adresse pour l'œil humain, et porte le millésime à côté. Donc le renommer
+// ne casse aucune logique — mais trois fichiers reconstruisent la même chaîne
+// (Lancer-Test.ps1:11, smoke_ui.py:74) et suivent ici.
+//
+// ⚠ À NE PAS fondre avec l'IDENTIFIANT DU DOM du badge,
+// « memory-test-build » (uiBadgeMarker ci-dessous) : ce n'est pas la même
+// surface. Celui-là est gardé par parallel_delivery_test.go:20 et vit dans le
+// gabarit ; il n'a pas bougé ce coup-ci.
+const uiOpenQueryParam = "aidros-main"
+
+// parallelOpenURL : l'adresse que le build portable ouvre dans le navigateur.
+//
+// Séparée de cmdParallelApp pour être JOUABLE. L'URL était construite en ligne
+// dans la fonction qui ouvre le navigateur — donc aucune assurance ne pouvait
+// dire ce qu'elle porte, et le nom qu'elle porte est justement ce qui a menti
+// pendant un an sur l'identité de ce build.
+//
+// Elle reçoit l'ADRESSE d'écoute (« 127.0.0.1:18099 »), pas le port : c'est
+// celle que net.Listen reçoit juste à côté. Écrire « 127.0.0.1 » en dur ici
+// rendait l'URL fausse le jour où l'hôte d'écoute bougerait — un fichier qui
+// dit d'aller là où le serveur ne s'est pas posé. Et 18090 n'est qu'un défaut
+// (parallelUIPortDef) : AJEAN_UI_PORT décale, deux installations côte à côte se
+// décalent. Écrire 18090 en dur dans un filet l'aurait rendu faux sur une
+// instance décalée — mes scripts de diagnostic connaissent déjà 18090, 18094, 18095.
+func parallelOpenURL(addr string) string {
+	return "http://" + addr + "/?" + uiOpenQueryParam + "=" + displayVersion()
+}
+
 func cmdParallelApp() error {
 	// Le port de l'interface se lit, il ne s'impose plus : deux installations
 	// côte à côte (la vivante et une copie de réparation, ou les deux moitiés
@@ -272,7 +312,7 @@ func cmdParallelApp() error {
 	// se voler 18090. AJEAN_UI_PORT ou la clé parallel_ui_port décalent.
 	port := parallelUIPort()
 	addr := "127.0.0.1:" + port
-	url := "http://" + addr + "/?memory-test=" + displayVersion()
+	url := parallelOpenURL(addr)
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("port d’interface %s occupé ; aucun processus arrêté : %w (décaler avec AJEAN_UI_PORT=18094)", port, err)

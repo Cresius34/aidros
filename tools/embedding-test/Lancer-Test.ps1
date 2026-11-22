@@ -8,7 +8,7 @@ $diskVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($app).ProductVersio
 if ($diskVersion -ne $expectedVersion) {
     throw "Fichiers de versions differentes : le lanceur attend $expectedVersion mais cet executable annonce $diskVersion. Extrais de nouveau le paquet R5 complet dans le dossier du TEST."
 }
-$chatUrl = 'http://127.0.0.1:18090/?memory-test=' + $expectedVersion
+$chatUrl = 'http://127.0.0.1:18090/?aidros-main=' + $expectedVersion
 Write-Host "AJEAN Memoire TEST R5 : $app"
 $state = $null
 try { $state = Invoke-RestMethod -Uri 'http://127.0.0.1:18090/api/embeddings' -TimeoutSec 2 } catch { }

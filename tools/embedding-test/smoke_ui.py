@@ -71,7 +71,7 @@ def main():
                     context = browser.new_context(viewport={'width': 1280, 'height': 1050}, locale='fr-FR')
                     page = context.new_page()
                     page.on('pageerror', lambda e: errors.append(str(e)))
-                    page.goto(base+'/?memory-test='+status['version'], wait_until='domcontentloaded')
+                    page.goto(base+'/?aidros-main='+status['version'], wait_until='domcontentloaded')
                     expect(page.locator('#memory-test-build')).to_be_visible()
                     expect(page.locator('#memory-test-build')).to_contain_text('TEST mémoire · R5')
                     results['served_revision_badge'] = 'PASS'
