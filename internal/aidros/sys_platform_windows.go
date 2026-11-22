@@ -244,6 +244,7 @@ func vswhereProp(prop string) string {
 
 // msvcInstallVersion returns the major version of the newest MSVC install that
 // has the C++ toolchain (e.g. "17"), or "" if none is found.
+//
 //lint:ignore U1000 sa seule lectrice etait ensureCompiler (L269, mesuree ici meme) ; celle-ci a perdu ses cinq appelants quand l'amont a supprime backend_llamacpp.go et web_llamacpp.go a v0.20.0. Le detecteur de VS reste exact, il n'a plus de porte.
 func msvcInstallVersion() string {
 	ver := vswhereProp("installationVersion")
@@ -266,6 +267,7 @@ func msvcInstallVersion() string {
 // Visual Studio 2022 Build Tools (VCTools workload) via winget if not. This is a
 // large download but keeps `ajean llamacpp install` fully unattended on a bare
 // Windows box.
+//
 //lint:ignore U1000 le machin de compilation de llama.cpp est debranche en bloc par l'amont : ses appelants (backend_llamacpp.go:182/:272/:571, web_llamacpp.go:503/:539, mesures en v0.18.17) n'existent plus depuis v0.20.0, et aucune route /api/build ne mene ici chez nous. La machinerie reste intacte pour qui la rebranche.
 func ensureCompiler() error {
 	if msvcInstallVersion() != "" {
@@ -299,6 +301,7 @@ func ensureCompiler() error {
 // Best-effort: any failure just leaves the machine on the CPU path (the caller
 // ignores the return value). The CUDA download is large; we only trigger it when
 // a GPU is actually detected.
+//
 //lint:ignore U1000 appelee par les memes trois routes llama.cpp, parties avec elle a v0.20.0. A ne pas confondre avec msvcDevEnv, numJobs, nvccCandidates, qui eux sont APPELES par le chemin CUDA vivant de backend_moe_windows.go:131.
 func ensureAccelerator() {
 	if parallelBuild() {
