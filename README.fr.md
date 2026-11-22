@@ -2,7 +2,7 @@
 
 [**English**](README.md) · Français
 
-![Interface web d'Aidros](docs/ui.png)
+![La barre latérale d'Aidros : version, moteur, GPU, mémoire, presets et le Pont Aidros↔Aidros](docs/ui.png)
 
 > **Aidros suit sa propre ligne.** À la suite d'un changement de direction du
 > projet originel, Aidros continue en produit à part entière, avec ses propres

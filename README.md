@@ -2,7 +2,7 @@
 
 **English** · [Français](README.fr.md)
 
-![Aidros, the web interface](docs/ui.png)
+![Aidros' sidebar: version, engine, GPU, memory, presets and the Aidros↔Aidros bridge](docs/ui.png)
 
 > **Aidros runs its own line.** Following a change of direction in the original
 > project, Aidros carries on as its own product, with its own releases. It
