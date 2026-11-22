@@ -44,17 +44,6 @@ func cmdUI(args []string) error {
 	}
 }
 
-// killForeignUIWorker tue un worker de lien détaché encore en vie (laissé par
-// une version antérieure ou une autre copie de l'app). Indispensable AVANT que
-// l'app ne prenne la main : sinon deux process servent la même conversation et
-// les fils divergent entre l'UI locale et app.ajean.link.
-func killForeignUIWorker() {
-	if pid := uiUserPID(); pid > 0 {
-		killTree(pid)
-		_ = os.Remove(uiPIDPath())
-	}
-}
-
 // uiPIDPath / uiLogPath : suivi du worker hors systemd (macOS, Windows), où
 // Aidros est une app de bureau lancée sans droits root.
 func uiPIDPath() string { return filepath.Join(AjeanHome(), uiUnitName+".pid") }
@@ -102,8 +91,11 @@ func uiServiceActive() bool {
 	return strings.TrimSpace(string(out)) == "active"
 }
 
-// uiUserPID renvoie le PID du worker de lien s'il tourne vraiment, 0 sinon
-// (fichier absent, illisible, ou process mort → on nettoie le fichier obsolète).
+// uiUserPID renvoie le PID du worker de l'INTERFACE s'il tourne vraiment, 0
+// sinon : fichier absent, illisible, PID illisible, ou processus mort. Elle ne
+// supprime rien — un simple lecteur ne doit pas effacer le fichier sous les
+// pieds d'un service qu'on est en train de démarrer ; c'est uiUserSvcCtl
+// (« stop », « restart ») et le contrôle de vie plus bas qui l'effacent.
 func uiUserPID() int {
 	b, err := os.ReadFile(uiPIDPath())
 	if err != nil {
@@ -114,6 +106,9 @@ func uiUserPID() int {
 	}
 	pid, _ := strconv.Atoi(strings.TrimSpace(string(b)))
 	if pid <= 0 || !pidAlive(pid) {
+		// Le fichier est périmé, mais on le laisse : uiUserPID est appelée en
+		// LECTURE par uiServiceActive et par le « start » ci-dessous, qui doit
+		// pouvoir réécrire par-dessus. Seul un « stop »/« restart » l'efface.
 		return 0
 	}
 	return pid
@@ -172,20 +167,20 @@ func uiUserSvcCtl(action string) error {
 	}
 	_ = cmd.Process.Release()
 
-	// Le worker peut mourir aussitôt (token refusé, relais injoignable) : on laisse
-	// passer un instant avant de déclarer la victoire, sinon l'UI afficherait
-	// « en ligne » sur un process déjà mort.
+	// Le worker peut mourir aussitôt (port déjà pris, dossier de données illisible) :
+	// on laisse passer un instant avant de déclarer la victoire, sinon l'UI
+	// afficherait « démarré » sur un processus déjà mort.
 	time.Sleep(1500 * time.Millisecond)
 	if !pidAlive(pid) {
 		_ = os.Remove(uiPIDPath())
-		return fmt.Errorf("le lien s'est arrêté aussitôt — voir %s", uiLogPath())
+		return fmt.Errorf("le service s'est arrêté aussitôt — voir %s", uiLogPath())
 	}
 	fmt.Printf("%s service %s démarré (PID %d)\n", green("[ok]"), uiServiceName(), pid)
 	return nil
 }
 
-// appWebMux : le mux que l”app de bureau sert elle-mÃªme, et qui porte la
-// conversation â€” donc un seul processus propriÃ©taire. Le relais le
-// rÃ©utilisait pour ouvrir le tunnel sur la MÃŠME conversation ; le relais est
-// retirÃ©, le mux reste celui de l”interface locale (cli_app.go).
+// appWebMux : le mux que l'app de bureau sert elle-même, et qui porte la
+// conversation — donc un seul processus propriétaire. Le relais le
+// réutilisait pour ouvrir le tunnel sur la MÊME conversation ; le relais est
+// retiré, le mux reste celui de l'interface locale (cli_app.go).
 var appWebMux *http.ServeMux

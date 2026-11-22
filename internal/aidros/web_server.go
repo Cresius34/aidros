@@ -75,13 +75,14 @@ func cmdWeb(args []string) error {
 }
 
 // newWebMux construit le routeur HTTP de l'UI web. Extrait de cmdWeb pour être
-// réutilisé par `aidros link`, qui sert ce même mux à travers le tunnel sans
-// repasser par un écouteur TCP local.
+// partagé : cmdApp (l'app de bureau) et le profil portable le montent aussi,
+// sans repasser par cmdWeb.
 var convLoadOnce sync.Once
 
 func newWebMux() *http.ServeMux {
-	// Charge l'état de conversation persisté (une fois par process : aidros web ET
-	// aidros link serve appellent newWebMux).
+	// Charge l'état de conversation persisté (une fois par process : cmdWeb,
+	// cmdApp et le profil portable appellent tous newWebMux, et un seul
+	// processus doit posséder la conversation).
 	convLoadOnce.Do(func() {
 		// Amorce le projet « Générale » et migre l'existant (mémoire plate + sessions
 		// + keyvault) AVANT de charger la conversation, pour que memoryDir() et le
