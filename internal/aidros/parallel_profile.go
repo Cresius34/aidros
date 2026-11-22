@@ -121,6 +121,35 @@ func displayVersion() string {
 func parallelBuild() bool                   { return BuildFlavor == "embedding-test" }
 func parallelHome(executable string) string { return filepath.Join(filepath.Dir(executable), "data") }
 
+// parallelHomeLabel : de quoi dire « QUI est cette instance », en court.
+//
+// Le nom du dossier de données ne distingue RIEN : tout build portable pose son
+// home à côté de son exécutable (parallelHome), donc s'appelle « data » chez
+// l'une et chez l'autre. Ce qui les sépare, c'est le dossier qui LES SÉPARE —
+// celui de l'exécutable. C'est aussi ce que l'humain tape, et ce que le lanceur
+// de l'autre poste regarde.
+//
+// Best-effort : un badge muet sur ce point vaut mieux qu'une page absente.
+func parallelHomeLabel() string {
+	home := os.Getenv("AJEAN_HOME")
+	if home == "" {
+		if exe, err := os.Executable(); err == nil {
+			home = parallelHome(exe)
+		}
+	}
+	if home == "" {
+		return ""
+	}
+	// On nomme le PARENT du home : « data » ne dit rien, « ajean-memory-test » dit
+	// tout. Un home posé à la racine d'un disque rend « C: », court et lisible.
+	if parent := filepath.Dir(strings.TrimRight(home, `\/`)); parent != "" {
+		if nom := filepath.Base(parent); nom != "" && nom != "." && nom != string(filepath.Separator) {
+			return nom
+		}
+	}
+	return filepath.Base(home)
+}
+
 func initParallelProfile() error {
 	exe, err := os.Executable()
 	if err != nil {

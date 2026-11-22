@@ -565,7 +565,21 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	if parallelBuild() {
 		html := strings.Replace(string(b), "<title>Aidros</title>", fmt.Sprintf("<title>Aidros %s · %s</title>", displayVersion(), parallelUIPort()), 1)
-		badge := fmt.Sprintf(`<div id="memory-test-build" style="font-size:11px;line-height:1.4;padding:4px 0"><strong>%s</strong><br><span>%s</span></div>`, uiBadgeLabel, displayVersion())
+		// Le badge ne répète plus ce que le logo dit déjà. Sous le logo, la ligne
+		// « #ver » affiche le millésime (05-status.js:62, lu sur /api/status) et le
+		// mot-pixel épelette Aidros : le badge y ajoutait une troisieme ligne
+		// disant « Aidros » puis « 1.0.0 » — le nom et le millesime deux fois, a
+		// deux tailles, a trois pixels du logo.
+		//
+		// Il porte desormais ce que LUI SEUL sait : sur quelle interface ce binaire
+		// ecoute, et ou sont SES donnees. Deux instances portables sur la meme
+		// machine se distinguent par leur dossier, pas par leur millesime — c'est la
+		// signature de ce build, et elle n'apparait nulle part ailleurs a l'ecran.
+		//
+		// La balise garde son style : uiBadgeMarker est <div id="memory-test-build"
+		// style=, et le garde de livraison lit cette signature, pas le mot.
+		badge := fmt.Sprintf(`<div id="memory-test-build" style="font-size:11px;line-height:1.4;padding:4px 0;word-break:break-all"><span>:%s · %s</span></div>`,
+			parallelUIPort(), parallelHomeLabel())
 		b = []byte(strings.Replace(html, `<div id="memory-test-build" hidden></div>`, badge, 1))
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
