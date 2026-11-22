@@ -28,15 +28,56 @@ type ajeanPaths struct {
 	Backends  string `json:"backends"`
 }
 
+// nomProduit et nomVieuxProduit : le nom du binaire installé, aujourd'hui et
+// hier. La marque à l'écran, les assets de release et le paquet Go portent déjà
+// « aidros » ; le binaire installé était le dernier à dire « ajean ».
+const (
+	nomProduit      = "aidros"
+	nomVieuxProduit = "ajean"
+)
+
+// exeName nomme le fichier exécutable pour un nom de produit : sous Windows le
+// suffixe .exe est obligatoire pour que l'association et le PATH le reconnaissent.
+func exeName(nom string) string {
+	if runtime.GOOS == "windows" {
+		return nom + ".exe"
+	}
+	return nom
+}
+
 // installedExePath est l'emplacement canonique du binaire après installation.
-// Il diffère par plateforme : sous Unix les installateurs posent /usr/local/bin/ajean
-// (c'est ce que référencent les unités systemd et le plist launchd) ; sous Windows,
-// faute d'équivalent, on utilise AJEAN_HOME\bin ajouté au PATH utilisateur.
+// Il diffère par plateforme : sous Unix les installateurs posent
+// /usr/local/bin/aidros (c'est ce que référencent les unités systemd et le plist
+// launchd) ; sous Windows, faute d'équivalent, on utilise AJEAN_HOME\bin ajouté
+// au PATH utilisateur.
+//
+// Le nom suit celui du produit, déjà porté par le paquet Go (e956522) et par les
+// assets de release (release.yml:106, qui s'appellent aidros-*). L'aide de
+// run.go:165 invitait déjà à taper « aidros <commande> » : c'était la seule
+// phrase du programme à contredire le fichier qu'il installe.
 func installedExePath() string {
 	if runtime.GOOS == "windows" {
-		return filepath.Join(binDir(), "ajean.exe")
+		return filepath.Join(binDir(), exeName(nomProduit))
 	}
-	return "/usr/local/bin/ajean"
+	return "/usr/local/bin/" + nomProduit
+}
+
+// aliasAvecCote nomme l'alias d'avant, posé À CÔTÉ du binaire qu'on lui donne —
+// et non à côté du dossier d'installation global. Deux appelants, deux dossiers
+// différents, et c'est voulu :
+//   - l'installation entretient l'alias de la machine, à côté du binaire installé ;
+//   - le ménage de mise à jour (sys_update.go) balaie les reliquats laissés à côté
+//     du binaire QUI TOURNE, qui peut être ailleurs que dans binDir().
+//
+// Le nom d'avant est gardé comme ALIAS et non comme cible : une machine installée
+// avant le renommage a son raccourci, son PATH et ses habitudes arrimés à ce nom.
+// Le supprimer net la laisserait relancer un binaire périmé à chaque clic — le
+// piège que remplaceEnCours décrit pour un alias laissé de côté.
+//
+// Le précédent est dans le dépôt : « jean.exe » y est devenu « ajean.exe »,
+// l'ancien nom restant entretenu comme alias (voir retireVieuxBinaires).
+func aliasAvecCote(canonique string) string {
+	return filepath.Join(filepath.Dir(canonique), exeName(nomVieuxProduit))
 }
 
 func currentPaths() ajeanPaths {

@@ -521,9 +521,11 @@ func cleanupOldBinary() {
 		return
 	}
 	removeOldBinaries(exe)
-	// L'alias herite laisse le meme reliquat quand il etait en cours d'execution
-	// au moment ou on l'a remplace (voir replaceExe).
-	removeOldBinaries(filepath.Join(filepath.Dir(exe), "ajean.exe"))
+	// L'alias hérite laisse le même reliquat quand il était en cours d'exécution
+	// au moment où on l'a remplacé (voir replaceExe). Le nom vient de
+	// aliasAvecCote, pas d'un littéral : le renommage du binaire installé ne doit
+	// pas laisser derrière lui un nom que plus personne n'écrit.
+	removeOldBinaries(aliasAvecCote(exe))
 }
 
 // handleUpdateCheck (GET /api/update) : renvoie l'état de mise à jour pour l'UI.

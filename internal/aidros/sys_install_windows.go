@@ -82,19 +82,60 @@ func installSelf(binDir string) (string, error) {
 		return "", err
 	}
 	src, _ = filepath.EvalSymlinks(src)
-	dst := filepath.Join(binDir, "ajean.exe")
+	// Le nom vient de exeName(nomProduit), mais le DOSSIER vient du paramètre :
+	// installSelf est appelé avec un dossier temporaire par les tests, et avec
+	// binDir() par l'installation. Passer par installedExePath() ici écrirait dans
+	// le dossier d'installation RÉEL pendant un test — mesuré, un filet l'a pris.
+	dst := filepath.Join(binDir, exeName(nomProduit))
 	if strings.EqualFold(src, dst) {
+		entrelientAlias(dst)
 		return dst, nil
 	}
 	if err := os.MkdirAll(binDir, 0o755); err != nil {
 		return "", err
 	}
-	// replaceExe et non copyExe : ajean.exe peut etre en cours d'execution
+	// replaceExe et non copyExe : le binaire peut etre en cours d'execution
 	// (service en tache de fond), auquel cas Windows refuse de l'ecraser.
 	if err := replaceExe(src, dst); err != nil {
 		return "", err
 	}
+	entrelientAlias(dst)
 	return dst, nil
+}
+
+// entrelientAlias remet le nom d'avant à niveau, SANS le créer.
+//
+// Une machine installée avant le renommage a son raccourci, son PATH et ses
+// habitudes arrimés à « ajean.exe ». Le laisser sur une version périmée, c'est
+// relancer indéfiniment un vieux binaire depuis son propre raccourci — le piège
+// déjà décrit plus bas pour un alias délaissé. Le supprimer net, c'est casser le
+// raccourci de celui qui n'a rien demandé.
+//
+// D'ou la regle : on le MET A JOUR s'il existe, on ne le CREER pas. Une
+// installation neuve ne paie pas deux copies de ~20 Mo pour un nom qu'elle n'a
+// jamais connu ; une installation d'avant garde son habitude, a jour.
+//
+// L'alias se prend A COTE du binaire canonique, et non dans binDir() global :
+// installSelf est joue avec un dossier temporaire par les filets, et un chemin
+// global y enverrait l'entretien écrire dans l'installation reelle.
+func entrelientAlias(canonique string) {
+	alias := aliasAvecCote(canonique)
+	if _, err := os.Stat(alias); err != nil {
+		return // pas d'habitude ici : rien à entretenir
+	}
+	if canonPathSafe(alias) == canonPathSafe(canonique) {
+		return // l'alias EST le canonique (lien, ou même fichier)
+	}
+	_ = replaceExe(canonique, alias) // best-effort : un alias verrouillé ne doit pas faire échouer l'installation
+}
+
+// canonPathSafe rend un chemin comparable, sans faire échouer l'appelant si le
+// fichier n'existe pas (EvalSymlinks échoue alors, et le chemin d'origine suffit).
+func canonPathSafe(p string) string {
+	if r, err := filepath.EvalSymlinks(p); err == nil {
+		return strings.ToLower(r)
+	}
+	return strings.ToLower(p)
 }
 
 // replaceExe copie src vers dst, y compris quand dst est un exécutable EN COURS.

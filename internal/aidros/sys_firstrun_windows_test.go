@@ -45,7 +45,13 @@ func TestInstallSelfCreatesBinDir(t *testing.T) {
 // cible existe déjà, et laisser l'ancien de côté sans le confondre avec la cible.
 func TestReplaceInstalled(t *testing.T) {
 	dir := t.TempDir()
-	target := filepath.Join(dir, "ajean.exe")
+	// Le nom suit installedExePath, le seul endroit qui fournit « target » en vrai
+	// (runAsInstaller, sys_firstrun_windows.go:97). Écrire ici le nom d'avant
+	// rejouerait un chemin que plus aucun appelant ne prend : replaceInstalled
+	// déplace target puis laisse installSelf écrire le nom canonique — si les deux
+	// noms diffèrent, target n'est jamais re-créé, et ce que le test veut voir
+	// (la cible écrasée en place) n'existe plus.
+	target := filepath.Join(dir, exeName(nomProduit))
 	if err := os.WriteFile(target, []byte("ancienne version"), 0o755); err != nil {
 		t.Fatal(err)
 	}
