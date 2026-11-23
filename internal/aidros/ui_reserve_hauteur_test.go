@@ -17,7 +17,7 @@ package aidros
 // url_ouverture_test.go qui parcourt ui/src et ui/src/js avant moi.
 //
 // ⚠ Un id sans propriétaire retombe sur releaseHeights : rien n'est cassé à
-// l'écran, le bloc est juste encore otage des dix-neuf. C'est une régression
+// l'écran, le bloc est juste encore otage des dix-huit. C'est une régression
 // muette — la seule façon de la voir est de compter.
 
 import (
@@ -196,9 +196,9 @@ func TestReserveDeHauteurLeveeParSonChargeur(t *testing.T) {
 	for _, id := range reserves {
 		// ⚠ Le cœur du filet. Sans propriétaire, `if(!p) continue` fait retomber
 		// le bloc sur releaseHeights : il n'est PAS cassé, il est juste encore
-		// otage des dix-neuf. Rien à l'écran ne le dirait.
+		// otage des dix-huit. Rien à l'écran ne le dirait.
 		if proprietaire[id] == "" {
-			t.Errorf("le bloc réservé « %s » n'a pas de chargeur propriétaire : il attendrait les dix-neuf, dont /api/moe à 2,4 s qui ne le peint pas", id)
+			t.Errorf("le bloc réservé « %s » n'a pas de chargeur propriétaire : il attendrait les dix-huit, dont /api/moe à 2,4 s qui ne le peint pas", id)
 		}
 	}
 	for id, nom := range proprietaire {
@@ -213,7 +213,7 @@ func TestReserveDeHauteurLeveeParSonChargeur(t *testing.T) {
 
 	corps := corpsDeLoadAll(t, source)
 
-	// 2. Les dix-neuf chargeurs sont tous lancés, et UN SEUL APPEL chacun.
+	// 2. Les dix-huit chargeurs sont tous lancés, et UN SEUL APPEL chacun.
 	// ⚠ Le lancement passe par `.map(f=>lance(f.name,f))` : les noms ne sont PAS
 	// littéraux dans `lance(...)`. La liste à compter est le tableau lui-même.
 	// Un chargeur retiré = un panneau qui ne se remplit plus ; deux = deux
@@ -223,8 +223,8 @@ func TestReserveDeHauteurLeveeParSonChargeur(t *testing.T) {
 		t.Fatal("la liste des chargeurs de loadAll est introuvable : le tableau passé à allSettled a changé de forme")
 	}
 	noms := regexp.MustCompile(`\b(load[A-Za-z0-9_$]+)`).FindAllString(liste[1], -1)
-	if len(noms) != 19 {
-		t.Errorf("%d chargeurs dans la liste, attendu 19 : %v", len(noms), noms)
+	if len(noms) != 18 {
+		t.Errorf("%d chargeurs dans la liste, attendu 18 : %v", len(noms), noms)
 	}
 	compte := map[string]int{}
 	for _, nom := range noms {

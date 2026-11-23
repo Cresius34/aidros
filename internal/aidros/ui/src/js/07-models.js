@@ -112,7 +112,6 @@ async function openItem(kind, key){
   const benchBtn = document.getElementById('btn-bench');
   if(benchBtn) benchBtn.style.display = (kind === 'preset' && key && key === ACTIVE_PRESET_ID) ? 'inline-flex' : 'none';
   // Model picker is preset-only: it edits the MODEL= line of the preset.
-  document.getElementById('m-memory-block').style.display=kind==='preset'?'':'none';
   const modelRow = document.getElementById('m-model-row');
   const engineRow = document.getElementById('m-engine-row'); // Moteur, en haut du modal
   const settingsRow = document.getElementById('m-settings-row');
@@ -124,7 +123,6 @@ async function openItem(kind, key){
   // Marque le type sur la modale : le CSS s'en sert pour retirer la carte autour
   // du contenu d'une page mémoire (le textarea a déjà sa propre bordure).
   document.getElementById('modal').classList.toggle('kind-mem', kind === 'mem');
-  document.getElementById('modal').classList.remove('kind-moe-memory');
   // Prompt système : propre au preset, replié par défaut, masqué pour la mémoire.
   const sysRow = document.getElementById('m-sys-row');
   if(sysRow){
@@ -190,14 +188,13 @@ async function openItem(kind, key){
   document.getElementById('m-content').value = d.content || '';
   if(kind === 'preset'){
     // Prompt système du preset (peut être vide).
-    document.getElementById('modal').classList.toggle('kind-moe-memory',cfgReadKey('ENGINE')==='moe');
     const sp = document.getElementById('m-sysprompt'); if(sp) sp.value = d.sysprompt || '';
     // Ces deux-là LISENT le contenu : elles doivent passer après son arrivée.
     document.getElementById('m-quant').value = currentQuantInTextarea();
     populateSettings();
     syncRunMode();
     attachDownload();                      // téléchargement encore en cours côté serveur ?
-    await Promise.all([loadExl3(), populateModelPicker(), populateMmproj(), populateSpecDraft(), populateDlDirs(), populateMemoryPreset()]);
+    await Promise.all([loadExl3(), populateModelPicker(), populateMmproj(), populateSpecDraft(), populateDlDirs()]);
     await populateBackend();
     if(seq !== openSeq) return;
   }
@@ -1042,8 +1039,6 @@ function runMode(){
 }
 function syncRunMode(){
   const mode = runMode();
-  const anchor=document.getElementById(mode==='external'?'m-memory-remote-anchor':'m-memory-local-anchor');
-  anchor.after(document.getElementById('m-memory-block'));
   document.querySelectorAll('input[name="m-run"]').forEach(r=>{ r.checked = r.value === mode; });
   document.getElementById('m-cloud-body').style.display = mode === 'modal' ? '' : 'none';
   document.getElementById('m-ext-body').style.display = mode === 'external' ? '' : 'none';
@@ -1548,7 +1543,7 @@ function watchDownload(fname){
       e.prog.innerHTML = '<span style="color:var(--ok)">✓ '+fname+' '+t('models.dl.downloaded')+' ('+fmtSize(st.done)+')</span>';
       e.bar.className = 'pe-bar done'; e.bar.firstElementChild.style.width = '100%';
       stop();
-      await Promise.all([populateModelPicker(), populateMmproj(), populateSpecDraft(), populateDlDirs(), populateMemoryPreset()]);
+      await Promise.all([populateModelPicker(), populateMmproj(), populateSpecDraft(), populateDlDirs()]);
       // Un projecteur (mmproj) se sélectionne dans le champ Vision, un modèle dans
       // le sélecteur de modèle — d'après le nom du fichier téléchargé. Le fichier
       // a pu atterrir hors du dossier ajean : l'option porte alors le chemin

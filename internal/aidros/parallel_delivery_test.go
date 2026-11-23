@@ -17,15 +17,10 @@ func TestParallelDeliveryServesMemoryControlsAndRevision(t *testing.T) {
 		t.Fatalf("page non servie sans cache : %d %v", w.Code, w.Header())
 	}
 	body := w.Body.String()
-	for _, marker := range []string{displayVersion(), uiBadgeMarker, uiBadgeLabel, `id="memory-system"`, `id="m-memory-block"`, `id="m-memory-device"`, `id="m-memory-image"`, `id="m-memory-audio"`, `id="m-memory-video"`, "function setMemorySystem", "function populateMemoryPreset", `id="moe-windows-options"`, `id="moe-backend"`, `id="moe-memory-edit"`, `id="moe-verify"`, "function moeVerify"} {
+	for _, marker := range []string{displayVersion(), uiBadgeMarker, uiBadgeLabel, `id="tabs"`, `id="tab-memory"`, `id="mem-frame"`, `id="moe-windows-options"`, `id="moe-backend"`, `id="moe-verify"`, "function moeVerify"} {
 		if !strings.Contains(body, marker) {
 			t.Errorf("interface embarquée incomplète : %s absent", marker)
 		}
-	}
-	vision := strings.Index(body, `id="s-mmproj-cpu-row"`)
-	memory := strings.Index(body, `id="m-memory-block"`)
-	if vision < 0 || memory <= vision {
-		t.Error("réglages mémoire absents sous Vision")
 	}
 	BuildFlavor = ""
 	w = httptest.NewRecorder()

@@ -11,8 +11,14 @@
 // PAGE, servie par une autre route (`/semantic-memory`, web_server.go:140 →
 // handleEmbeddingPage), avec son propre <style> qui redéfinit body, h1 et button,
 // et ses propres fonctions globales — `load`, `api`, `search`, `saveConfig`,
-// `pickers` — qui portent TOUTES le même nom que des fonctions de cette app
-// (07b-memory.js a son `load`, 09-stream.js a son `api`). Les recopier dans cette
+// `pickers` — des noms GLOBAUX, donc en concurrence avec ceux de cette app.
+// ⚠ L'exemple que ce commentaire donnait ici (« 07b-memory.js a son `load` ») est mort
+// le 23/11 au soir : le panneau de réglages mémoire de l'accueil est sorti au profit de
+// l'onglet, et son fichier avec. Mesuré après coup : plus aucun JS de l'app ne définit
+// `function load(`. La séparation par iframe reste la bonne raison — c'est la PAGE SERVIE
+// qui porte ces globaux (relu dans son <script> : `api`, `load`, `search`, `saveConfig`,
+// `pickers`) — mais un commentaire qui cite un fichier disparu ment à celui qui le lit.
+// Les recopier dans cette
 // page, c'était les faire se marcher dessus, et repeindre le fil avec le CSS de
 // l'autre. L'iframe est ce qui garde la séparation SANS dupliquer le code : la page
 // servie reste la seule copie, ici comme ailleurs.

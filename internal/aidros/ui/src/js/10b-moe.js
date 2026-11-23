@@ -189,7 +189,6 @@ function moeRenderQuants(pickReco){
   document.querySelectorAll('[data-moe-install-only]').forEach(el=>{el.hidden=!!(fit&&fit.preset)||(el.id==='moe-toolkit-row'&&moeBackend!=='cuda');});
   const go = document.getElementById('moe-go');
   go.disabled = !fit || !!fit.active || (!!moeState.modern && !(moeState.env||{}).supported && !fit.preset);
-  document.getElementById('moe-memory-edit').hidden=!(fit&&fit.preset);
   document.getElementById('moe-verify').hidden=!(moeState.modern&&fit&&fit.active);
   document.getElementById('moe-verify-result').textContent='';
   document.getElementById('moe-bench').hidden = !(fit && fit.active);
@@ -366,10 +365,6 @@ async function moeInstall(){
 
 async function moeChangeBackend(){
   moeBackend=document.getElementById('moe-backend').value;moeQuant='';moeTarget='';await openMoe();
-}
-async function moeEditMemory(){
-  const f=moeState&&moeState.families.find(x=>x.id===moeFam),fit=f&&f.fits.find(x=>x.quant.id===moeQuant);
-  if(!fit||!fit.preset)return;closeMoe();await openItem('preset',fit.preset);
 }
 async function moeVerify(){
   const button=document.getElementById('moe-verify'),out=document.getElementById('moe-verify-result');

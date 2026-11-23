@@ -716,10 +716,10 @@ async function loadAll(){
   // savoir lequel a fini. (Lancer deux fois vaudrait deux appels reseau.)
   const P={};
   const lance=(nom,f)=>{ if(!P[nom]) P[nom]=f(); return P[nom]; };
-  // Les dix-neuf, dans le meme ordre qu'avant : rien n'est retire, rien n'est
+  // Les dix-huit, dans le meme ordre qu'avant : rien n'est retire, rien n'est
   // rendu plus lent. allSettled et pas all : un seul chargement en echec (acces
   // distant coupe, cle API absente…) ne doit pas empecher la suite.
-  const T=[loadStatus,loadTelemetry,loadCfg,loadPresets,loadAgent,loadInternet,loadComputer,loadMCP,loadApiKey,loadNetwork,loadPrefs,loadOpen,loadMemoryPreferences,loadEngine,loadMoe,loadExl3,loadRemote,loadBridge,loadTasks]
+  const T=[loadStatus,loadTelemetry,loadCfg,loadPresets,loadAgent,loadInternet,loadComputer,loadMCP,loadApiKey,loadNetwork,loadPrefs,loadOpen,loadEngine,loadMoe,loadExl3,loadRemote,loadBridge,loadTasks]
     .map(f=>lance(f.name,f));
   // ⚠ LE DEFAUT QUE CA REPARAIT, mesure le 23/11 : la reserve de ces six blocs
   // ne tombait qu'ici, donc quand les DIX-NEUF avaient fini. Or le plus lent,
