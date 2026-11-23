@@ -40,9 +40,16 @@ func embeddingStatus() map[string]any {
 	}
 	job, note := embeddingCache.Job, embeddingCache.Note
 	embeddingCache.Unlock()
+	// La chaîne qui suivait mentait depuis le 23/11 : « RAM uniquement
+	// (reconstruit au lancement) ». Elle est remplacée par ce qui est vérifié sur
+	// le disque à cet instant — le fichier du cache, s'il est là, et sa taille.
+	cache := "RAM ; aucun cache disque"
+	if fi, err := os.Stat(cheminCacheMemoire(root)); err == nil && fi.Mode().IsRegular() {
+		cache = fmt.Sprintf("RAM + disque (%s/%s, %d octets)", dossierCacheMemoire, fichierCacheMemoire, fi.Size())
+	}
 	return map[string]any{"config": readEmbeddingConfig(), "running": running, "ready": ready, "pages": pages, "chunks": chunks,
 		"job": job, "note": note, "project": activeProjectSlug(), "memory_path": root, "home": AjeanHome(),
-		"parallel": parallelBuild(), "version": displayVersion(), "executable": executable, "memory_ui_revision": parallelMemoryRevision, "locked": memLocked(), "cache": "RAM uniquement (reconstruit au lancement)",
+		"parallel": parallelBuild(), "version": displayVersion(), "executable": executable, "memory_ui_revision": parallelMemoryRevision, "locked": memLocked(), "cache": cache,
 		"chat_url": ReadConfig()[extKeyURL], "defaults": readEmbeddingDefaults(), "preset_memory_system": ReadConfig()["MEMORY_SYSTEM"],
 		"default_paths": map[string]any{"llama_cpp": map[string]string{"bin": gb, "model": gm}, "transformers": map[string]string{"bin": pb, "model": pm}},
 		"providers":     map[string]any{"llama_cpp": map[string]any{"modalities": []string{"text"}}, "transformers": map[string]any{"modalities": []string{"text", "image", "audio", "video"}}}}

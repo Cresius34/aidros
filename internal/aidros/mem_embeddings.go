@@ -48,6 +48,10 @@ func clearEmbeddingCache() {
 	embeddingCache.Epoch++
 	embeddingCache.Indexes = make(map[string]*embeddingIndex)
 	embeddingCache.Unlock()
+	// Le disque suit le RAM, sinon le verrouillage de la mémoire ne serait que
+	// temporaire : la prochaine recherche retrouverait ses vecteurs dans le
+	// fichier. Appelé hors du verrou, ce parcours ne touche aucun index en RAM.
+	effacerCachesMemoireSurDisque()
 }
 
 var ignoredMemoryName = regexp.MustCompile(`(?i)(^|[._ -])(archive[s]?|backup|bak|old|corrupted|copy|copie|temp|tmp)([._ -]|$)`)
@@ -264,6 +268,12 @@ func rebuildEmbeddingIndex(ctx context.Context, root string, cfg embeddingConfig
 	}
 	embeddingCache.Lock()
 	old := embeddingCache.Indexes[root]
+	// Le cache RAM est vide au premier tour après un redémarrage : sans ce
+	// fichier, chaque lancement repaierait les ~25 minutes de réencodage mesurées
+	// le 23/11. La réutilisation en dessous ne demandait qu'un « old » survivant.
+	if old == nil {
+		old = lireCacheMemoire(root, client.Fingerprint)
+	}
 	embeddingCache.Job.Total = len(chunks)
 	embeddingCache.Unlock()
 	idx := &embeddingIndex{Fingerprint: client.Fingerprint, Hashes: snapshotHashes(docs), Vectors: make(map[string][]float32), Updated: time.Now()}
@@ -323,6 +333,12 @@ func rebuildEmbeddingIndex(ctx context.Context, root string, cfg embeddingConfig
 		embeddingCache.Indexes = make(map[string]*embeddingIndex)
 	}
 	embeddingCache.Indexes[root] = idx
+	// Sous le même verrou : l'index publié en RAM et celui posé sur le disque
+	// sont alors le même. Écrire hors du verrou aurait exigé d'en figer une copie
+	// (2,8 Mo de vecteurs) pour la confier à une goroutine. ~30 ms par indexation.
+	if err := ecrireCacheMemoire(root, idx); err != nil {
+		embeddingCache.Note = "index prêt ; cache disque non écrit : " + err.Error()
+	}
 	return idx, nil
 }
 
@@ -386,6 +402,18 @@ func SearchMemory(ctx context.Context, query string, limit int) memorySearchResu
 	embeddingCache.Lock()
 	idx := embeddingCache.Indexes[root]
 	epoch := embeddingCache.Epoch
+	// Le RAM est vide après un redémarrage : le disque répond AVANT de relancer
+	// une recherche lexicale. C'est là que le gain devient visible — sans cette
+	// ligne, le fichier posé ne servirait qu'à rebuildEmbeddingIndex, et la
+	// recherche retomberait encore sur « index absent ou modifié » comme le 23/11.
+	// indexFresh, en dessous, est le juge : empreinte du moteur et empreintes des
+	// pages doivent correspondre, sinon le cache est écarté sans appel.
+	if idx == nil {
+		if disque := lireCacheMemoire(root, client.Fingerprint); disque != nil {
+			idx = disque
+			embeddingCache.Indexes[root] = disque
+		}
+	}
 	embeddingCache.Unlock()
 	if !indexFresh(idx, docs, client.Fingerprint) {
 		queueEmbeddingIndex(root, cfg)
