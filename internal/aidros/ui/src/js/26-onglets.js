@@ -32,15 +32,36 @@ var tabMemoireInterdit = false; // le serveur refuse d'être encadré : on l'a m
 // setTabsVisible : la barre ne se montre que si elle a quelque chose à offrir.
 //
 // Le lien de la mémoire est dans #mem-block, un `gated-group` : le verrouillage de
-// la mémoire le masque (voir le garde de 05-status.js sur .gated-group). Poser une
-// barre avec un seul onglet, c'est offrir un bouton mort à l'humain. Donc : on la
-// montre quand le lien existe, on la retire quand il disparaît, et si l'onglet
-// mémoire était ouvert au moment où il s'éteint, on revient à la conversation —
-// sinon on resterait sur un calque dont la porte vient d'être condamnée.
+// la mémoire le masque (voir setAgentGate, 06-settings.js:391 — et non 05-status.js,
+// que ce commentaire nommait à tort ; mesuré : zéro occurrence de « gated » dans
+// 05-status.js). Poser une barre avec un seul onglet, c'est offrir un bouton mort
+// à l'humain. Donc : on la montre quand la mémoire existe, on la retire quand elle
+// disparaît, et si l'onglet mémoire était ouvert au moment où elle s'éteint, on
+// revient à la conversation — sinon on resterait sur un calque dont la porte vient
+// d'être condamnée.
+//
+// ⚠️ LE LIEN SEUL NE SUFFIT PAS, et c'est le défaut que Julien a vu le 23/11 au
+// soir : « tu vois une barre d'onglet là-dessus, en haut à l'horizontale ? » — il ne
+// la voyait pas, et il ne POUVAIT pas la voir. `#mem-block` vit dans `#mem-modal`
+// (index.tmpl.html:984, une `modal-ov` en `display:none` que seul openMemHub ouvre,
+// 18-projects.js:206). Le lien n'existe donc dans le DOM QUE quand la modale
+// Mémoire est ouverte. Une barre dont l'existence dépend d'une modale fermée est
+// invisible jusqu'au jour où l'humain ouvre cette modale — et l'ordre qu'il a donné
+// était de pouvoir basculer entre les sections. La barre doit être là AVANT.
+//
+// ⚠️ La source de vérité n'est donc plus le DOM, c'est le SERVEUR : `tabMemoireDispo`,
+// lu dans `/api/embeddings` → `config.enabled` (mesuré : répond en 10 ms,
+// `{"config":{"enabled":true,…}}`). Le lien reste écouté par l'observateur, donc si
+// la mémoire se verrouille et que le lien part, `tabMemoireDispo` retombe et la
+// barre aussi. Un `enabled: true` qui n'offre aucun chemin utilisable montrerait une
+// barre vide : c'est le risque de ce geste, il est pris sciemment, l'API est ce que
+// l'app a de mieux comme avis sur la mémoire.
+var tabMemoireDispo = false;
+
 function setTabsVisible() {
 	var barre = document.getElementById('tabs');
 	var lien = document.querySelector('#mem-block a[href="/semantic-memory"]');
-	var visible = !!lien;
+	var visible = !!lien || tabMemoireDispo;
 	if (!barre) return;
 	barre.hidden = !visible;
 	if (!visible && tabActif === 'memory') goTab('chat');
@@ -189,10 +210,48 @@ function tabInstaller() {
 	cadre.src = TAB_MEMORY_URL;
 }
 
+// closeTab rend la main ET décharge l'iframe.
+//
+// ⚠️ `hidden = true` seul ne rend RIEN. Le calque est caché à l'œil, l'iframe est
+// toujours dans le DOM : son document vit, ses promesses aussi, et surtout sa
+// minuterie. Relue à l'instant, la page encadrée (`/semantic-memory`, 12 944 o)
+// porte `setInterval(load, 2000)` et AUCUN garde `visibilitychange` — mesuré :
+// 0 occurrence. Un `setInterval` dans l'iframe d'un onglet VISIBLE n'est pas
+// bridé par le navigateur. Résultat : une seule ouverture de l'onglet = un
+// sondeur de 2 secondes à perpétuité, fetch derrière fetch, jusqu'à la fermeture
+// de l'onglet du navigateur. Sur une machine à 1-4 Go libres, chaque battement
+// re-faute des pages : ça ne consomme pas des giga-octets, ça empêche de dormir.
+// C'est le défaut que Julien a nommé d'abord, en demandant des onglets « sans
+// ouvrir de nouvelle fenêtre ni d'instance en dehors ».
+//
+// ⚠️ `about:blank` est le geste, pas le retrait de l'élément. Naviguer l'iframe
+// détruit son document, sa fenêtre globale et donc sa minuterie ; l'élément vide
+// ne pèse rien. RETIRER l'élément aurait été un piège : `tabInstaller()` fait
+// `getElementById('mem-frame')` et `return` s'il est absent — il aurait fallu le
+// recréer, et un oubli ici ouvrait un calque vide. `reloadTab` (au bas de ce
+// fichier) fait déjà exactement ce déchargement, pour la même raison.
+//
+// ⚠️ `tabMemoirePret` TOMBE À FAUX, il faut le remettre à faux ici. Sans ça,
+// `openMemoryTab()` retombe sur son `if (tabMemoirePret) return` et rouvre un
+// calque que le code tient pour prêt alors qu'il vient d'être vidé — le pire des
+// deux. `tabEnCadreRelu`, lui, est GARDÉ : c'est une question au serveur, pas un
+// état qui change tout seul (voir son commentaire en tête de fichier).
+//
+// ⚠️ Le `onload` posé par `tabInstaller` se déclenche AUSSI sur `about:blank` :
+// il écrirait `tabMemoirePret = true` sur la décharge, et effacerait juste après
+// la remise à faux du paragraphe ci-dessus. D'où les deux handlers coupés
+// AVANT de changer la source.
 function closeTab() {
 	tabActif = 'chat';
 	var calque = document.getElementById('mem-tab');
 	if (calque) calque.hidden = true;
+	tabMemoirePret = false;
+	var cadre = document.getElementById('mem-frame');
+	if (cadre) {
+		cadre.onload = null;
+		cadre.onerror = null;
+		cadre.src = 'about:blank';
+	}
 }
 
 // reloadTab rejoue la charge du calque. ⚠ On ne remet PAS la même valeur : poser
@@ -275,8 +334,33 @@ function tabRaccourcis(ev) {
 	else if (ev.key === '2') { ev.preventDefault(); goTab('memory'); }
 }
 
+// tabRelireLaMemoire : demande au serveur si la mémoire sémantique est de service.
+//
+// ⚠ UNE SEULE FOIS, pas de sonde : c'est un avis, pas un état qui bouge tout seul.
+// Un appel raté (réseau court, serveur qui redémarre) ne DOIT PAS griser la barre
+// que l'observateur aurait déjà levée : on ne touche à `tabMemoireDispo` que si la
+// réponse est lisible, et `setTabsVisible` reste appelé quoi qu'il arrive pour ne
+// pas laisser la barre dans un état qu'on n'aurait pas recalculé.
+async function tabRelireLaMemoire() {
+	try {
+		var ctrl = new AbortController();
+		var delai = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, 4000);
+		var r = await fetch('/api/embeddings', { cache: 'no-store', signal: ctrl.signal });
+		clearTimeout(delai);
+		if (!r.ok) return;
+		var j = await r.json();
+		tabMemoireDispo = !!(j && j.config && j.config.enabled);
+	} catch (e) {
+		// Silent : l'observateur et le lien restent le second chemin, et une panne
+		// de lecture n'est pas une interdiction (même règle qu'en tête de fichier
+		// pour le HEAD d'en-cadrement).
+	}
+	setTabsVisible();
+}
+
 function initOnglets() {
 	tabVeilleLeLien();
+	tabRelireLaMemoire();
 	document.addEventListener('keydown', tabRaccourcis);
 	// La langue peut changer sans recharger (setLang réapplique applyI18n) : les
 	// libellés des onglets portent data-i18n, donc applyI18n les relit seul. Rien

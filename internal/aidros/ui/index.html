@@ -16011,10 +16011,11 @@ var TAB_MEMORY_URL = '/semantic-memory';
 var tabActif = 'chat';
 var tabMemoirePret = false;   
 var tabMemoireInterdit = false; 
+var tabMemoireDispo = false;
 function setTabsVisible() {
 	var barre = document.getElementById('tabs');
 	var lien = document.querySelector('#mem-block a[href="/semantic-memory"]');
-	var visible = !!lien;
+	var visible = !!lien || tabMemoireDispo;
 	if (!barre) return;
 	barre.hidden = !visible;
 	if (!visible && tabActif === 'memory') goTab('chat');
@@ -16113,6 +16114,13 @@ function closeTab() {
 	tabActif = 'chat';
 	var calque = document.getElementById('mem-tab');
 	if (calque) calque.hidden = true;
+	tabMemoirePret = false;
+	var cadre = document.getElementById('mem-frame');
+	if (cadre) {
+		cadre.onload = null;
+		cadre.onerror = null;
+		cadre.src = 'about:blank';
+	}
 }
 function reloadTab() {
 	var cadre = document.getElementById('mem-frame');
@@ -16157,8 +16165,22 @@ function tabRaccourcis(ev) {
 	if (ev.key === '1') { ev.preventDefault(); goTab('chat'); }
 	else if (ev.key === '2') { ev.preventDefault(); goTab('memory'); }
 }
+async function tabRelireLaMemoire() {
+	try {
+		var ctrl = new AbortController();
+		var delai = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, 4000);
+		var r = await fetch('/api/embeddings', { cache: 'no-store', signal: ctrl.signal });
+		clearTimeout(delai);
+		if (!r.ok) return;
+		var j = await r.json();
+		tabMemoireDispo = !!(j && j.config && j.config.enabled);
+	} catch (e) {
+	}
+	setTabsVisible();
+}
 function initOnglets() {
 	tabVeilleLeLien();
+	tabRelireLaMemoire();
 	document.addEventListener('keydown', tabRaccourcis);
 }
 if (document.readyState === 'loading') {
