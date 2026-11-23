@@ -27,10 +27,16 @@ const parallelMemoryRevision = 7
 // actée le 21/11, la base n'est PLUS « reprise telle quelle du tag nathaninline
 // fusionné » : elle est la nôtre, et le nom du patch n'entre plus dans le
 // millésime (ordre de l'humain du 21/11 : « supprime Cresius du millésime »).
-// Version = "1.0" suivi de ".0" rend donc « 1.0.0 » (étiquette git
-// v1.0.0+rev0), et la correction suivante rendra « 1.0.1 ». Le suffixe reste un
-// incrément de correctif en « . », jamais un « + » : c'est la forme qu'admet le
-// test de version Windows, et celle que le lanceur d'un poste sait lire.
+// Version = "1.0" suivi de buildFlavorSuffix rend le millésime affiché : « .0 » a
+// rendu « 1.0.0 » (étiquette git v1.0.0+rev0), « .1 » rend « 1.0.1 » (ordre de
+// l'humain du 23/11). Le suffixe reste un incrément de correctif en « . », jamais
+// un « + » : c'est la forme qu'admet le test de version Windows, et celle que le
+// lanceur d'un poste sait lire.
+//
+// Le « + » n'était pas qu'un goût. Il rendait la release INVISIBLE à l'auto-maj :
+// semver.Canonical efface le build-suffixe, donc Compare(v1.0.0+rev0, v1.0) rend 0
+// et rien n'était jamais proposé (mesuré avec tools/sonde-semver, la sonde
+// versionnée). Un « . » se compare : 1.0.1 > 1.0.0.
 //
 // Ce qui GARDE encore le nom du patch, et ne le perd pas avec cette décision :
 // l'étiquette git (+revN), l'intitulé affiché sous le logo (uiBadgeLabel), et
@@ -81,7 +87,14 @@ const parallelMemoryRevision = 7
 // Doit rester identique à
 // cmd/ajean-memory-test/versioninfo.json (StringFileInfo.ProductVersion et
 // FileVersion), vérifié par TestVersionFlavorWindowsSuit.
-const buildFlavorSuffix = ".0"
+//
+// La révision .1 est l'ordre du 23/11 (« v1.0.1 »), qui répare le défaut nommé la
+// veille : un +revN est INVISIBLE à la mise à jour, semver.Canonical efface le
+// build-suffixe donc Compare(v1.0.0+rev0, v1.0) rend 0. Un incrément en « . » se
+// compare. Le .1 porte aussi la bascule de l'encodeur mémoire : EmbeddingGemma 2
+// passe du Python/Transformers (pic de 20 Go, 3,5 Go vifs en 2 min) au GGUF Q8 lu
+// par llama.cpp, six fois plus petit et sans runtime Python.
+const buildFlavorSuffix = ".1"
 
 // uiBadgeLabel : intitulé affiché sous le logo par le build portable, à la
 // place du repère « TEST mémoire · R6 ». Ce n'est plus « le nom du patch » :
