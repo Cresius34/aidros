@@ -1,167 +1,162 @@
-# Aidros `1.0.0` — étiquette `v1.0.0+rev0`
+# Aidros `1.1.0` — le système d'embeddings EmbeddingGemma 2, refondu
 
-Première release publiée de ce dépôt. **Phase de mise au point** : les noms, les
-issues et le moteur sont encore en train d'être rangés. Elle est publiée pour
-que le pointeur de mise à jour existe, pas pour annoncer un produit figé.
+Un cran de **fonction** : l'encodeur de mémoire change de voie, sa mémoire de
+ travail survit au redémarrage, et l'interface arrête d'attendre le moteur.
+ Quatre coûts mesurés, quatre correctifs, chacun avec un filet qui mord.
 
 **Projet dérivé, usage personnel.** Construit sur [**nathaninline/ajean**](https://github.com/nathaninline/ajean)
-(projet principal, MIT), dont il descend en `0.20.1`. Les changements décrits
-ci-dessous forment une **ligne privée** : non validés sur d'autres machines, non
-garantis transposables. Pour installer AJEAN, prenez les versions publiées sur
+(projet principal, MIT), dont il descend en `0.20.1`. Les changements décrits ici
+forment une **ligne privée** : non validés sur d'autres machines, non garantis
+transposables. Pour installer AJEAN, prenez les versions publiées sur
 [nathaninline/ajean](https://github.com/nathaninline/ajean/releases/latest).
 
-## ⚠ Cette release ne se proposera pas en mise à jour — et c'est voulu
+## Les gains, chiffrés
 
-Le comparateur du programme (`sys_update.go`) passe par `semver.Canonical`, qui
-**efface la métadonnée `+rev…`** :
+| | avant | après |
+|---|---|---|
+| **RAM privée de l'encodeur** | **5,21 Go** | **1,27 Go** (0,27 Go vifs) |
+| **Indexation de la mémoire** | **~25 min à CHAQUE lancement** | **une seule fois** |
+| **Réserve de hauteur de l'interface** | **2 402 ms** | **29 à 75 ms** par bloc |
 
-```
-machine qui tourne 1.0.0   +   release v1.0.0+rev0   →   Compare = 0   →   rien de proposé
-```
+Le débit d'indexation mesuré est de **59 pages/minute** (1 310 → 1 436 en 60 s),
+sur 1 448 fragments. C'est ce débit qui faisait les ~25 minutes — et c'est surtout
+le fait que le cache ne survit pas au processus qui les faisait **repayer à chaque
+démarrage**.
 
-Donc : le 404 du pointeur de mise à jour disparaît (il n'y avait **aucune**
-release publiée ici), et l'application ne se propose rien en boucle. Un
-`+revN` désigne une **étiquette git de nos correctifs**, pas un numéro qui monte.
-Les versions qui se proposeront entre elles seront `1.0.1`, `1.0.2`, `1.1.0`.
+## 1. L'encodeur passe de Python/Transformers à llama.cpp/GGUF
 
-## Ce qu'Aidros est
+L'encodeur d'embeddings tournait sur Python/Transformers : il mangeait la machine,
+et son veilleur a fini par tuer **pour inactivité une instance déjà morte**. Le
+job d'indexation a reçu une erreur réseau au lieu d'une relance.
 
-Une application de conversation et d'agent **entièrement locale**, sur le matériel
-graphique d'un PC de bureau, sans cloud.
+Il tourne maintenant sur **llama.cpp/GGUF** : `embeddinggemma-2-Q8_0.gguf`,
+`device=cpu`, un seul fichier de 310 Mio contre tout un dossier de poids. Les
+vecteurs rendus sont **les mêmes** — l'épreuve a été jouée sur les deux voies, pas
+supposée. Prêt en **2 s**, `POST /v1/embeddings` répond en **0,09 s**.
 
-- **Moteur MoE Strata** (0.1.59, avec son panneau de contrôle 0.1.54) — un modèle
-  à experts activés à la volée, servi par un llama.cpp ROCm/HIP.
-- **Moteur d'embeddings EmbeddingGemma-2** (256 dimensions) branché sur toutes
-  les fonctions de mémoire : indexation, recherche sémantique, re-lecture du
-  fil, invalidation d'un média supprimé. Il remplace le moteur de la génération
-  précédente.
-- **Pont Aidros↔Aidros** — deux machines du même réseau local qui se parlent :
-  échange de fichiers, et pilotage à distance des presets et du mode depuis la
-  carte de l'un ou de l'autre. La clé API de l'un **ne sort jamais** de son
-  magasin local.
-- **Cartes AMD** : mesuré sur une Radeon AI PRO R9700 (gfx1201) et sur une
-  RX 6900 XT (gfx1030). Le sentier NVIDIA est celui de l'amont.
+⚠ **Le python de 73 Go n'est pas l'encodeur.** C'est le **moteur MoE** de
+conversation (ses poids d'experts relus par PCIe, le journal dit « expert cache
+95,1 % hit »). Il existait avant cette bascule et n'y change rien. **Ce n'est pas
+de la VRAM**, contrainte à l'intuition : c'est de la RAM.
 
-## Ce que cette version fait, depuis la base 0.20.1
+⚠ **Correction d'une affirmation de la note `1.0.0`**, qui annonçait
+« EmbeddingGemma-2 (256 dimensions) ». Sur ce poste, la configuration vivante rend
+**`dimensions: 512`**, et le code attend **768** pour EmbeddingGemma 2 quand il
+valide une réponse. La dimension est **réglable par preset** (768 / 512 / 256 /
+128) : elle n'aurait pas dû être écrite comme une constante du produit.
 
-### Le nom, posé partout où on le lit
+## 2. Le cache des vecteurs survit au redémarrage
 
-L'application s'appelle **Aidros**. Elle a été trouvée trois fois en train de
-porter un nom d'un temps mort, sur des surfaces que personne ne regardait :
+C'était le coût le plus visible et le moins nommé : l'interface le disait pourtant
+noir sur blanc, « cache : **RAM uniquement** (reconstruit au lancement) ». Le prix
+avait donc été payé, sans avoir servi : 1 448 fragments indexés pour **0
+recherche**.
 
-- le **raccourci** s'appelait `AJEAN.lnk` alors que son infobulle disait « Aidros » —
-  l'explorateur masque l'extension, donc le poste affichait un nom sous l'icône
-  et un autre au survol ;
-- le **binaire installé** s'appelait `ajean.exe` alors que le programme invitait
-  à taper `aidros` ;
-- l'**URL d'ouverture** s'appelait `?memory-test=` — l'époque où ce build servait
-  à essayer un moteur de mémoire — sous un onglet intitulé « Aidros ».
+Le cache vit sous `<racine du projet>/.memcache/embeddings.json` (2,8 Mo pour
+1 448 fragments).
 
-Les trois sont nommés par **une seule source** et gardés par des tests. Le nom
-d'avant est reconnu là où il faut : les raccourcis et les binaires d'une
-installation antérieure sont **renomés, pas doublonnés**, et un ancien
-`ajean.exe` trouvé sur le disque est **mis à jour s'il existe, jamais créé** —
-deux icônes pour une application, ou deux exes qui se disputent un service, sont
-les deux ratés mesurés en route.
+- Il est **chiffré** quand la mémoire l'est, et **verrouiller la mémoire l'emporte
+  pour tous les projets** : la clé est unique, un projet verrouillé ne doit pas
+  garder ses vecteurs en clair. Sans cela, le verrouillage n'aurait duré qu'un
+  redémarrage.
+- Le **juge d'empreinte tient** : un moteur qui change n'exporte pas ses vecteurs,
+  on ne mélange pas deux espaces vectoriels.
+- `SearchMemory` relit le disque **avant** le repli lexical. C'est le branchement
+  qui rend le gain visible : sans lui, le fichier n'aurait servi qu'à l'indexation
+  et la recherche serait retombée sur « index absent ou modifié ».
+- Un fichier **à plat** dans `memory/` l'aurait faussée : la fraîcheur de l'index se
+  juge en comparant le **nombre** de documents. D'où le sous-dossier, et le nom
+  `.memcache` (`.cache` est déjà refusé par trois endroits du projet).
 
-### Le millésime du moteur avertit au lieu de refuser
+## 3. L'interface ne rend plus une promesse
 
-Un preset qui ne demande pas le millésime de moteur épinglé par cette
-application **démarre quand même**, et l'avis s'affiche — en trois endroits : la
-bannière de `/api/status`, la carte des presets, et la pastille de la ligne du
-preset. Vert exige trois accords : ce que le preset demande, ce que le moteur
-posé déclare dans son `BUILD.json`, ce que cette application épingle.
+`/api/embeddings` affichait une chaîne, pas un fait. Elle rend maintenant ce qui
+est sur le disque à l'instant : « RAM + disque (.memcache/embeddings.json,
+N octets) », ou « RAM ; aucun cache disque ».
 
-Ça paie une mesure du 15/11 : un exe épinglé 0.1.57 refusait son propre vieux
-preset 0.1.48 **quel que soit l'état du moteur** sur le disque. Changer le moteur
-d'un poste ne coûtera plus une reconstruction du binaire.
+## 4. Le tchat n'est plus otage du moteur
 
-### Deux routages perdus retrouvés, deux bugs clients
+Les six panneaux du réglage gardaient une hauteur réservée **jusqu'à ce que les
+dix-neuf chargeurs aient fini**. Or le plus lent — `/api/moe` à **2,396 s**, les
+dix-huit autres à **0,079 s ou moins** — ne peint **aucun** des six : il les
+retenait tous, pour une raison sans rapport avec eux.
 
-Un symbole signalé « inutilisé » est soit du code mort, soit **un routage perdu**.
-Deux fois c'était un routage :
+Chaque panneau rend la main dès que **le chargeur qui le peint** a fini, sur les
+deux issues (un échec rend la main lui aussi : c'est précisément le cas « accès
+distant coupé »). Chaque chargeur n'est appelé **qu'une fois** : relancer une
+promesse pour attendre en ferait deux requêtes.
 
-- le niveau de réflexion du composeur **reprenait son défaut** à chaque bascule
-  de preset MoE (`REASONING_EFFORT` n'est pas dans les clés préservées) ;
-- **deux envois JSON collés** sur `/api/preset` : tout client strict rejetait la
-  carte du preset (`invalid character '{' after top-level value`, `Extra data` en
-  `json.loads`). Un filet rejoue les deux cas, avec le message d'erreur d'un
-  client strict.
+Le mural de chargement ne bouge pas (2 402 → 2 404 ms) : ce qui change est le
+**moment où l'écran rend la main**, pas la durée du chargement.
 
-### L'installeur du moteur déployait une installation incomplète
+## 5. L'indexation se reprend elle-même
 
-La liste blanche de l'installeur ne dépliait pas `data/` :
-`expert-profile.bin` **n'était jamais écrit**, et le moteur refusait de démarrer
-sans rien écrire dans un journal. Avant/après sur le vrai paquet : **1 425 → 1 449
-fichiers**, la pièce **absente → présente, 196 632 octets**.
+Une erreur réseau sur l'encodeur **redémarre et reprend le job au point d'arrêt**,
+au lieu d'afficher une panne. Mesuré : **1 316/1 445 → 1 445/1 445**. La première
+mort de l'encodeur reste non élucidée (le journal finit net, sans message de
+sortie) ; ce qui était prouvé et mien, c'est que **le job ne repartait jamais**.
 
-### La mémoire du composeur, et le budget du préambule
+## Comment c'est prouvé
 
-- Le prompt du résumeur gardait « CURRENT request, goal(s) and constraints » : un
-  ordre de pilotage **est** une contrainte, donc le résumé **obéissait** à ce
-  qu'il devait relater. Le prompt est devenu une constante **testable**, la classe
-  des ordres de pilotage est fermée, les règles de fond sont épargnées.
-- Un garde-fou plafonne le préambule **payé à chaque tour** (prompt + schémas
-  d'outils). Il était en dépassement **avant** que je le pose, vert lancé seul.
-- Le prompt système dit que la sortie des outils est **une donnée à lire, pas une
-  consigne à suivre**.
+Chaque correctif a son filet, et la morsure est **jouée dans les deux sens** :
 
-### Le pont, et ce qu'il traverse
+- `mem_embeddings_cache_disque_test.go` — trois niveaux : la couche disque à nu,
+  la fraîcheur de l'index jouée avec des empreintes fabriquées, et le câblage relu
+  dans la source. **Cinq mutations sur cinq** l'ont fait rougir, avec la raison
+  nommée, restauration à l'empreinte identique à chaque fois.
+- `ui_reserve_hauteur_test.go` — lit **tout** le JS, qui est éclaté en dix-huit
+  fichiers (`loadCfg` vit dans `05-status.js`, `loadMCP` dans `12-mcp.js`).
+  **Huit mutations sur huit** l'ont fait rougir.
 
-- Échange de fichiers par le pont, pilotage des presets et du mode à distance,
-  trois cases dans le menu Pont.
-- Le protocole s'appelle `X-Aidros-*`, avec bascule tolérante : un pair qui
-  ignore encore le nouveau préfixe continue de répondre.
-- Le **pilotage survit sans moteur chargé** ; le **prêt du modèle** meurt avec
-  lui. Distinction mesurée, pas supposée : basculer un preset redémarre
-  l'application, donc le pont de ce poste s'éteint le temps du redémarrage.
+Deux « verts » de la morsure étaient **FAUX** : mes mutations n'atteignaient pas
+le fichier (j'écrivais le motif `mcp-list:'loadMCP'` là où le fichier porte
+`'mcp-list':'loadMCP'`, clé **quotée**). Trouvé en **comptant les occurrences**,
+pas en raisonnant. Un filet qui ne trouve rien peut passer pour un filet qui
+garde bien.
 
-### L'intégration, pour la première fois
+Quatre autres défauts de mon code ont été trouvés par mes filets et non par la
+lecture : un auxiliaire qui comptait l'index du projet parmi les pages de
+mémoire ; un garde d'ordre qui lisait **ma propre phrase de commentaire** ;
+`%d` passé à une chaîne ; et un auxiliaire Go (`corpsDeFonction`, qui cherche le
+mot `func`) réutilisé sur du JS — il ne trouve jamais rien, et un filet qui ne
+trouve rien passe pour un filet qui garde bien.
 
-Les 21 et 22 novembre 2026, les runs d'intégration continue de ce dépôt sont
-passés **au vert** — une première chez nous : nos huit premiers runs étaient
-rouges, et notre dépôt archivé sous l'ancien nom (`Cresius34/ajean`) n'a **aucun**
-run d'Actions. Chacun des huit rouges a été diagnostiqué un par un, et
-**aucun n'était une panne du produit** : un nom de dépôt renommé, un fichier unix
-qui compilait mal, `gofmt` sur 27 fichiers jamais formatés, une image de projet
-sous lien symbole refusée sous macOS (`/var` → `/private/var`, un vrai défaut,
-pas un caprice du coureur), deux tests qui jugeaient la machine qui les jouait,
-et `staticcheck` ramené de 70 avertissements à **0** sous Linux **et** Windows.
+`gofmt -l` muet sur le dépôt, `go vet ./...` 0 ligne, suite complète ok en
+140,9 s. Le binaire est relu **dans ses octets, dans les deux sens** : les marques
+des deux correctifs sont absentes du 1.0.1 et présentes dans le 1.1.0, et le
+mensonge « RAM uniquement » est présent dans le vieux, **absent** du neuf.
 
 ## Ce qui n'est pas là, dit franchement
 
-- **La génération d'images n'est pas codée.** ComfyUI tourne sur ce poste, mais
-  compte **zéro occurrence** dans le dépôt, ici comme chez l'amont. Deux verrous
-  sont nommés dans le code ; l'onglet est conçu, pas écrit.
-- **L'écriture du prompt système par preset n'a plus de porte.** Sa lecture et son
-  effacement sont routés, la clé a disparu de la requête d'enregistrement et
-  l'interface ne l'envoie plus. Lacune reçue de l'amont en 0.20.0 : la reposer,
-  c'est un champ et une porte.
-- **Pas de coffre à secrets, pas de sauvegarde.** La base est du bbolt à verrou
-  exclusif, et une clé d'API est stockée en clair dans un fichier de profil.
-- **Les correctifs de l'amont ne tomberont plus tout seuls.** Depuis la scission,
-  leur `main` est un historique **sans ancêtre commun** avec le nôtre (racine
-  sans parent, 10 étiquettes en trois jours, chemins qui ne se recouvrent pas).
-  Un correctif sur `web_api.go`, `llm_client.go`, `chat_compact.go` ou l'UI se
-  porte à la main, désormais.
-- **Les binaires de cette release sont construits pour AMD par nos soins** ; le
-  paquet publié ici est celui que l'intégration continue fabrique, sans moteur
-  embarqué. Le moteur s'installe par le poseur du dépôt.
+- **Le premier lancement sous 1.1.0 paie la toute première réindexation sous
+  llama.cpp** : une fois, plus jamais après.
+- **La bascule de l'encodeur est un choix du preset, pas du binaire.** Ce
+  millésime la rend possible et la rend visible ; il ne l'impose pas.
+- **Les minuteries de l'interface ne sont pas touchées.** Quatre tournent sous la
+  seconde (200, 250, 500 ×2, 800 ms), dont une qui fait un `sync()` **réseau** tous
+  les 500 ms. C'est un autre chantier, et la cause mesurée du « chargement long »
+  des panneaux était la réserve de hauteur, pas elles.
+- **Le premier rendu du fil ne page pas.** Un fil de 148 108 jetons est rejoué en
+  entier ; la pagination existe (`/api/chat/older` répond en 0,014 s) et le premier
+  rendu ne s'en sert pas. C'est le plus gros des trois gains restants.
+- La génération d'images n'est toujours pas codée ; pas de coffre à secrets, pas de
+  sauvegarde ; les correctifs de l'amont ne tomberont plus tout seuls (leur `main`
+  est un historique **sans ancêtre commun** avec le nôtre).
 
-## Les six cibles
+## État sur le poste de fabrication
 
-`aidros-linux`, `aidros-linux-arm`, `aidros-windows.exe`,
-`aidros-windows-arm.exe`, `aidros-macos`, `aidros-macos-arm`, plus `SHA256SUMS`.
-Ces noms sont ceux que le programme cherche pour se mettre à jour
-(`updateAssetName`) : les changer, c'est éteindre la mise à jour automatique.
-
-**Le moteur MoE n'est pas dans ces fichiers.** Il se pose par
-`moe_portable_install.ps1`, qui épingle le millésime.
+Le binaire est **posé et libre** aux deux endroits attendus (racine `aidros.exe`
+et `data\bin\aidros.exe`, 17 978 880 octets / `C59B0183DF4B` / identité Windows
+**1.1.0**), avec son point de retour (`aidros.avant-1.1.0.bak.exe`, le 1.0.1).
+**Rien lancé, rien tué** : l'instance en service tourne encore sur le 1.0.0.
+L'étiquette `v1.1.0` n'est **pas encore posée** : la publication attend un accord
+explicite.
 
 ## Ascendance
 
 - Base amont : `nathaninline/ajean` **0.20.1** (MIT).
 - Moteur MoE : [**Niko1221/Strata**](https://github.com/Niko1221/Strata).
-- Embeddings : [**google/embeddinggemma-2**](https://huggingface.co/google/embeddinggemma-2).
-- Notes de la ligne précédente (`0.18.17.1 Cresius`, `v0.18.17+rev1`) :
-  [docs/notes-de-version-0.18.17.1-Cresius.md](docs/notes-de-version-0.18.17.1-Cresius.md).
+- Embeddings : [**google/embeddinggemma-2**](https://huggingface.co/google/embeddinggemma-2),
+  servi par [**ggml-org/llama.cpp**](https://github.com/ggml-org/llama.cpp).
+- Notes de la ligne précédente (`1.0.0`, `v1.0.0+rev0`) :
+  [docs/notes-de-version-1.0.0.md](docs/notes-de-version-1.0.0.md).
