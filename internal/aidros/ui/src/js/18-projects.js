@@ -47,7 +47,7 @@ async function loadProjects(){
   PROJECTS = r.projects || [];
   ACTIVE_PROJECT = r.active || '';
   const act = PROJECTS.find(p=>p.slug===ACTIVE_PROJECT);
-  setProjectBtnName(act ? act.name : '');
+  setProjectBtnName(projLabel(act));
   refreshProjMenu();
 }
 
@@ -70,9 +70,9 @@ const closeProjMenu = ()=>closeMenu();
 function openProjMenu(anchor, p){
   popMenu(anchor, [
     {icon:'doc', label:t('projects.options'), run:()=>optionsProjectUI(p)},            // description fournie à l'IA
-    {icon:'mem', label:t('projects.view_memory'), run:()=>openMemHub(p.slug, p.name)},  // sans basculer dessus
+    {icon:'mem', label:t('projects.view_memory'), run:()=>openMemHub(p.slug, projLabel(p))},  // sans basculer dessus
     {icon:'chart', label:t('projects.view_trackers'), run:()=>openTrackerHub(p.slug)},       // idem pour ses trackers
-    PROJECTS.length > 1 && {icon:'trash', label:t('projects.delete'), danger:true, run:()=>deleteProjectUI(p.slug, p.name)},
+    PROJECTS.length > 1 && {icon:'trash', label:t('projects.delete'), danger:true, run:()=>deleteProjectUI(p.slug, projLabel(p))},
   ], {side:'below', sub:true});
 }
 
@@ -83,7 +83,7 @@ async function switchProjectUI(slug){
   if(slug === ACTIVE_PROJECT) return;
   QUIET_LOADER_UNTIL = Date.now() + 4000; // pas de logo de chargement pendant la bascule
   const prev = ACTIVE_PROJECT;
-  const label = (s)=>{ const p = PROJECTS.find(x=>x.slug===s); if(p) setProjectBtnName(p.name); };
+  const label = (s)=>{ const p = PROJECTS.find(x=>x.slug===s); if(p) setProjectBtnName(projLabel(p)); };
   ACTIVE_PROJECT = slug; label(slug);
   let r; try{ r = await jpost('/api/projects/switch', {slug}); }
   catch(_){ ACTIVE_PROJECT = prev; label(prev); toast(t('projects.network_error')); return; }
@@ -117,12 +117,15 @@ async function optionsProjectUI(p){
   const res = await askPrompt(
     t('projects.describe_prompt'),
     {title:t('projects.options_title'), okText:t('projects.save_btn'), multiline:true,
-     name: p.name||'', namePlaceholder:t('projects.rename_placeholder'),
+     name: projLabel(p), namePlaceholder:t('projects.rename_placeholder'),
      default: p.desc||'', placeholder:t('projects.describe_placeholder')});
   if(res===null) return;                  // annulé : on ne touche à rien
   const name = res.name.trim(), desc = res.text;
   if(!name){ toast(t('projects.name_empty')); return; }
-  if(name !== (p.name||'')){
+  // Comparé au LIBELLÉ affiché, pas au nom stocké : sinon enregistrer sans rien
+  // changer sur le projet par défaut (case « General » en anglais, nom stocké
+  // « Générale ») enverrait un renommage que l'humain n'a pas demandé.
+  if(name !== projLabel(p)){
     let rr; try{ rr = await jpost('/api/projects/rename', {slug, name}); }catch(_){ toast(t('projects.network_error')); return; }
     if(!rr.ok){ toast(rr.error || t('projects.rename_failed')); return; }
   }
@@ -138,7 +141,7 @@ async function optionsProjectUI(p){
 function pickProjectPop(anchor, excludeSlug, onPick){
   const dests = PROJECTS.filter(p=>p.slug!==excludeSlug);
   popMenu(anchor, dests.length
-    ? dests.map(p=>({icon:projFolderSvg(16), label:p.name||p.slug, run:()=>onPick(p.slug)}))
+    ? dests.map(p=>({icon:projFolderSvg(16), label:projLabel(p), run:()=>onPick(p.slug)}))
     : [{label:t('projects.no_other_project'), disabled:true}], {side:'below'});
 }
 
@@ -154,8 +157,30 @@ function moveSessionUI(c, anchor){
   });
 }
 
+// Nom d'AFFICHAGE d'un projet. Le nom stocké (p.name) est rendu tel quel, SAUF
+// pour le projet par défaut lorsqu'il porte encore son nom figé : ce nom-là est
+// écrit en français dans le registre Go (defaultProjectName = « Générale »), il
+// se traduit donc par projects.default_name.
+//
+// ⚠ Ce n'est PAS le nom qu'on traduit. Le nom stocké ne bouge pas : c'est lui
+// qui nomme le dossier mémoire (memory/<slug>/), et le slug ne change pas non
+// plus. Et un projet RENOMMÉ a name_default=false : on n'écrase jamais un nom
+// que l'humain a écrit, mesuré dans le serveur (web_projects.go, name_default).
+//
+// EFFET DE BORD ASSUMÉ : la fenêtre d'options pré-remplit la case avec ce
+// libellé. Si l'humain enregistre sans rien changer sur le projet par défaut,
+// le nom stocké devient le mot traduit (« General ») et name_default tombe à
+// faux — le projet est désormais bel et bien nommé, par lui. Le dossier mémoire
+// ne bouge pas (c'est le slug). Montrer l'inverse — la case « Générale » alors
+// que l'écran dit « General » — serait pire.
+function projLabel(p){
+  if(!p) return '';
+  if(p.name_default) return t('projects.default_name');
+  return p.name || p.slug || '';
+}
+
 // Nom d'affichage d'un projet depuis son slug (repli sur le slug).
-function projName(slug){ const p = PROJECTS.find(x=>x.slug===slug); return p ? (p.name||p.slug) : slug; }
+function projName(slug){ const p = PROJECTS.find(x=>x.slug===slug); return p ? projLabel(p) : (slug||''); }
 
 async function deleteProjectUI(slug, name){
   if(!await askConfirm(t('projects.delete_project_prefix') + (name||slug) + t('projects.delete_project_suffix'), {title:t('projects.delete_project_title'), okText:t('projects.delete'), danger:true})) return;
@@ -233,7 +258,7 @@ function renderProjMenu(){
     const row=document.createElement('div'); row.className='pm-row';
     const b=document.createElement('button');
     b.innerHTML=PM_FOLDER+'<span></span>';
-    b.lastChild.textContent=p.name||p.slug;
+    b.lastChild.textContent=projLabel(p);
     if(p.slug===ACTIVE_PROJECT) b.classList.add('on');
     b.onclick=()=>pickProjFromMenu(p.slug);
     const more=document.createElement('button'); more.className='pm-more';

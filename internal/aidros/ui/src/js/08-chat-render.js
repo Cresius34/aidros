@@ -898,7 +898,9 @@ function sessionRow(c, active){
   const n = c.turns || 0;
   // Projet de la conversation : affiché seulement s'il diffère du projet actif
   // (résultats de recherche, qui couvrent tous les projets).
-  const pn = (c.project && c.mode!=='fast' && c.mode!=='base' && c.project !== (ACTIVE_PROJECT||HIST_DEFAULT_PROJ)) ? (HIST_PROJ_NAMES[c.project] || c.project) : '';
+  // Le nom du projet par défaut se dit dans la langue (projetLabel) ; un projet
+  // renommé garde le nom écrit par l'humain.
+  const pn = (c.project && c.mode!=='fast' && c.mode!=='base' && c.project !== (ACTIVE_PROJECT||HIST_DEFAULT_PROJ)) ? projetLabel(c.project) : '';
   if(pn){ const pj=document.createElement('span'); pj.className='sess-proj'; pj.textContent=pn; meta.appendChild(pj); }
   meta.appendChild(document.createTextNode(fmtHistDate(c.saved_at) + ' · ' + n + ' ' + (n>1?t('chat.session.messages'):t('chat.session.message')) + (active?' · '+t('chat.session.ongoing'):'')));
   info.appendChild(name); info.appendChild(meta);
@@ -919,7 +921,15 @@ function openHistRowMenu(anchor, c){
     {icon:'trash', label:t('chat.session.delete_permanently'), danger:true, run:()=>deleteHistory(c.id, c.title)},
   ], {side:'below'});
 }
-let HIST_PROJ_NAMES = {}, HIST_DEFAULT_PROJ = '';
+// Libellé d'un projet dans l'historique, où l'on ne connaît que le slug et le
+// nom stocké (HIST_PROJ_NAMES), pas l'objet complet. Le projet par défaut, tant
+// qu'il n'a pas été renommé, se dit dans la langue ; les autres gardent le nom
+// écrit par l'humain. Même règle que projLabel() dans 18-projects.js.
+function projetLabel(slug){
+  if(slug === HIST_DEFAULT_PROJ && HIST_DEFAULT_NAME_DEFAULT) return t('projects.default_name');
+  return HIST_PROJ_NAMES[slug] || slug || '';
+}
+let HIST_PROJ_NAMES = {}, HIST_DEFAULT_PROJ = '', HIST_DEFAULT_NAME_DEFAULT = false;
 // Historique par PAGES (60 lignes, la suite au défilement) : construire d'un coup
 // les 500+ conversations figeait l'ouverture. HIST_SIG évite de reconstruire une
 // liste identique (préchargement puis ouverture : rien ne bouge à l'écran).
@@ -957,6 +967,7 @@ async function loadHistory(){
   catch(_){ if(!box.children.length) box.innerHTML = '<span class="muted" style="font-size:12px">'+t('chat.session.load_error')+'</span>'; return; }
   const list = (r && r.conversations) || [];
   HIST_PROJ_NAMES = (r && r.projects) || {}; HIST_DEFAULT_PROJ = (r && r.default_project) || '';
+  HIST_DEFAULT_NAME_DEFAULT = !!(r && r.default_name_default);
   const sig = JSON.stringify([HIST_Q, r.active, r.total, list.map(c=>[c.id,c.title,c.fav,c.turns,c.project])]);
   const cnt = document.getElementById('sess-count'); if(cnt) cnt.textContent = r.total || '';
   // « Tout supprimer » masqué pendant une recherche : il viderait tout l'historique,

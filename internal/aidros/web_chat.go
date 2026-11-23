@@ -253,9 +253,18 @@ func handleChatHistory(w http.ResponseWriter, r *http.Request) {
 	}
 	// Noms des projets (slug → nom) : l'historique général affiche le projet de
 	// chaque conversation.
+	//
+	// default_name_default : le projet par défaut porte-t-il encore son nom figé
+	// (donc jamais renommé) ? L'interface s'en sert pour l'afficher dans la
+	// langue, comme le champ name_default de /api/projects. Le nom STOCKÉ n'est
+	// pas touché : c'est lui qui nomme le dossier mémoire.
 	names := map[string]string{}
+	defNameDefault := false
 	for _, p := range listProjects() {
 		names[p.Slug] = p.Name
+		if p.Slug == defaultProjectSlug {
+			defNameDefault = p.Name == defaultProjectName
+		}
 	}
 	if list == nil {
 		list = []convArchiveMeta{}
@@ -263,7 +272,8 @@ func handleChatHistory(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, 200, map[string]any{"ok": true, "conversations": list, "total": total,
 		"state": state, "terms": terms, "indexed": 0, "indexed_total": 0,
 		"active": conv.currentID(), "generating": conv.isGenerating(),
-		"projects": names, "default_project": defaultProjectSlug})
+		"projects": names, "default_project": defaultProjectSlug,
+		"default_name_default": defNameDefault})
 }
 
 // handleChatPeek (GET ?id=) : renvoie le contenu d'une conversation archivée EN

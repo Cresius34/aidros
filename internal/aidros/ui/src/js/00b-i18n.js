@@ -82,6 +82,29 @@ function setLang(lang) {
 	applyI18n();
 	if (typeof savePrefs === 'function') savePrefs();
 	if (typeof loadAll === 'function') loadAll();
+	// Le nom du projet par défaut se dit dans la langue (projects.default_name).
+	// loadAll() ne le repeint pas : il retouche les panneaux, pas la bulle du
+	// composeur ni l'en-tête de l'historique.
+	//
+	// ⚠ RE-RENDU LOCAL, PAS UN RECHARGEMENT. PROJECTS est déjà en mémoire, le
+	// libellé se recalcule sans le serveur. Je n'appelle PAS loadProjects() ni
+	// loadHistory() ici, pour deux raisons nommées :
+	//   1. le nombre de chargeurs de loadAll() est un contrat gardé par un test
+	//      (ui_reserve_hauteur_test.go : « 17 chargeurs ») ;
+	//   2. loadHistory() reconstruit tout le fil — mesuré 148 108 jetons le
+	//      23/11 — et le payer pour un seul mot serait un changement de langue
+	//      plus lent que l'ouverture d'un tchat.
+	// CE QUI RESTE TRADUIT PLUS TARD, dit franchement : l'étiquette de projet
+	// d'une ligne d'historique déjà affichée (projetLabel, 08-chat-render.js)
+	// prend la nouvelle langue au prochain rechargement de l'historique, pas
+	// à la seconde. C'est une ligne de liste, pas l'écran courant.
+	if (typeof setProjectBtnName === 'function' && typeof PROJECTS !== 'undefined'
+		&& typeof ACTIVE_PROJECT !== 'undefined') {
+		var act = (PROJECTS || []).find(function (p) { return p.slug === ACTIVE_PROJECT; });
+		if (typeof projLabel === 'function') setProjectBtnName(projLabel(act));
+	}
+	if (typeof histHeadLabel === 'function') histHeadLabel();
+	if (typeof refreshProjMenu === 'function') refreshProjMenu();
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -101,3 +124,24 @@ document.addEventListener('DOMContentLoaded', function () {
 // tf : traduction avec repli. Rend le texte fourni si la clé n'existe pas (une
 // clé absente est renvoyée telle quelle par t()).
 function tf(key, fr){ const v = t(key); return v === key ? fr : v; }
+
+// tp : traduction TROUEE. La valeur peut porter {0}, {1}, ... ; tp les remplace
+// dans l'ordre par les arguments fournis.
+//
+// POURQUOI cette fonction, et pas des préfixes collés à la main (« Écoute sur le
+// port » + port + « ; le cerveau vient de : » + source) : l'ordre des morceaux
+// n'est pas le même dans les deux langues. Une phrase coupée en préfixes rend un
+// anglais compréhensible et un français bancal, ou l'inverse, selon la langue.
+// Le trou est dans la PHRASE, la phrase reste une seule valeur à traduire.
+//
+// ⚠ Le remplacement est littéral, jamais une expression régulière : un port ou
+// une URL ne peut pas casser le texte. Les arguments sont convertis en chaîne
+// sans échappement HTML — appeler escHtml() soi-même si le résultat va dans
+// innerHTML (c'est déjà le cas partout où ce fichier le fait).
+function tp(key) {
+	var v = t(key);
+	for (var i = 1; i < arguments.length; i++) {
+		v = v.split('{' + (i - 1) + '}').join(String(arguments[i] == null ? '' : arguments[i]));
+	}
+	return v;
+}

@@ -15,7 +15,15 @@ func handleProjects(w http.ResponseWriter, r *http.Request) {
 	list := listProjects()
 	out := make([]map[string]any, 0, len(list))
 	for _, p := range list {
-		out = append(out, map[string]any{"slug": p.Slug, "name": p.Name, "created_at": p.CreatedAt, "desc": p.Desc})
+		out = append(out, map[string]any{"slug": p.Slug, "name": p.Name, "created_at": p.CreatedAt, "desc": p.Desc,
+			// name_default : ce projet est le projet par défaut ET porte encore
+			// son nom figé, donc il n'a jamais été renommé. L'interface s'en sert
+			// pour afficher projects.default_name dans la langue (le nom figé est
+			// français dans le registre). ⚠ Ce n'est PAS le nom qu'on traduit :
+			// p.Name reste le nom STOCKÉ, qui nomme le dossier mémoire. Et un
+			// projet renommé a name_default=false — on n'écrase jamais un nom que
+			// l'humain a écrit.
+			"name_default": p.Slug == defaultProjectSlug && p.Name == defaultProjectName})
 	}
 	sendJSON(w, 200, map[string]any{"ok": true, "projects": out, "active": activeProjectSlug()})
 }

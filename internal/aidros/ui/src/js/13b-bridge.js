@@ -31,11 +31,11 @@ function renderBridge(d){
 
   const live = !!d.listening;
   setBadge('bridge-badge', live ? true : (d.enabled ? 'warn' : false),
-           live ? 'à l’écoute' : (d.enabled ? 'à réveiller' : 'éteint'));
+           live ? t('bridge.badge_listening') : (d.enabled ? t('bridge.badge_sleep') : t('bridge.badge_off')));
 
   const st = document.getElementById('bridge-state');
   if(st){
-    st.textContent = live ? 'en ligne' : (d.enabled ? 'aucune écoute' : 'fermé');
+    st.textContent = live ? t('bridge.state_online') : (d.enabled ? t('bridge.state_silent') : t('bridge.state_closed'));
     st.classList.toggle('on', live);
   }
   const on = document.getElementById('bridge-on');
@@ -62,17 +62,17 @@ function renderBridge(d){
   // pas de clé (le pont refuse tout le monde) et rien derrière (pas de cerveau).
   const mdl = document.getElementById('bridge-model');
   const note = document.getElementById('bridge-note');
-  const src = d.serving || ('moteur local 127.0.0.1:' + (d.engine_serving || d.engine_port));
+  const src = d.serving || tp('bridge.engine_local', d.engine_serving || d.engine_port);
   if(mdl && note){
     if(d.model){
-      mdl.textContent = 'Modèle prêté : ' + d.model;
-      note.textContent = 'Écoute sur le port ' + d.port + ' ; le cerveau vient de : ' + src + '.';
+      mdl.textContent = tp('bridge.model_lent', d.model);
+      note.textContent = tp('bridge.note_listening', d.port, src);
     } else if(live){
-      mdl.textContent = 'Aucun modèle ne répond derrière ce pont';
-      note.textContent = 'Le pont écoute mais rien ne répond derrière (' + src + ') : activer un preset — MoE local, API externe ou cloud — sinon l’autre Aidros recevra une erreur.';
+      mdl.textContent = t('bridge.model_dead');
+      note.textContent = tp('bridge.note_dead', src);
     } else {
-      mdl.textContent = 'Aucun modèle prêté';
-      note.textContent = 'Un pont ouvert sans preset actif n’a rien à prêter : activer un preset (page Modèles), MoE local, API externe ou cloud.';
+      mdl.textContent = t('bridge.model_none');
+      note.textContent = t('bridge.note_no_preset');
     }
   }
 }
@@ -110,20 +110,22 @@ function renderPeers(){
   const box = document.getElementById('peers-list');
   if(!box) return;
   if(!peersList.length){
-    box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">Aucun voisin déclaré. Un canal se déclare à la main, jamais par découverte automatique du réseau.</p></div>';
+    box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">' + escHtml(t('bridge.no_peers')) + '</p></div>';
     return;
   }
   box.innerHTML = peersList.map(function(p, i){
-    const cle = p.has_key ? 'clé posée' : '<b>sans clé</b> — il refusera la demande';
-    const can = p.thread ? ' · canal ' + p.thread + ' messages' : '';
+    // La clé est le seul élément qui porte du balisage : le reste passe par
+    // escHtml, sinon le nom d'un voisin ou son URL se retrouvent interprétés.
+    const cle = p.has_key ? escHtml(t('bridge.key_set')) : t('bridge.key_missing');
+    const can = p.thread ? tp('bridge.thread_count', p.thread) : '';
     return '<div class="switchrow"><span class="sw-txt"><span>' + escHtml(p.name) +
       '</span><span class="sw-sub">' + escHtml(p.url) + ' · ' + cle + can + '</span></span>' +
       // Piloter le voisin : lire SES moteurs, en activer un. Le bouton ne fait
       // qu'afficher le panneau — aucun appel réseau à l'affichage du menu, vers
       // une machine qui peut être éteinte.
-      '<button type="button" class="sw-action" onclick="peerPilotToggleIdx(' + i + ')">Moteurs</button>' +
-      '<button type="button" class="sw-action" onclick="peerForgetIdx(' + i + ')">Oublier</button>' +
-      '<button type="button" class="sw-action" onclick="peerRemoveIdx(' + i + ')">Retirer</button></div>' +
+      '<button type="button" class="sw-action" onclick="peerPilotToggleIdx(' + i + ')">' + escHtml(t('bridge.peers_engines')) + '</button>' +
+      '<button type="button" class="sw-action" onclick="peerForgetIdx(' + i + ')">' + escHtml(t('bridge.peer_forget')) + '</button>' +
+      '<button type="button" class="sw-action" onclick="peerRemoveIdx(' + i + ')">' + escHtml(t('bridge.peer_remove')) + '</button></div>' +
       '<div class="pilot-block" id="pilot-' + i + '" hidden></div>';
   }).join('');
 }
@@ -158,7 +160,7 @@ function peerPilotToggleIdx(i){
   }
   pilotOuvert = i;
   box.hidden = false;
-  box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">Lecture de ses moteurs…</p></div>';
+  box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">' + escHtml(t('bridge.pilot_reading')) + '</p></div>';
   peerPilotLoad(i);
 }
 
@@ -169,39 +171,40 @@ async function peerPilotLoad(i){
   if(!p) return;
   try{
     const r = await jpost('/api/peers/pilot', { name: p.name, action: 'presets' });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
     const ps = r.presets || [];
     const epingle = r.moteur_epingle || '';
     let html = '';
     if(!ps.length){
-      html = '<div class="rowbody"><p class="muted" style="margin:0">Ce voisin n’a aucun preset.</p></div>';
+      html = '<div class="rowbody"><p class="muted" style="margin:0">' + escHtml(t('bridge.pilot_none')) + '</p></div>';
     } else {
       html = ps.map(function(pre, j){
         // Le millésime, et s'il correspond au moteur que l'exe du voisin sait
         // lancer. Un preset qui pointe un autre millésime sera REFUSÉ, pas démarré :
         // le dire avant le clic vaut mieux que le découvrir après.
-        const moteur = pre.moteur ? ' · moteur ' + escHtml(pre.moteur) : '';
+        const moteur = pre.moteur ? tp('bridge.pilot_engine', escHtml(pre.moteur)) : '';
         const doute = pre.moteur && epingle && pre.moteur !== epingle
-          ? ' <b class="warn">— son application est épinglée ' + escHtml(epingle) + ', celui-là sera refusé</b>'
+          ? ' <b class="warn">' + escHtml(tp('bridge.pilot_mismatch', epingle)) + '</b>'
           : '';
-        const actif = pre.active ? ' <b>· actif</b>' : '';
+        const actif = pre.active ? t('bridge.pilot_active') : '';
+        const kind = pre.external ? t('bridge.kind_api') : (pre.moe ? t('bridge.kind_moe') : t('bridge.kind_preset'));
         return '<div class="switchrow"><span class="sw-txt"><span>' + escHtml(pre.name || pre.id) +
-          actif + '</span><span class="sw-sub">' + (pre.external ? 'API distante' : (pre.moe ? 'MoE local' : 'preset') + moteur + doute) +
+          actif + '</span><span class="sw-sub">' + kind + moteur + doute +
           '</span></span>' +
-          (pre.active ? '' : '<button type="button" class="sw-action" onclick="peerPilotSwitchIdx(' + i + ',' + j + ')">Activer</button>') +
+          (pre.active ? '' : '<button type="button" class="sw-action" onclick="peerPilotSwitchIdx(' + i + ',' + j + ')">' + escHtml(t('bridge.pilot_activate')) + '</button>') +
           '</div>';
       }).join('');
     }
     // L'avertissement, dans la panneau et pas seulement dans le toast : l'acte
     // est grave et irréversible en un clic.
-    html += '<div class="rowbody"><p class="muted" style="margin:0">⚠ Basculer arrête le moteur en place chez lui et redémarre son application : le canal se coupe quelques secondes. Chez elle comme ici, un seul moteur par instance.</p></div>';
+    html += '<div class="rowbody"><p class="muted" style="margin:0">' + escHtml(t('bridge.pilot_warning')) + '</p></div>';
     box.innerHTML = html;
     // La liste est gardée pour que le clic trouve l'id, jamais une position
     // périmée : si le voisin a modifié ses presets depuis, la position désignerait
     // un autre preset.
     box._presets = ps;
   }catch(e){
-    box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">Injoignable : ' + escHtml(e.message || 'erreur') + '</p></div>';
+    box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">' + escHtml(tp('bridge.pilot_unreachable', e.message || t('bridge.error_word'))) + '</p></div>';
   }
 }
 
@@ -211,59 +214,59 @@ async function peerPilotSwitchIdx(i, j){
   if(!box || !p) return;
   const ps = box._presets || [];
   const pre = ps[j];
-  if(!pre || !pre.id){ toast('Preset introuvable dans la liste relue'); return; }
+  if(!pre || !pre.id){ toast(t('bridge.pilot_stale')); return; }
   try{
     const r = await jpost('/api/peers/pilot', { name: p.name, action: 'switch', id: pre.id });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
-    toast('« ' + p.name + ' » passe sur ' + (r.preset || pre.id) + ' — son application redémarre, le canal se coupe quelques secondes');
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
+    toast(tp('bridge.pilot_switched', p.name, r.preset || pre.id));
     // Le panneau se referme : sa liste est périmée dès que le preset actif a
     // changé, et la rouvrir coûte un appel, pas un risque de clic sur du vieux.
     box.hidden = true; box.innerHTML = ''; box._presets = null;
     if(pilotOuvert === i) pilotOuvert = -1;
-  }catch(e){ toast('Voisin ' + p.name + ' : ' + e.message); }
+  }catch(e){ toast(tp('bridge.peer_error', p.name, e.message)); }
 }
 
 async function peerAdd(){
   const g = function(id){ const e = document.getElementById(id); return e ? e.value.trim() : ''; };
   const name = g('peer-name'), url = g('peer-url'), key = g('peer-key');
-  if(!name || !url){ toast('Nom et adresse du voisin requis'); return; }
+  if(!name || !url){ toast(t('bridge.peer_need_fields')); return; }
   try{
     const r = await jpost('/api/peers', { add: name, url: url, key: key });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
     ['peer-name','peer-url','peer-key'].forEach(function(id){ const e = document.getElementById(id); if(e) e.value=''; });
-    toast('Voisin ' + r.name + ' déclaré');
+    toast(t('bridge.peer_added', r.name));
     loadPeers();
-  }catch(e){ toast('Voisin : ' + e.message); }
+  }catch(e){ toast(tp('bridge.peer_error_plain', e.message)); }
 }
 
 async function peerRemove(name){
   try{
     const r = await jpost('/api/peers', { remove: name });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
-    toast('Voisin ' + name + ' retiré');
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
+    toast(tp('bridge.peer_removed', name));
     loadPeers();
-  }catch(e){ toast('Voisin : ' + e.message); }
+  }catch(e){ toast(tp('bridge.peer_error_plain', e.message)); }
 }
 
 async function peerForget(name){
   try{
     const r = await jpost('/api/peers', { forget: name });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
-    toast('Souvenir du canal effacé');
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
+    toast(t('bridge.thread_forgotten'));
     loadPeers();
-  }catch(e){ toast('Canal : ' + e.message); }
+  }catch(e){ toast(tp('bridge.channel_error', e.message)); }
 }
 
 async function bridgeToggle(wanted){
   const box = document.getElementById('bridge-on');
   try{
     const r = await jpost('/api/bridge', { enabled: !!wanted });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
     renderBridge(r);
-    toast(wanted ? 'Pont ouvert sur le réseau local' : 'Pont coupé');
+    toast(wanted ? t('bridge.opened') : t('bridge.closed'));
   }catch(e){
     if(box) box.checked = !wanted;
-    toast('Pont : ' + e.message);
+    toast(tp('bridge.bridge_error', e.message));
   }
 }
 
@@ -272,18 +275,18 @@ async function bridgeSetAgent(wanted){
   const box = document.getElementById('bridge-agent');
   try{
     const r = await jpost('/api/bridge', { agent: !!wanted });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
     renderBridge(r);
     // Le voisin peut ouvrir cette porte pendant que la machine tient la sienne
     // fermée : le dire tout de suite, sinon la case coche sans effet.
     if(wanted && r.agent_requested && !r.agent_mode_local){
-      toast('Autorisation prise, mais le mode Agent de cette machine est éteint : rien ne se déclenchera');
+      toast(t('bridge.agent_no_mode'));
     } else {
-      toast(wanted ? 'Agent du voisin autorisé ici' : 'Agent du voisin refusé');
+      toast(wanted ? t('bridge.agent_allowed') : t('bridge.agent_denied'));
     }
   }catch(e){
     if(box) box.checked = !wanted;
-    toast('Agent du voisin : ' + e.message);
+    toast(tp('bridge.agent_error', e.message));
   }
 }
 
@@ -293,13 +296,12 @@ async function bridgeSetControl(wanted){
   const box = document.getElementById('bridge-control');
   try{
     const r = await jpost('/api/bridge', { control: !!wanted });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
     renderBridge(r);
-    toast(wanted ? 'Le voisin peut changer le moteur de cette machine'
-                 : 'Pilotage coupé — le voisin ne reçoit plus que le modèle nu');
+    toast(wanted ? t('bridge.control_on') : t('bridge.control_off'));
   }catch(e){
     if(box) box.checked = !wanted;
-    toast('Pilotage : ' + e.message);
+    toast(tp('bridge.control_error', e.message));
   }
 }
 
@@ -308,11 +310,11 @@ async function bridgeSavePort(){
   const p = ((inp && inp.value) || '').trim();
   try{
     const r = await jpost('/api/bridge', { port: p });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
     renderBridge(r);
-    toast('Port du pont : ' + r.port);
+    toast(tp('bridge.port_msg', r.port));
   }catch(e){
-    toast('Port du pont : ' + e.message);
+    toast(tp('bridge.port_msg', e.message));
     if(inp && bridgeEtat) inp.value = bridgeEtat.port || '';
   }
 }

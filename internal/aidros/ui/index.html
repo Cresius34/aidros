@@ -2260,32 +2260,32 @@ audio.jf-media{width:min(520px,100%);margin-top:18vh}
       <div id="lan-warn" class="rowbody" style="display:none"></div>
     </div>
   </details>
-  <details id="bridge-details" hidden><summary><span class="stitle">Pont Aidros ↔ Aidros</span><span id="bridge-badge" class="sbadge"></span></summary>
+  <details id="bridge-details" hidden><summary><span class="stitle" data-i18n="bridge.title">Pont Aidros ↔ Aidros</span><span id="bridge-badge" class="sbadge"></span></summary>
     <div class="slist api-conn">
       <div class="api-ent">
-        <div class="api-lbl"><span>Adresse à coller chez l’autre Aidros</span><span id="bridge-state" class="api-state"></span></div>
+        <div class="api-lbl"><span data-i18n="bridge.address_label">Adresse à coller chez l’autre Aidros</span><span id="bridge-state" class="api-state"></span></div>
         <div class="api-line"><input id="bridge-url" readonly class="api-val">
-          <button class="sw-ic" onclick="copyText(document.getElementById('bridge-url').value,'adresse copiée');flashCopied(this)" title="copier"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div>
+          <button class="sw-ic" onclick="copyText(document.getElementById('bridge-url').value,t('bridge.copied'));flashCopied(this)" data-i18n="bridge.copy" data-i18n-attr="title" title="copier"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div>
       </div>
-      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-on" onchange="bridgeToggle(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span>Prêter ce modèle à un autre Aidros</span><span class="sw-sub">n’ouvre que l’API du modèle (/v1) sur le réseau local, verrouillée par la clé API de cette machine. Ni la mémoire, ni le chat.</span></span></label>
-      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-agent" onchange="bridgeSetAgent(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span>Laisser l’agent du voisin travailler ici</span><span class="sw-sub">un message du canal déclenche un tour d’agent sur CETTE machine : outils, shell, disque. Nécessite aussi le mode Agent de cette machine, sinon rien ne se déclenche.</span></span></label>
-      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-control" onchange="bridgeSetControl(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span>Laisser le voisin changer le moteur de cette machine</span><span class="sw-sub">lui ouvre « basculer le preset actif » et « allumer/couper l’agent ». ⚠ basculer un preset <b>arrête le moteur en place</b> et redémarre l’application : le pont de cette machine se coupe quelques secondes, et le canal avec lui.</span></span></label>
-      <div class="api-line"><span class="api-lbl">Port d’écoute <span class="pe-sub">doit différer du port de l’interface et de celui du moteur</span></span>
+      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-on" onchange="bridgeToggle(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span data-i18n="bridge.lend_title">Prêter ce modèle à un autre Aidros</span><span class="sw-sub" data-i18n="bridge.lend_help">n’ouvre que l’API du modèle (/v1) sur le réseau local, verrouillée par la clé API de cette machine. Ni la mémoire, ni le chat.</span></span></label>
+      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-agent" onchange="bridgeSetAgent(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span data-i18n="bridge.agent_title">Laisser l’agent du voisin travailler ici</span><span class="sw-sub" data-i18n="bridge.agent_help">un message du canal déclenche un tour d’agent sur CETTE machine : outils, shell, disque. Nécessite aussi le mode Agent de cette machine, sinon rien ne se déclenche.</span></span></label>
+      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-control" onchange="bridgeSetControl(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span data-i18n="bridge.control_title">Laisser le voisin changer le moteur de cette machine</span><span class="sw-sub" data-i18n="bridge.control_help" data-i18n-html>lui ouvre « basculer le preset actif » et « allumer/couper l’agent ». ⚠ basculer un preset <b>arrête le moteur en place</b> et redémarre l’application : le pont de cette machine se coupe quelques secondes, et le canal avec lui.</span></span></label>
+      <div class="api-line"><span class="api-lbl"><span data-i18n="bridge.port_label">Port d’écoute</span> <span class="pe-sub" data-i18n="bridge.port_help">doit différer du port de l’interface et de celui du moteur</span></span>
         <input id="bridge-port" class="api-val" inputmode="numeric" style="max-width:90px;text-align:right" onchange="bridgeSavePort()"></div>
-      <div class="switchrow"><span class="sw-txt"><span id="bridge-model">Aucun modèle prêté</span><span class="sw-sub" id="bridge-note">Un pont ouvert sans moteur actif n’a rien à prêter : activer un preset MoE (page Modèles).</span></span></div>
+      <div class="switchrow"><span class="sw-txt"><span id="bridge-model" data-i18n="bridge.model_none">Aucun modèle prêté</span><span class="sw-sub" id="bridge-note" data-i18n="bridge.note_idle">Un pont ouvert sans moteur actif n’a rien à prêter : activer un preset MoE (page Modèles).</span></span></div>
     </div>
     <div class="slist">
-      <div class="subhead"><span>Recevoir un cerveau</span></div>
-      <div class="rowbody"><p class="muted" style="margin:0">Pour que CETTE installation utilise le modèle d’un autre Aidros : Presets → <b>API Externe</b>, et y coller l’adresse du pont de l’autre machine avec la clé API de cette machine-là. L’adresse d’un pont allumé sur cette même machine est refusée — une instance ne se parle pas à elle-même.</p></div>
+      <div class="subhead"><span data-i18n="bridge.borrow_head">Recevoir un cerveau</span></div>
+      <div class="rowbody"><p class="muted" style="margin:0" data-i18n="bridge.borrow_help" data-i18n-html>Pour que CETTE installation utilise le modèle d’un autre Aidros : Presets → <b>API Externe</b>, et y coller l’adresse du pont de l’autre machine avec la clé API de cette machine-là. L’adresse d’un pont allumé sur cette même machine est refusée — une instance ne se parle pas à elle-même.</p></div>
     </div>
     <div class="slist" id="peers-block" hidden>
-      <div class="subhead"><span>Parler à un autre Aidros</span></div>
-      <div class="rowbody"><p class="muted" style="margin:0">Un voisin garde son propre modèle et sa propre mémoire : l’outil <code>peer</code> lui envoie des messages et garde le souvenir de l’échange. Rien ne s’exécute de l’autre côté, et rien ici à sa demande.</p></div>
+      <div class="subhead"><span data-i18n="bridge.peers_head">Parler à un autre Aidros</span></div>
+      <div class="rowbody"><p class="muted" style="margin:0" data-i18n="bridge.peers_help" data-i18n-html>Un voisin garde son propre modèle et sa propre mémoire : l’outil <code>peer</code> lui envoie des messages et garde le souvenir de l’échange. Rien ne s’exécute de l’autre côté, et rien ici à sa demande.</p></div>
       <div id="peers-list"></div>
-      <div class="api-line"><input id="peer-name" class="api-val" placeholder="nom (ex. poste-salon)" style="max-width:150px">
+      <div class="api-line"><input id="peer-name" class="api-val" data-i18n="bridge.peer_name_ph" data-i18n-attr="placeholder" placeholder="nom (ex. poste-salon)" style="max-width:150px">
         <input id="peer-url" class="api-val" placeholder="http://192.168.1.98:18190/v1">
-        <input id="peer-key" class="api-val" type="password" placeholder="clé API de l’autre machine" style="max-width:190px">
-        <button type="button" class="sw-action" onclick="peerAdd()">Ajouter</button></div>
+        <input id="peer-key" class="api-val" type="password" data-i18n="bridge.peer_key_ph" data-i18n-attr="placeholder" placeholder="clé API de l’autre machine" style="max-width:190px">
+        <button type="button" class="sw-action" onclick="peerAdd()" data-i18n="bridge.peer_add">Ajouter</button></div>
     </div>
   </details>
   <details id="lc-details"><summary><span class="stitle" data-i18n="engine.title">Engine</span></summary>
@@ -5176,6 +5176,80 @@ fr: {
   "models.dl.downloaded": "téléchargé",
   "models.dl.remaining": "reste",
   "models.dl.file_n_prefix": "fichier ",
+  "bridge.title": "Pont Aidros ↔ Aidros",
+  "bridge.address_label": "Adresse à coller chez l’autre Aidros",
+  "bridge.copy": "copier",
+  "bridge.copied": "adresse copiée",
+  "bridge.lend_title": "Prêter ce modèle à un autre Aidros",
+  "bridge.lend_help": "n’ouvre que l’API du modèle (/v1) sur le réseau local, verrouillée par la clé API de cette machine. Ni la mémoire, ni le chat.",
+  "bridge.agent_title": "Laisser l’agent du voisin travailler ici",
+  "bridge.agent_help": "un message du canal déclenche un tour d’agent sur CETTE machine : outils, shell, disque. Nécessite aussi le mode Agent de cette machine, sinon rien ne se déclenche.",
+  "bridge.control_title": "Laisser le voisin changer le moteur de cette machine",
+  "bridge.control_help": "lui ouvre « basculer le preset actif » et « allumer/couper l’agent ». ⚠ basculer un preset <b>arrête le moteur en place</b> et redémarre l’application : le pont de cette machine se coupe quelques secondes, et le canal avec lui.",
+  "bridge.port_label": "Port d’écoute",
+  "bridge.port_help": "doit différer du port de l’interface et de celui du moteur",
+  "bridge.model_none": "Aucun modèle prêté",
+  "bridge.note_idle": "Un pont ouvert sans moteur actif n’a rien à prêter : activer un preset MoE (page Modèles).",
+  "bridge.note_no_preset": "Un pont ouvert sans preset actif n’a rien à prêter : activer un preset (page Modèles), MoE local, API externe ou cloud.",
+  "bridge.borrow_head": "Recevoir un cerveau",
+  "bridge.borrow_help": "Pour que CETTE installation utilise le modèle d’un autre Aidros : Presets → <b>API Externe</b>, et y coller l’adresse du pont de l’autre machine avec la clé API de cette machine-là. L’adresse d’un pont allumé sur cette même machine est refusée — une instance ne se parle pas à elle-même.",
+  "bridge.peers_head": "Parler à un autre Aidros",
+  "bridge.peers_help": "Un voisin garde son propre modèle et sa propre mémoire : l’outil <code>peer</code> lui envoie des messages et garde le souvenir de l’échange. Rien ne s’exécute de l’autre côté, et rien ici à sa demande.",
+  "bridge.peer_name_ph": "nom (ex. poste-salon)",
+  "bridge.peer_key_ph": "clé API de l’autre machine",
+  "bridge.peer_add": "Ajouter",
+  "bridge.badge_listening": "à l’écoute",
+  "bridge.badge_sleep": "à réveiller",
+  "bridge.badge_off": "éteint",
+  "bridge.state_online": "en ligne",
+  "bridge.state_silent": "aucune écoute",
+  "bridge.state_closed": "fermé",
+  "bridge.engine_local": "moteur local 127.0.0.1:{0}",
+  "bridge.model_lent": "Modèle prêté : {0}",
+  "bridge.note_listening": "Écoute sur le port {0} ; le cerveau vient de : {1}.",
+  "bridge.model_dead": "Aucun modèle ne répond derrière ce pont",
+  "bridge.note_dead": "Le pont écoute mais rien ne répond derrière ({0}) : activer un preset — MoE local, API externe ou cloud — sinon l’autre Aidros recevra une erreur.",
+  "bridge.no_peers": "Aucun voisin déclaré. Un canal se déclare à la main, jamais par découverte automatique du réseau.",
+  "bridge.key_set": "clé posée",
+  "bridge.key_missing": "<b>sans clé</b> — il refusera la demande",
+  "bridge.thread_count": " · canal {0} messages",
+  "bridge.peers_engines": "Moteurs",
+  "bridge.peer_forget": "Oublier",
+  "bridge.peer_remove": "Retirer",
+  "bridge.pilot_reading": "Lecture de ses moteurs…",
+  "bridge.pilot_none": "Ce voisin n’a aucun preset.",
+  "bridge.pilot_engine": " · moteur {0}",
+  "bridge.pilot_mismatch": "— son application est épinglée {0}, celui-là sera refusé",
+  "bridge.pilot_active": " <b>· actif</b>",
+  "bridge.kind_api": "API distante",
+  "bridge.kind_moe": "MoE local",
+  "bridge.kind_preset": "preset",
+  "bridge.pilot_activate": "Activer",
+  "bridge.pilot_warning": "⚠ Basculer arrête le moteur en place chez lui et redémarre son application : le canal se coupe quelques secondes. Chez elle comme ici, un seul moteur par instance.",
+  "bridge.pilot_unreachable": "Injoignable : {0}",
+  "bridge.error_word": "erreur",
+  "bridge.pilot_stale": "Preset introuvable dans la liste relue",
+  "bridge.pilot_switched": "« {0} » passe sur {1} — son application redémarre, le canal se coupe quelques secondes",
+  "bridge.peer_error": "Voisin {0} : {1}",
+  "bridge.peer_error_plain": "Voisin : {0}",
+  "bridge.peer_need_fields": "Nom et adresse du voisin requis",
+  "bridge.refused": "refusé",
+  "bridge.peer_added": "Voisin {0} déclaré",
+  "bridge.peer_removed": "Voisin {0} retiré",
+  "bridge.thread_forgotten": "Souvenir du canal effacé",
+  "bridge.channel_error": "Canal : {0}",
+  "bridge.opened": "Pont ouvert sur le réseau local",
+  "bridge.closed": "Pont coupé",
+  "bridge.bridge_error": "Pont : {0}",
+  "bridge.agent_no_mode": "Autorisation prise, mais le mode Agent de cette machine est éteint : rien ne se déclenchera",
+  "bridge.agent_allowed": "Agent du voisin autorisé ici",
+  "bridge.agent_denied": "Agent du voisin refusé",
+  "bridge.agent_error": "Agent du voisin : {0}",
+  "bridge.control_on": "Le voisin peut changer le moteur de cette machine",
+  "bridge.control_off": "Pilotage coupé — le voisin ne reçoit plus que le modèle nu",
+  "bridge.control_error": "Pilotage : {0}",
+  "bridge.port_msg": "Port du pont : {0}",
+  "projects.default_name": "Générale",
 },
 en: {
   "chat.tool.tracker_lbl": "Tracker",
@@ -6667,6 +6741,80 @@ en: {
   "models.dl.downloaded": "downloaded",
   "models.dl.remaining": "remaining",
   "models.dl.file_n_prefix": "file ",
+  "bridge.title": "Aidros↔Aidros bridge",
+  "bridge.address_label": "Address to paste into the other Aidros",
+  "bridge.copy": "copy",
+  "bridge.copied": "address copied",
+  "bridge.lend_title": "Lend this model to another Aidros",
+  "bridge.lend_help": "opens only the model API (/v1) on the local network, locked by this machine's API key. Not memory, not chat.",
+  "bridge.agent_title": "Let the neighbour's agent work here",
+  "bridge.agent_help": "a channel message triggers an agent turn on THIS machine: tools, shell, disk. Also requires this machine's Agent mode, otherwise nothing is triggered.",
+  "bridge.control_title": "Let the neighbour change this machine's engine",
+  "bridge.control_help": "opens \"switch the active preset\" and \"turn the agent on/off\" for them. ⚠ switching a preset <b>stops the engine in place</b> and restarts the app: this machine's bridge drops for a few seconds, and the channel with it.",
+  "bridge.port_label": "Listening port",
+  "bridge.port_help": "must differ from the interface port and from the engine port",
+  "bridge.model_none": "No model lent",
+  "bridge.note_idle": "An open bridge with no active engine has nothing to lend: activate a MoE preset (Models page).",
+  "bridge.note_no_preset": "An open bridge with no active preset has nothing to lend: activate a preset (Models page), local MoE, external API or cloud.",
+  "bridge.borrow_head": "Receive a brain",
+  "bridge.borrow_help": "For THIS installation to use another Aidros' model: Presets → <b>External API</b>, and paste there the bridge address of the other machine with that machine's API key. The address of a bridge running on this same machine is refused — an instance does not talk to itself.",
+  "bridge.peers_head": "Talk to another Aidros",
+  "bridge.peers_help": "A neighbour keeps its own model and its own memory: the <code>peer</code> tool sends it messages and keeps the memory of the exchange. Nothing runs over there, and nothing here at its request.",
+  "bridge.peer_name_ph": "name (e.g. living-room-pc)",
+  "bridge.peer_key_ph": "the other machine's API key",
+  "bridge.peer_add": "Add",
+  "bridge.badge_listening": "listening",
+  "bridge.badge_sleep": "to wake up",
+  "bridge.badge_off": "off",
+  "bridge.state_online": "online",
+  "bridge.state_silent": "nothing listening",
+  "bridge.state_closed": "closed",
+  "bridge.engine_local": "local engine 127.0.0.1:{0}",
+  "bridge.model_lent": "Model lent: {0}",
+  "bridge.note_listening": "Listening on port {0}; the brain comes from: {1}.",
+  "bridge.model_dead": "No model answers behind this bridge",
+  "bridge.note_dead": "The bridge listens but nothing answers behind it ({0}): activate a preset — local MoE, external API or cloud — otherwise the other Aidros gets an error.",
+  "bridge.no_peers": "No neighbour declared. A channel is declared by hand, never by automatic network discovery.",
+  "bridge.key_set": "key set",
+  "bridge.key_missing": "<b>no key</b> — it will refuse the request",
+  "bridge.thread_count": " · channel {0} messages",
+  "bridge.peers_engines": "Engines",
+  "bridge.peer_forget": "Forget",
+  "bridge.peer_remove": "Remove",
+  "bridge.pilot_reading": "Reading its engines…",
+  "bridge.pilot_none": "This neighbour has no preset.",
+  "bridge.pilot_engine": " · engine {0}",
+  "bridge.pilot_mismatch": "— its app is pinned to {0}, that one will be refused",
+  "bridge.pilot_active": " <b>· active</b>",
+  "bridge.kind_api": "remote API",
+  "bridge.kind_moe": "local MoE",
+  "bridge.kind_preset": "preset",
+  "bridge.pilot_activate": "Activate",
+  "bridge.pilot_warning": "⚠ Switching stops the engine in place over there and restarts its app: the channel drops for a few seconds. Over there as here, one engine per instance.",
+  "bridge.pilot_unreachable": "Unreachable: {0}",
+  "bridge.error_word": "error",
+  "bridge.pilot_stale": "Preset not found in the re-read list",
+  "bridge.pilot_switched": "\"{0}\" moves to {1} — its app restarts, the channel drops for a few seconds",
+  "bridge.peer_error": "Neighbour {0}: {1}",
+  "bridge.peer_error_plain": "Neighbour: {0}",
+  "bridge.peer_need_fields": "Neighbour name and address required",
+  "bridge.refused": "refused",
+  "bridge.peer_added": "Neighbour {0} declared",
+  "bridge.peer_removed": "Neighbour {0} removed",
+  "bridge.thread_forgotten": "Channel memory erased",
+  "bridge.channel_error": "Channel: {0}",
+  "bridge.opened": "Bridge open on the local network",
+  "bridge.closed": "Bridge closed",
+  "bridge.bridge_error": "Bridge: {0}",
+  "bridge.agent_no_mode": "Permission granted, but this machine's Agent mode is off: nothing will be triggered",
+  "bridge.agent_allowed": "Neighbour's agent allowed here",
+  "bridge.agent_denied": "Neighbour's agent refused",
+  "bridge.agent_error": "Neighbour's agent: {0}",
+  "bridge.control_on": "The neighbour may change this machine's engine",
+  "bridge.control_off": "Control off — the neighbour now receives only the bare model",
+  "bridge.control_error": "Control: {0}",
+  "bridge.port_msg": "Bridge port: {0}",
+  "projects.default_name": "General",
 }
 };
 var LANG_NAMES = {
@@ -6710,6 +6858,13 @@ function setLang(lang) {
 	applyI18n();
 	if (typeof savePrefs === 'function') savePrefs();
 	if (typeof loadAll === 'function') loadAll();
+	if (typeof setProjectBtnName === 'function' && typeof PROJECTS !== 'undefined'
+		&& typeof ACTIVE_PROJECT !== 'undefined') {
+		var act = (PROJECTS || []).find(function (p) { return p.slug === ACTIVE_PROJECT; });
+		if (typeof projLabel === 'function') setProjectBtnName(projLabel(act));
+	}
+	if (typeof histHeadLabel === 'function') histHeadLabel();
+	if (typeof refreshProjMenu === 'function') refreshProjMenu();
 }
 document.addEventListener('DOMContentLoaded', function () {
 	var sel = document.getElementById('lang-select');
@@ -6726,6 +6881,13 @@ document.addEventListener('DOMContentLoaded', function () {
 	applyI18n();
 });
 function tf(key, fr){ const v = t(key); return v === key ? fr : v; }
+function tp(key) {
+	var v = t(key);
+	for (var i = 1; i < arguments.length; i++) {
+		v = v.split('{' + (i - 1) + '}').join(String(arguments[i] == null ? '' : arguments[i]));
+	}
+	return v;
+}
 function applyTheme(id){
   const dark = id==='dark' || (typeof id==='string' && id.endsWith('-dark'));
   document.documentElement.setAttribute('data-theme', dark?'dark':'light');
@@ -10009,7 +10171,7 @@ function sessionRow(c, active){
   name.appendChild(document.createTextNode(c.title || t('chat.session.default_name')));
   const meta = document.createElement('div'); meta.className = 'sess-meta';
   const n = c.turns || 0;
-  const pn = (c.project && c.mode!=='fast' && c.mode!=='base' && c.project !== (ACTIVE_PROJECT||HIST_DEFAULT_PROJ)) ? (HIST_PROJ_NAMES[c.project] || c.project) : '';
+  const pn = (c.project && c.mode!=='fast' && c.mode!=='base' && c.project !== (ACTIVE_PROJECT||HIST_DEFAULT_PROJ)) ? projetLabel(c.project) : '';
   if(pn){ const pj=document.createElement('span'); pj.className='sess-proj'; pj.textContent=pn; meta.appendChild(pj); }
   meta.appendChild(document.createTextNode(fmtHistDate(c.saved_at) + ' · ' + n + ' ' + (n>1?t('chat.session.messages'):t('chat.session.message')) + (active?' · '+t('chat.session.ongoing'):'')));
   info.appendChild(name); info.appendChild(meta);
@@ -10028,7 +10190,11 @@ function openHistRowMenu(anchor, c){
     {icon:'trash', label:t('chat.session.delete_permanently'), danger:true, run:()=>deleteHistory(c.id, c.title)},
   ], {side:'below'});
 }
-let HIST_PROJ_NAMES = {}, HIST_DEFAULT_PROJ = '';
+function projetLabel(slug){
+  if(slug === HIST_DEFAULT_PROJ && HIST_DEFAULT_NAME_DEFAULT) return t('projects.default_name');
+  return HIST_PROJ_NAMES[slug] || slug || '';
+}
+let HIST_PROJ_NAMES = {}, HIST_DEFAULT_PROJ = '', HIST_DEFAULT_NAME_DEFAULT = false;
 const HIST_PAGE = 60;
 let HIST_ST = {off:0, total:0, active:'', section:'', loading:false, sig:''};
 let HIST_Q = '', HIST_QT = 0;
@@ -10060,6 +10226,7 @@ async function loadHistory(){
   catch(_){ if(!box.children.length) box.innerHTML = '<span class="muted" style="font-size:12px">'+t('chat.session.load_error')+'</span>'; return; }
   const list = (r && r.conversations) || [];
   HIST_PROJ_NAMES = (r && r.projects) || {}; HIST_DEFAULT_PROJ = (r && r.default_project) || '';
+  HIST_DEFAULT_NAME_DEFAULT = !!(r && r.default_name_default);
   const sig = JSON.stringify([HIST_Q, r.active, r.total, list.map(c=>[c.id,c.title,c.fav,c.turns,c.project])]);
   const cnt = document.getElementById('sess-count'); if(cnt) cnt.textContent = r.total || '';
   const clr = document.getElementById('history-clear-all'); if(clr) clr.hidden = !!HIST_Q;
@@ -10852,7 +11019,7 @@ function histHeadLabel(){
   }
   if(ic && ic._folder) ic.innerHTML=ic._folder;
   const p=(typeof PROJECTS!=='undefined'?PROJECTS:[]).find(x=>x.slug===ACTIVE_PROJECT);
-  hl.textContent=p?p.name:t('projects.projects');
+  hl.textContent=p?projLabel(p):t('projects.projects');
 }
 function syncModeWithAgent(){ applyFastBtn(); }
 function swapModeLabel(){
@@ -11867,10 +12034,10 @@ function renderBridge(d){
   card.hidden = false;
   const live = !!d.listening;
   setBadge('bridge-badge', live ? true : (d.enabled ? 'warn' : false),
-           live ? 'à l’écoute' : (d.enabled ? 'à réveiller' : 'éteint'));
+           live ? t('bridge.badge_listening') : (d.enabled ? t('bridge.badge_sleep') : t('bridge.badge_off')));
   const st = document.getElementById('bridge-state');
   if(st){
-    st.textContent = live ? 'en ligne' : (d.enabled ? 'aucune écoute' : 'fermé');
+    st.textContent = live ? t('bridge.state_online') : (d.enabled ? t('bridge.state_silent') : t('bridge.state_closed'));
     st.classList.toggle('on', live);
   }
   const on = document.getElementById('bridge-on');
@@ -11885,17 +12052,17 @@ function renderBridge(d){
   if(url) url.value = (d.urls && d.urls.length && live) ? d.urls[0] : '';
   const mdl = document.getElementById('bridge-model');
   const note = document.getElementById('bridge-note');
-  const src = d.serving || ('moteur local 127.0.0.1:' + (d.engine_serving || d.engine_port));
+  const src = d.serving || tp('bridge.engine_local', d.engine_serving || d.engine_port);
   if(mdl && note){
     if(d.model){
-      mdl.textContent = 'Modèle prêté : ' + d.model;
-      note.textContent = 'Écoute sur le port ' + d.port + ' ; le cerveau vient de : ' + src + '.';
+      mdl.textContent = tp('bridge.model_lent', d.model);
+      note.textContent = tp('bridge.note_listening', d.port, src);
     } else if(live){
-      mdl.textContent = 'Aucun modèle ne répond derrière ce pont';
-      note.textContent = 'Le pont écoute mais rien ne répond derrière (' + src + ') : activer un preset — MoE local, API externe ou cloud — sinon l’autre Aidros recevra une erreur.';
+      mdl.textContent = t('bridge.model_dead');
+      note.textContent = tp('bridge.note_dead', src);
     } else {
-      mdl.textContent = 'Aucun modèle prêté';
-      note.textContent = 'Un pont ouvert sans preset actif n’a rien à prêter : activer un preset (page Modèles), MoE local, API externe ou cloud.';
+      mdl.textContent = t('bridge.model_none');
+      note.textContent = t('bridge.note_no_preset');
     }
   }
 }
@@ -11925,17 +12092,17 @@ function renderPeers(){
   const box = document.getElementById('peers-list');
   if(!box) return;
   if(!peersList.length){
-    box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">Aucun voisin déclaré. Un canal se déclare à la main, jamais par découverte automatique du réseau.</p></div>';
+    box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">' + escHtml(t('bridge.no_peers')) + '</p></div>';
     return;
   }
   box.innerHTML = peersList.map(function(p, i){
-    const cle = p.has_key ? 'clé posée' : '<b>sans clé</b> — il refusera la demande';
-    const can = p.thread ? ' · canal ' + p.thread + ' messages' : '';
+    const cle = p.has_key ? escHtml(t('bridge.key_set')) : t('bridge.key_missing');
+    const can = p.thread ? tp('bridge.thread_count', p.thread) : '';
     return '<div class="switchrow"><span class="sw-txt"><span>' + escHtml(p.name) +
       '</span><span class="sw-sub">' + escHtml(p.url) + ' · ' + cle + can + '</span></span>' +
-      '<button type="button" class="sw-action" onclick="peerPilotToggleIdx(' + i + ')">Moteurs</button>' +
-      '<button type="button" class="sw-action" onclick="peerForgetIdx(' + i + ')">Oublier</button>' +
-      '<button type="button" class="sw-action" onclick="peerRemoveIdx(' + i + ')">Retirer</button></div>' +
+      '<button type="button" class="sw-action" onclick="peerPilotToggleIdx(' + i + ')">' + escHtml(t('bridge.peers_engines')) + '</button>' +
+      '<button type="button" class="sw-action" onclick="peerForgetIdx(' + i + ')">' + escHtml(t('bridge.peer_forget')) + '</button>' +
+      '<button type="button" class="sw-action" onclick="peerRemoveIdx(' + i + ')">' + escHtml(t('bridge.peer_remove')) + '</button></div>' +
       '<div class="pilot-block" id="pilot-' + i + '" hidden></div>';
   }).join('');
 }
@@ -11954,7 +12121,7 @@ function peerPilotToggleIdx(i){
   }
   pilotOuvert = i;
   box.hidden = false;
-  box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">Lecture de ses moteurs…</p></div>';
+  box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">' + escHtml(t('bridge.pilot_reading')) + '</p></div>';
   peerPilotLoad(i);
 }
 async function peerPilotLoad(i){
@@ -11964,31 +12131,32 @@ async function peerPilotLoad(i){
   if(!p) return;
   try{
     const r = await jpost('/api/peers/pilot', { name: p.name, action: 'presets' });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
     const ps = r.presets || [];
     const epingle = r.moteur_epingle || '';
     let html = '';
     if(!ps.length){
-      html = '<div class="rowbody"><p class="muted" style="margin:0">Ce voisin n’a aucun preset.</p></div>';
+      html = '<div class="rowbody"><p class="muted" style="margin:0">' + escHtml(t('bridge.pilot_none')) + '</p></div>';
     } else {
       html = ps.map(function(pre, j){
-        const moteur = pre.moteur ? ' · moteur ' + escHtml(pre.moteur) : '';
+        const moteur = pre.moteur ? tp('bridge.pilot_engine', escHtml(pre.moteur)) : '';
         const doute = pre.moteur && epingle && pre.moteur !== epingle
-          ? ' <b class="warn">— son application est épinglée ' + escHtml(epingle) + ', celui-là sera refusé</b>'
+          ? ' <b class="warn">' + escHtml(tp('bridge.pilot_mismatch', epingle)) + '</b>'
           : '';
-        const actif = pre.active ? ' <b>· actif</b>' : '';
+        const actif = pre.active ? t('bridge.pilot_active') : '';
+        const kind = pre.external ? t('bridge.kind_api') : (pre.moe ? t('bridge.kind_moe') : t('bridge.kind_preset'));
         return '<div class="switchrow"><span class="sw-txt"><span>' + escHtml(pre.name || pre.id) +
-          actif + '</span><span class="sw-sub">' + (pre.external ? 'API distante' : (pre.moe ? 'MoE local' : 'preset') + moteur + doute) +
+          actif + '</span><span class="sw-sub">' + kind + moteur + doute +
           '</span></span>' +
-          (pre.active ? '' : '<button type="button" class="sw-action" onclick="peerPilotSwitchIdx(' + i + ',' + j + ')">Activer</button>') +
+          (pre.active ? '' : '<button type="button" class="sw-action" onclick="peerPilotSwitchIdx(' + i + ',' + j + ')">' + escHtml(t('bridge.pilot_activate')) + '</button>') +
           '</div>';
       }).join('');
     }
-    html += '<div class="rowbody"><p class="muted" style="margin:0">⚠ Basculer arrête le moteur en place chez lui et redémarre son application : le canal se coupe quelques secondes. Chez elle comme ici, un seul moteur par instance.</p></div>';
+    html += '<div class="rowbody"><p class="muted" style="margin:0">' + escHtml(t('bridge.pilot_warning')) + '</p></div>';
     box.innerHTML = html;
     box._presets = ps;
   }catch(e){
-    box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">Injoignable : ' + escHtml(e.message || 'erreur') + '</p></div>';
+    box.innerHTML = '<div class="rowbody"><p class="muted" style="margin:0">' + escHtml(tp('bridge.pilot_unreachable', e.message || t('bridge.error_word'))) + '</p></div>';
   }
 }
 async function peerPilotSwitchIdx(i, j){
@@ -11997,82 +12165,81 @@ async function peerPilotSwitchIdx(i, j){
   if(!box || !p) return;
   const ps = box._presets || [];
   const pre = ps[j];
-  if(!pre || !pre.id){ toast('Preset introuvable dans la liste relue'); return; }
+  if(!pre || !pre.id){ toast(t('bridge.pilot_stale')); return; }
   try{
     const r = await jpost('/api/peers/pilot', { name: p.name, action: 'switch', id: pre.id });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
-    toast('« ' + p.name + ' » passe sur ' + (r.preset || pre.id) + ' — son application redémarre, le canal se coupe quelques secondes');
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
+    toast(tp('bridge.pilot_switched', p.name, r.preset || pre.id));
     box.hidden = true; box.innerHTML = ''; box._presets = null;
     if(pilotOuvert === i) pilotOuvert = -1;
-  }catch(e){ toast('Voisin ' + p.name + ' : ' + e.message); }
+  }catch(e){ toast(tp('bridge.peer_error', p.name, e.message)); }
 }
 async function peerAdd(){
   const g = function(id){ const e = document.getElementById(id); return e ? e.value.trim() : ''; };
   const name = g('peer-name'), url = g('peer-url'), key = g('peer-key');
-  if(!name || !url){ toast('Nom et adresse du voisin requis'); return; }
+  if(!name || !url){ toast(t('bridge.peer_need_fields')); return; }
   try{
     const r = await jpost('/api/peers', { add: name, url: url, key: key });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
     ['peer-name','peer-url','peer-key'].forEach(function(id){ const e = document.getElementById(id); if(e) e.value=''; });
-    toast('Voisin ' + r.name + ' déclaré');
+    toast(t('bridge.peer_added', r.name));
     loadPeers();
-  }catch(e){ toast('Voisin : ' + e.message); }
+  }catch(e){ toast(tp('bridge.peer_error_plain', e.message)); }
 }
 async function peerRemove(name){
   try{
     const r = await jpost('/api/peers', { remove: name });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
-    toast('Voisin ' + name + ' retiré');
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
+    toast(tp('bridge.peer_removed', name));
     loadPeers();
-  }catch(e){ toast('Voisin : ' + e.message); }
+  }catch(e){ toast(tp('bridge.peer_error_plain', e.message)); }
 }
 async function peerForget(name){
   try{
     const r = await jpost('/api/peers', { forget: name });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
-    toast('Souvenir du canal effacé');
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
+    toast(t('bridge.thread_forgotten'));
     loadPeers();
-  }catch(e){ toast('Canal : ' + e.message); }
+  }catch(e){ toast(tp('bridge.channel_error', e.message)); }
 }
 async function bridgeToggle(wanted){
   const box = document.getElementById('bridge-on');
   try{
     const r = await jpost('/api/bridge', { enabled: !!wanted });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
     renderBridge(r);
-    toast(wanted ? 'Pont ouvert sur le réseau local' : 'Pont coupé');
+    toast(wanted ? t('bridge.opened') : t('bridge.closed'));
   }catch(e){
     if(box) box.checked = !wanted;
-    toast('Pont : ' + e.message);
+    toast(tp('bridge.bridge_error', e.message));
   }
 }
 async function bridgeSetAgent(wanted){
   const box = document.getElementById('bridge-agent');
   try{
     const r = await jpost('/api/bridge', { agent: !!wanted });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
     renderBridge(r);
     if(wanted && r.agent_requested && !r.agent_mode_local){
-      toast('Autorisation prise, mais le mode Agent de cette machine est éteint : rien ne se déclenchera');
+      toast(t('bridge.agent_no_mode'));
     } else {
-      toast(wanted ? 'Agent du voisin autorisé ici' : 'Agent du voisin refusé');
+      toast(wanted ? t('bridge.agent_allowed') : t('bridge.agent_denied'));
     }
   }catch(e){
     if(box) box.checked = !wanted;
-    toast('Agent du voisin : ' + e.message);
+    toast(tp('bridge.agent_error', e.message));
   }
 }
 async function bridgeSetControl(wanted){
   const box = document.getElementById('bridge-control');
   try{
     const r = await jpost('/api/bridge', { control: !!wanted });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
     renderBridge(r);
-    toast(wanted ? 'Le voisin peut changer le moteur de cette machine'
-                 : 'Pilotage coupé — le voisin ne reçoit plus que le modèle nu');
+    toast(wanted ? t('bridge.control_on') : t('bridge.control_off'));
   }catch(e){
     if(box) box.checked = !wanted;
-    toast('Pilotage : ' + e.message);
+    toast(tp('bridge.control_error', e.message));
   }
 }
 async function bridgeSavePort(){
@@ -12080,11 +12247,11 @@ async function bridgeSavePort(){
   const p = ((inp && inp.value) || '').trim();
   try{
     const r = await jpost('/api/bridge', { port: p });
-    if(!r.ok){ throw new Error(r.error || 'refusé'); }
+    if(!r.ok){ throw new Error(r.error || t('bridge.refused')); }
     renderBridge(r);
-    toast('Port du pont : ' + r.port);
+    toast(tp('bridge.port_msg', r.port));
   }catch(e){
-    toast('Port du pont : ' + e.message);
+    toast(tp('bridge.port_msg', e.message));
     if(inp && bridgeEtat) inp.value = bridgeEtat.port || '';
   }
 }
@@ -13209,7 +13376,7 @@ async function loadProjects(){
   PROJECTS = r.projects || [];
   ACTIVE_PROJECT = r.active || '';
   const act = PROJECTS.find(p=>p.slug===ACTIVE_PROJECT);
-  setProjectBtnName(act ? act.name : '');
+  setProjectBtnName(projLabel(act));
   refreshProjMenu();
 }
 function projFolderSvg(sz){
@@ -13226,16 +13393,16 @@ const closeProjMenu = ()=>closeMenu();
 function openProjMenu(anchor, p){
   popMenu(anchor, [
     {icon:'doc', label:t('projects.options'), run:()=>optionsProjectUI(p)},            
-    {icon:'mem', label:t('projects.view_memory'), run:()=>openMemHub(p.slug, p.name)},  
+    {icon:'mem', label:t('projects.view_memory'), run:()=>openMemHub(p.slug, projLabel(p))},  
     {icon:'chart', label:t('projects.view_trackers'), run:()=>openTrackerHub(p.slug)},       
-    PROJECTS.length > 1 && {icon:'trash', label:t('projects.delete'), danger:true, run:()=>deleteProjectUI(p.slug, p.name)},
+    PROJECTS.length > 1 && {icon:'trash', label:t('projects.delete'), danger:true, run:()=>deleteProjectUI(p.slug, projLabel(p))},
   ], {side:'below', sub:true});
 }
 async function switchProjectUI(slug){
   if(slug === ACTIVE_PROJECT) return;
   QUIET_LOADER_UNTIL = Date.now() + 4000; 
   const prev = ACTIVE_PROJECT;
-  const label = (s)=>{ const p = PROJECTS.find(x=>x.slug===s); if(p) setProjectBtnName(p.name); };
+  const label = (s)=>{ const p = PROJECTS.find(x=>x.slug===s); if(p) setProjectBtnName(projLabel(p)); };
   ACTIVE_PROJECT = slug; label(slug);
   let r; try{ r = await jpost('/api/projects/switch', {slug}); }
   catch(_){ ACTIVE_PROJECT = prev; label(prev); toast(t('projects.network_error')); return; }
@@ -13260,12 +13427,12 @@ async function optionsProjectUI(p){
   const res = await askPrompt(
     t('projects.describe_prompt'),
     {title:t('projects.options_title'), okText:t('projects.save_btn'), multiline:true,
-     name: p.name||'', namePlaceholder:t('projects.rename_placeholder'),
+     name: projLabel(p), namePlaceholder:t('projects.rename_placeholder'),
      default: p.desc||'', placeholder:t('projects.describe_placeholder')});
   if(res===null) return;                  
   const name = res.name.trim(), desc = res.text;
   if(!name){ toast(t('projects.name_empty')); return; }
-  if(name !== (p.name||'')){
+  if(name !== projLabel(p)){
     let rr; try{ rr = await jpost('/api/projects/rename', {slug, name}); }catch(_){ toast(t('projects.network_error')); return; }
     if(!rr.ok){ toast(rr.error || t('projects.rename_failed')); return; }
   }
@@ -13278,7 +13445,7 @@ async function optionsProjectUI(p){
 function pickProjectPop(anchor, excludeSlug, onPick){
   const dests = PROJECTS.filter(p=>p.slug!==excludeSlug);
   popMenu(anchor, dests.length
-    ? dests.map(p=>({icon:projFolderSvg(16), label:p.name||p.slug, run:()=>onPick(p.slug)}))
+    ? dests.map(p=>({icon:projFolderSvg(16), label:projLabel(p), run:()=>onPick(p.slug)}))
     : [{label:t('projects.no_other_project'), disabled:true}], {side:'below'});
 }
 function moveSessionUI(c, anchor){
@@ -13289,7 +13456,12 @@ function moveSessionUI(c, anchor){
     loadHistory();
   });
 }
-function projName(slug){ const p = PROJECTS.find(x=>x.slug===slug); return p ? (p.name||p.slug) : slug; }
+function projLabel(p){
+  if(!p) return '';
+  if(p.name_default) return t('projects.default_name');
+  return p.name || p.slug || '';
+}
+function projName(slug){ const p = PROJECTS.find(x=>x.slug===slug); return p ? projLabel(p) : (slug||''); }
 async function deleteProjectUI(slug, name){
   if(!await askConfirm(t('projects.delete_project_prefix') + (name||slug) + t('projects.delete_project_suffix'), {title:t('projects.delete_project_title'), okText:t('projects.delete'), danger:true})) return;
   let r; try{ r = await jpost('/api/projects/delete', {slug}); }catch(_){ toast(t('projects.network_error')); return; }
@@ -13345,7 +13517,7 @@ function renderProjMenu(){
     const row=document.createElement('div'); row.className='pm-row';
     const b=document.createElement('button');
     b.innerHTML=PM_FOLDER+'<span></span>';
-    b.lastChild.textContent=p.name||p.slug;
+    b.lastChild.textContent=projLabel(p);
     if(p.slug===ACTIVE_PROJECT) b.classList.add('on');
     b.onclick=()=>pickProjFromMenu(p.slug);
     const more=document.createElement('button'); more.className='pm-more';

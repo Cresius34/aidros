@@ -182,28 +182,31 @@
   <!-- Pont Ajean↔Ajean : prêter le cerveau de CETTE machine à un autre Ajean du
        même réseau local. Réservé à la version portable (le Go répond 403
        ailleurs) et éteint par défaut : rien ne s'expose tout seul, la carte se
-       montre seule quand /api/bridge répond. Texte en français ici, comme le
-       bloc Mémoire plus bas : cette carte n'existe que sur la ligne Cresius. -->
-  <details id="bridge-details" hidden><summary><span class="stitle">Pont Aidros ↔ Aidros</span><span id="bridge-badge" class="sbadge"></span></summary>
+       montre seule quand /api/bridge répond. TEXTES TRADUITS depuis le 23/11 :
+       chaque libellé porte data-i18n="bridge.*". Le texte français reste écrit
+       ici, en secours si une clé manque (c'est le repli prévu du moteur, voir
+       00b-i18n.js). Les libellés qui portent du balisage (<b>, <code>) portent
+       aussi data-i18n-html, sinon applyI18n les écrirait en texte. -->
+  <details id="bridge-details" hidden><summary><span class="stitle" data-i18n="bridge.title">Pont Aidros ↔ Aidros</span><span id="bridge-badge" class="sbadge"></span></summary>
     <div class="slist api-conn">
       <div class="api-ent">
-        <div class="api-lbl"><span>Adresse à coller chez l’autre Aidros</span><span id="bridge-state" class="api-state"></span></div>
+        <div class="api-lbl"><span data-i18n="bridge.address_label">Adresse à coller chez l’autre Aidros</span><span id="bridge-state" class="api-state"></span></div>
         <div class="api-line"><input id="bridge-url" readonly class="api-val">
-          <button class="sw-ic" onclick="copyText(document.getElementById('bridge-url').value,'adresse copiée');flashCopied(this)" title="copier"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div>
+          <button class="sw-ic" onclick="copyText(document.getElementById('bridge-url').value,t('bridge.copied'));flashCopied(this)" data-i18n="bridge.copy" data-i18n-attr="title" title="copier"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div>
       </div>
-      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-on" onchange="bridgeToggle(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span>Prêter ce modèle à un autre Aidros</span><span class="sw-sub">n’ouvre que l’API du modèle (/v1) sur le réseau local, verrouillée par la clé API de cette machine. Ni la mémoire, ni le chat.</span></span></label>
+      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-on" onchange="bridgeToggle(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span data-i18n="bridge.lend_title">Prêter ce modèle à un autre Aidros</span><span class="sw-sub" data-i18n="bridge.lend_help">n’ouvre que l’API du modèle (/v1) sur le réseau local, verrouillée par la clé API de cette machine. Ni la mémoire, ni le chat.</span></span></label>
       <!-- Deux portes distinctes, deux réglages distincts. Les confondre est ce
            qui a fait chercher midi à quatorze heures le 17/11 : une route qui
            répond 403 pour la mauvaise raison ne se débusque pas toute seule. -->
-      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-agent" onchange="bridgeSetAgent(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span>Laisser l’agent du voisin travailler ici</span><span class="sw-sub">un message du canal déclenche un tour d’agent sur CETTE machine : outils, shell, disque. Nécessite aussi le mode Agent de cette machine, sinon rien ne se déclenche.</span></span></label>
-      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-control" onchange="bridgeSetControl(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span>Laisser le voisin changer le moteur de cette machine</span><span class="sw-sub">lui ouvre « basculer le preset actif » et « allumer/couper l’agent ». ⚠ basculer un preset <b>arrête le moteur en place</b> et redémarre l’application : le pont de cette machine se coupe quelques secondes, et le canal avec lui.</span></span></label>
-      <div class="api-line"><span class="api-lbl">Port d’écoute <span class="pe-sub">doit différer du port de l’interface et de celui du moteur</span></span>
+      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-agent" onchange="bridgeSetAgent(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span data-i18n="bridge.agent_title">Laisser l’agent du voisin travailler ici</span><span class="sw-sub" data-i18n="bridge.agent_help">un message du canal déclenche un tour d’agent sur CETTE machine : outils, shell, disque. Nécessite aussi le mode Agent de cette machine, sinon rien ne se déclenche.</span></span></label>
+      <label class="switchrow"><span class="switch"><input type="checkbox" id="bridge-control" onchange="bridgeSetControl(this.checked)"><span class="slider"></span></span> <span class="sw-txt"><span data-i18n="bridge.control_title">Laisser le voisin changer le moteur de cette machine</span><span class="sw-sub" data-i18n="bridge.control_help" data-i18n-html>lui ouvre « basculer le preset actif » et « allumer/couper l’agent ». ⚠ basculer un preset <b>arrête le moteur en place</b> et redémarre l’application : le pont de cette machine se coupe quelques secondes, et le canal avec lui.</span></span></label>
+      <div class="api-line"><span class="api-lbl"><span data-i18n="bridge.port_label">Port d’écoute</span> <span class="pe-sub" data-i18n="bridge.port_help">doit différer du port de l’interface et de celui du moteur</span></span>
         <input id="bridge-port" class="api-val" inputmode="numeric" style="max-width:90px;text-align:right" onchange="bridgeSavePort()"></div>
-      <div class="switchrow"><span class="sw-txt"><span id="bridge-model">Aucun modèle prêté</span><span class="sw-sub" id="bridge-note">Un pont ouvert sans moteur actif n’a rien à prêter : activer un preset MoE (page Modèles).</span></span></div>
+      <div class="switchrow"><span class="sw-txt"><span id="bridge-model" data-i18n="bridge.model_none">Aucun modèle prêté</span><span class="sw-sub" id="bridge-note" data-i18n="bridge.note_idle">Un pont ouvert sans moteur actif n’a rien à prêter : activer un preset MoE (page Modèles).</span></span></div>
     </div>
     <div class="slist">
-      <div class="subhead"><span>Recevoir un cerveau</span></div>
-      <div class="rowbody"><p class="muted" style="margin:0">Pour que CETTE installation utilise le modèle d’un autre Aidros : Presets → <b>API Externe</b>, et y coller l’adresse du pont de l’autre machine avec la clé API de cette machine-là. L’adresse d’un pont allumé sur cette même machine est refusée — une instance ne se parle pas à elle-même.</p></div>
+      <div class="subhead"><span data-i18n="bridge.borrow_head">Recevoir un cerveau</span></div>
+      <div class="rowbody"><p class="muted" style="margin:0" data-i18n="bridge.borrow_help" data-i18n-html>Pour que CETTE installation utilise le modèle d’un autre Aidros : Presets → <b>API Externe</b>, et y coller l’adresse du pont de l’autre machine avec la clé API de cette machine-là. L’adresse d’un pont allumé sur cette même machine est refusée — une instance ne se parle pas à elle-même.</p></div>
     </div>
     <!-- Le canal, dans l’autre sens : ce n’est plus prêter ni emprunter un
          cerveau, c’est parler à une autre IA. Chaque voisin garde SON modèle, SA
@@ -211,13 +214,13 @@
          découvert. Cette partie n’apparaît que si /api/peers répond (build
          portable de Cresius). -->
     <div class="slist" id="peers-block" hidden>
-      <div class="subhead"><span>Parler à un autre Aidros</span></div>
-      <div class="rowbody"><p class="muted" style="margin:0">Un voisin garde son propre modèle et sa propre mémoire : l’outil <code>peer</code> lui envoie des messages et garde le souvenir de l’échange. Rien ne s’exécute de l’autre côté, et rien ici à sa demande.</p></div>
+      <div class="subhead"><span data-i18n="bridge.peers_head">Parler à un autre Aidros</span></div>
+      <div class="rowbody"><p class="muted" style="margin:0" data-i18n="bridge.peers_help" data-i18n-html>Un voisin garde son propre modèle et sa propre mémoire : l’outil <code>peer</code> lui envoie des messages et garde le souvenir de l’échange. Rien ne s’exécute de l’autre côté, et rien ici à sa demande.</p></div>
       <div id="peers-list"></div>
-      <div class="api-line"><input id="peer-name" class="api-val" placeholder="nom (ex. poste-salon)" style="max-width:150px">
+      <div class="api-line"><input id="peer-name" class="api-val" data-i18n="bridge.peer_name_ph" data-i18n-attr="placeholder" placeholder="nom (ex. poste-salon)" style="max-width:150px">
         <input id="peer-url" class="api-val" placeholder="http://192.168.1.98:18190/v1">
-        <input id="peer-key" class="api-val" type="password" placeholder="clé API de l’autre machine" style="max-width:190px">
-        <button type="button" class="sw-action" onclick="peerAdd()">Ajouter</button></div>
+        <input id="peer-key" class="api-val" type="password" data-i18n="bridge.peer_key_ph" data-i18n-attr="placeholder" placeholder="clé API de l’autre machine" style="max-width:190px">
+        <button type="button" class="sw-action" onclick="peerAdd()" data-i18n="bridge.peer_add">Ajouter</button></div>
     </div>
   </details>
   <details id="lc-details"><summary><span class="stitle" data-i18n="engine.title">Engine</span></summary>

@@ -1088,7 +1088,9 @@ function histHeadLabel(){
   }
   if(ic && ic._folder) ic.innerHTML=ic._folder;
   const p=(typeof PROJECTS!=='undefined'?PROJECTS:[]).find(x=>x.slug===ACTIVE_PROJECT);
-  hl.textContent=p?p.name:t('projects.projects');
+  // projLabel() : le projet par défaut se dit dans la langue, un projet renommé
+  // garde le nom écrit par l'humain (voir 18-projects.js).
+  hl.textContent=p?projLabel(p):t('projects.projects');
 }
 // L'agent est actif d'office (voir agentEnabled côté serveur) : le mode affiché
 // ne dépend plus de lui. Gardé pour les appelants qui rafraîchissent le sélecteur.
