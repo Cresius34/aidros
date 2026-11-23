@@ -2,7 +2,7 @@
 
 [**English**](README.md) · Français
 
-![La fenêtre entière d'Aidros : barre latérale (appareil, configuration, presets, tâches, apparence, API, Pont Aidros↔Aidros, moteur, réglages), jauges du moteur et composeur](docs/ui-fr.png)
+![La fenêtre entière d'Aidros : la barre d'onglets (Conversation, Mémoire sémantique), la barre latérale (appareil, configuration, presets, tâches, apparence, API, Pont Aidros↔Aidros, moteur, réglages), les jauges du moteur et le composeur](docs/ui-fr.png)
 
 > **Aidros suit sa propre ligne.** À la suite d'un changement de direction du
 > projet originel, Aidros continue en produit à part entière, avec ses propres
@@ -131,6 +131,15 @@ Choisissez le mode sur le bouton à gauche de la barre de saisie.
 Une conversation garde le mode dans lequel elle a commencé. Les outils dépendent
 du **mode agent**, activé par défaut ; `aidros agent off` le coupe (le modèle
 répond alors sans toucher à votre machine).
+
+### Des onglets, sans nouvelle fenêtre du navigateur
+
+La conversation et la mémoire sémantique vivent dans **deux onglets de la même fenêtre** :
+pas de fenêtre de navigateur en plus, pas de seconde copie de l'interface qui mange la
+mémoire vive pour elle. Un onglet ouvre la mémoire **sur place** ; les boutons sous la barre
+la rechargent, ou la rendent à une vraie fenêtre de navigateur si c'est ce que vous
+préférez. Les onglets apparaissent quand il y a quelque chose à montrer et disparaissent
+quand il n'y a plus rien à montrer : la barre n'offre jamais une porte qui ne mène nulle part.
 
 ### Les projets
 

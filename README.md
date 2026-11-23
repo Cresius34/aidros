@@ -2,7 +2,7 @@
 
 **English** · [Français](README.fr.md)
 
-![Aidros' whole window: sidebar (device, configuration, presets, tasks, appearance, API, the Aidros↔Aidros bridge, engine, settings), engine gauges and the composer](docs/ui-en.png)
+![Aidros' whole window: the tabs bar (Conversation, Semantic memory), the sidebar (device, configuration, presets, tasks, appearance, API, the Aidros↔Aidros bridge, engine, settings), engine gauges and the composer](docs/ui-en.png)
 
 > **Aidros runs its own line.** Following a change of direction in the original
 > project, Aidros carries on as its own product, with its own releases. It
@@ -129,6 +129,14 @@ Pick a mode from the button on the left of the input bar.
 A conversation keeps the mode it started in. Tools rely on **agent mode**, which
 is on by default; `aidros agent off` turns it off (the model then answers without
 touching your machine).
+
+### Tabs, without a new browser window
+
+The conversation and the semantic memory live in **two tabs of the same window**: no extra
+browser window, and no second copy of the interface taking memory for itself. A tab opens
+the memory **in place**; the buttons under the bar reload it, or hand it to a real browser
+window if you prefer that. Tabs appear when there is something to show and disappear when
+there is nothing left to show, so the bar never offers a door that leads nowhere.
 
 ### Projects
 
