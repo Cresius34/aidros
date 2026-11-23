@@ -431,6 +431,23 @@
 </div>
 <div id="side-thumb" aria-hidden="true"></div>
 <div class="main" style="position:relative">
+  <!-- Barre d'onglets (26-onglets.js) : la page de mémoire sémantique s'ouvre ICI,
+       sans fenêtre de navigateur. ⚠ Elle est posée DANS .main et non en fix sur
+       tout l'écran, pour une raison mesurée : sur téléphone (media max-width:84px)
+       .side passe en `position:fixed;inset:0 auto 0 0` — un enfant de <body>. Une
+       barre fixée à la gauche de l'écran aurait donc été RECOURUE sous le panneau
+       latéral, à 320 px du bord, là où le pouce ne va pas. Dans .main elle hérite
+       de la colonne de droite et se place seule quand le panneau est en tiroir.
+       Elle est hors flux (position:absolute) pour ne rien voler au fil : .main est
+       un flex column dont #chat et #composer se partagent la hauteur, un troisième
+       enfant en flux leur aurait pris 36 px à chaque tour. -->
+  <nav id="tabs" class="tabs" hidden aria-label="Onglets" data-i18n="tabs.titre" data-i18n-attr="aria-label">
+    <button id="tab-chat" class="tab is-on" onclick="goTab('chat')" data-i18n="tabs.chat">Conversation</button>
+    <button id="tab-memory" class="tab" onclick="goTab('memory')" data-i18n="tabs.memory">Mémoire sémantique</button>
+    <span class="tabs-sp"></span>
+    <button id="tab-reload" class="tab tab-side" onclick="reloadTab()" hidden title="Recharger" aria-label="Recharger" data-i18n-attr="title" data-i18n="tabs.reload"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg></button>
+    <button id="tab-pop" class="tab tab-side" onclick="popTab()" hidden title="Ouvrir dans une fenêtre" aria-label="Ouvrir dans une fenêtre" data-i18n-attr="title" data-i18n="tabs.pop"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
+  </nav>
   <div id="chat"></div>
   <!-- App ouverte (22-apps.js) : couvre la conversation et la zone de saisie,
        le menu reste en place. -->
@@ -446,6 +463,21 @@
       <span class="app-err-acts"><button id="app-err-fix" class="primary" onclick="appAskFix()"></button><button id="app-err-hide" onclick="document.getElementById('app-err').hidden=true"></button></span>
     </div>
     <div id="app-run-body" class="app-run-body"></div>
+  </div>
+  <!-- Mémoire sémantique ouverte en onglet : le calque, et dedans une IFRAME de la
+       page servie. ⚠ Une iframe et non le HTML recopié dans cette page : la page de
+       mémoire porte sa PROPRE portée globale, ses propres fonctions (load, search,
+       saveConfig, pickers) et son propre <style> qui redéfinit body, h1, button.
+       Les fondre dans la portée globale de l'app, c'était deux fonctions `load` et
+       deux `api` qui se marchent dessus, et un CSS qui repeignait le fil. L'iframe
+       garde la séparation, et la page servie reste LA SOURCE : une seule copie du
+       code, ici comme dans l'onglet. -->
+  <div id="mem-tab" class="mem-tab" hidden>
+    <iframe id="mem-frame" class="mem-frame" title="Mémoire sémantique"></iframe>
+    <div id="mem-tab-off" class="mem-tab-off" hidden>
+      <p id="mem-tab-off-txt" data-i18n="tabs.off_blocked">Le serveur refuse d'être affiché dans un onglet de cette page. Ouvre-la dans une fenêtre du navigateur.</p>
+      <button class="primary" onclick="popTab()" data-i18n="tabs.pop">Ouvrir dans une fenêtre du navigateur</button>
+    </div>
   </div>
   <!-- Voile de chargement du fil : sans lui, une connexion lente donne un chat
   VIDE indiscernable d'une conversation vide. Masqué au signal {caught_up}. -->

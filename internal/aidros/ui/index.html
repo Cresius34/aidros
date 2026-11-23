@@ -24,6 +24,20 @@ select{color-scheme:inherit}
 option,optgroup{background:var(--panel);color:var(--text)}
 .side{width:320px;border-right:1px solid var(--border);padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom));overflow-y:auto;flex-shrink:0}
 .main{flex:1;display:flex;flex-direction:column;min-width:0}
+.tabs{position:absolute;top:0;left:0;right:0;z-index:28;display:flex;align-items:stretch;gap:2px;height:36px;padding:0 8px;background:var(--panel);border-bottom:1px solid var(--border);box-sizing:border-box}
+.tabs[hidden]{display:none}
+.tab{display:flex;align-items:center;gap:6px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--dim);font:inherit;font-size:12.5px;cursor:pointer;white-space:nowrap;border-radius:0}
+.tab:hover{color:var(--text)}
+.tab.is-on{color:var(--text);border-bottom-color:var(--accent)}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tabs-sp{flex:1}
+.tab-side{padding:0 8px;opacity:.8}
+.mem-tab{position:absolute;top:36px;left:0;right:0;bottom:0;z-index:27;display:flex;background:var(--bg)}
+.mem-tab[hidden]{display:none}
+.mem-frame{flex:1;width:100%;height:100%;border:0;background:var(--bg)}
+.mem-tab-off{margin:auto;max-width:420px;padding:26px;border:1px solid var(--border);border-radius:14px;background:var(--panel);text-align:center}
+.mem-tab-off p{margin:0 0 14px;color:var(--dim);font-size:13px}
+@media(max-width:520px){.tab{padding:0 8px;font-size:12px}.tabs{padding:0 4px}}
 #menubtn{display:none;position:fixed;top:calc(10px + env(safe-area-inset-top));left:calc(10px + env(safe-area-inset-left));z-index:20;background:var(--panel);border:1px solid var(--border);color:var(--text);width:40px;height:40px;border-radius:6px;font-size:18px;cursor:pointer;touch-action:manipulation}
 #backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10}
 #lc-chip{display:none;align-items:center;gap:6px;position:fixed;top:calc(10px + env(safe-area-inset-top));left:calc(58px + env(safe-area-inset-left));z-index:20;max-width:60vw;background:var(--panel);border:1px solid var(--accent);color:var(--accent);height:40px;padding:0 12px;border-radius:6px;font-size:12px;cursor:pointer}
@@ -37,6 +51,8 @@ option,optgroup{background:var(--panel);color:var(--text)}
   #lc-chip:not([hidden]){display:flex}
   body.drawer-open #menubtn,body.drawer-open #lc-chip{display:none}
   .main{width:100%}
+  .tabs{top:56px}
+  .mem-tab{top:92px}
   #chat{padding:60px 8px 12px}
   .msg{max-width:92%}
   #chat .msg.assistant,#chat .msg.reasoning{max-width:100%}
@@ -2429,6 +2445,13 @@ audio.jf-media{width:min(520px,100%);margin-top:18vh}
 </div>
 <div id="side-thumb" aria-hidden="true"></div>
 <div class="main" style="position:relative">
+  <nav id="tabs" class="tabs" hidden aria-label="Onglets" data-i18n="tabs.titre" data-i18n-attr="aria-label">
+    <button id="tab-chat" class="tab is-on" onclick="goTab('chat')" data-i18n="tabs.chat">Conversation</button>
+    <button id="tab-memory" class="tab" onclick="goTab('memory')" data-i18n="tabs.memory">Mémoire sémantique</button>
+    <span class="tabs-sp"></span>
+    <button id="tab-reload" class="tab tab-side" onclick="reloadTab()" hidden title="Recharger" aria-label="Recharger" data-i18n-attr="title" data-i18n="tabs.reload"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg></button>
+    <button id="tab-pop" class="tab tab-side" onclick="popTab()" hidden title="Ouvrir dans une fenêtre" aria-label="Ouvrir dans une fenêtre" data-i18n-attr="title" data-i18n="tabs.pop"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
+  </nav>
   <div id="chat"></div>
   <div id="app-run" class="app-run" hidden>
     <div class="app-run-head">
@@ -2442,6 +2465,13 @@ audio.jf-media{width:min(520px,100%);margin-top:18vh}
       <span class="app-err-acts"><button id="app-err-fix" class="primary" onclick="appAskFix()"></button><button id="app-err-hide" onclick="document.getElementById('app-err').hidden=true"></button></span>
     </div>
     <div id="app-run-body" class="app-run-body"></div>
+  </div>
+  <div id="mem-tab" class="mem-tab" hidden>
+    <iframe id="mem-frame" class="mem-frame" title="Mémoire sémantique"></iframe>
+    <div id="mem-tab-off" class="mem-tab-off" hidden>
+      <p id="mem-tab-off-txt" data-i18n="tabs.off_blocked">Le serveur refuse d'être affiché dans un onglet de cette page. Ouvre-la dans une fenêtre du navigateur.</p>
+      <button class="primary" onclick="popTab()" data-i18n="tabs.pop">Ouvrir dans une fenêtre du navigateur</button>
+    </div>
   </div>
   <div id="chat-loading" class="show" aria-label="chargement de la conversation" data-i18n="chat.loading_aria" data-i18n-attr="aria-label"><svg id="cl-logo" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="3.7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.350000000000001" cy="1.9296806022131383" r="1.02" fill="currentColor"/><circle cx="9.245470267513111" cy="2.4466806022131387" r="0.62" fill="currentColor"/><circle cx="8.350000000000001" cy="10.07031939778686" r="1.02" fill="currentColor"/><circle cx="7.4545297324868915" cy="10.58731939778686" r="0.62" fill="currentColor"/><circle cx="1.2999999999999998" cy="6.000000000000001" r="1.02" fill="currentColor"/><circle cx="1.2999999999999996" cy="4.966000000000001" r="0.62" fill="currentColor"/></svg></div>
   <div id="chat-empty" aria-hidden="true">
@@ -4103,6 +4133,12 @@ fr: {
   "chat.history_search": "Rechercher partout…",
   "chat.history_no_results": "aucune conversation ne correspond.",
   "memory.mode_heading": "Mode",
+  "tabs.chat": "Conversation",
+  "tabs.memory": "Mémoire sémantique",
+  "tabs.titre": "Onglets",
+  "tabs.reload": "Recharger cette page",
+  "tabs.pop": "Ouvrir dans une fenêtre du navigateur",
+  "tabs.off_blocked": "Le serveur refuse d'être affiché dans un onglet de cette page. Ouvre-la dans une fenêtre du navigateur.",
   "chat.stat_time": "Durée de la réponse",
   "chat.stat_tokens": "Tokens générés",
   "chat.stat_speed": "Vitesse de génération",
@@ -5588,6 +5624,12 @@ en: {
   "chat.history_search": "Search everywhere…",
   "chat.history_no_results": "no matching conversation.",
   "memory.mode_heading": "Mode",
+  "tabs.chat": "Conversation",
+  "tabs.memory": "Semantic memory",
+  "tabs.titre": "Tabs",
+  "tabs.reload": "Reload this page",
+  "tabs.pop": "Open in a browser window",
+  "tabs.off_blocked": "The server refuses to be shown in a tab of this page. Open it in a browser window.",
   "chat.stat_time": "Response time",
   "chat.stat_tokens": "Generated tokens",
   "chat.stat_speed": "Generation speed",
@@ -15954,4 +15996,159 @@ async function voiceDelete(){
   }catch(e){ toast(t('voice.error').replace('{msg}', e.message)); }
 }
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', loadVoiceSettings); else loadVoiceSettings();
+var TAB_MEMORY_URL = '/semantic-memory';
+var tabActif = 'chat';
+var tabMemoirePret = false;   
+var tabMemoireInterdit = false; 
+function setTabsVisible() {
+	var barre = document.getElementById('tabs');
+	var lien = document.querySelector('#mem-block a[href="/semantic-memory"]');
+	var visible = !!lien;
+	if (!barre) return;
+	barre.hidden = !visible;
+	if (!visible && tabActif === 'memory') goTab('chat');
+	updateTabButtons();
+}
+function goTab(onglet) {
+	if (onglet === 'memory') {
+		openMemoryTab();
+	} else {
+		closeTab();
+	}
+	updateTabButtons();
+}
+function updateTabButtons() {
+	var chat = document.getElementById('tab-chat');
+	var memoire = document.getElementById('tab-memory');
+	var etre = function (el, actif) {
+		if (!el) return;
+		el.classList.toggle('is-on', actif);
+		el.setAttribute('aria-current', actif ? 'page' : 'false');
+	};
+	etre(chat, tabActif === 'chat');
+	etre(memoire, tabActif === 'memory');
+	var dansCalque = tabActif === 'memory';
+	var rel = document.getElementById('tab-reload');
+	var pop = document.getElementById('tab-pop');
+	if (rel) rel.hidden = !dansCalque;
+	if (pop) pop.hidden = !dansCalque;
+}
+var tabEnCadreRelu = null;
+async function tabEnCadrePermis() {
+	if (tabEnCadreRelu !== null) return tabEnCadreRelu;
+	var permis = true;
+	try {
+		var ctrl = new AbortController();
+		var delai = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, 4000);
+		var res = await fetch(TAB_MEMORY_URL, { method: 'HEAD', cache: 'no-store', signal: ctrl.signal });
+		clearTimeout(delai);
+		var xfo = (res.headers.get('x-frame-options') || '').trim().toUpperCase();
+		if (xfo && xfo !== 'SAMEORIGIN') permis = false;
+		var csp = res.headers.get('content-security-policy') || '';
+		if (permis && /frame-ancestors/i.test(csp)) {
+			var clause = csp.split(/;\s*/).filter(function (c) { return /^frame-ancestors/i.test(c.trim()); })[0] || '';
+			permis = /'self'|~\/|\bhttps?:\/\/|file:|\*/i.test(clause.replace(/frame-ancestors/i, ''));
+		}
+	} catch (e) {
+		permis = true;
+	}
+	tabEnCadreRelu = permis;
+	return permis;
+}
+async function openMemoryTab() {
+	tabActif = 'memory';
+	var calque = document.getElementById('mem-tab');
+	var repli = document.getElementById('mem-tab-off');
+	if (calque) calque.hidden = false;
+	if (repli) repli.hidden = true;
+	if (tabMemoirePret) return;
+	if (!(await tabEnCadrePermis())) {
+		tabMemoireInterdit = true;
+		tabMemoirePret = false;
+		if (repli) repli.hidden = false;
+		var cadre = document.getElementById('mem-frame');
+		if (cadre) cadre.src = 'about:blank';
+		return;
+	}
+	tabInstaller();
+}
+var tabGardeDelaiMs = 8000;
+var tabGarde = null;
+function tabInstaller() {
+	var cadre = document.getElementById('mem-frame');
+	var repli = document.getElementById('mem-tab-off');
+	if (!cadre) return;
+	cadre.onload = function () {
+		tabMemoirePret = true;
+		tabMemoireInterdit = false;
+		if (tabGarde) { clearTimeout(tabGarde); tabGarde = null; }
+		if (repli) repli.hidden = true;
+	};
+	cadre.onerror = function () {
+		if (repli) repli.hidden = false;
+	};
+	if (tabGarde) clearTimeout(tabGarde);
+	tabGarde = setTimeout(function () {
+		tabGarde = null;
+		if (!tabMemoirePret && repli) repli.hidden = false;
+	}, tabGardeDelaiMs);
+	cadre.src = TAB_MEMORY_URL;
+}
+function closeTab() {
+	tabActif = 'chat';
+	var calque = document.getElementById('mem-tab');
+	if (calque) calque.hidden = true;
+}
+function reloadTab() {
+	var cadre = document.getElementById('mem-frame');
+	if (!cadre) return;
+	tabMemoirePret = false;
+	cadre.src = 'about:blank';
+	setTimeout(function () { cadre.src = TAB_MEMORY_URL; }, 60);
+}
+function popTab() {
+	window.open(TAB_MEMORY_URL, '_blank', 'noopener');
+}
+function tabRaccorderLeLien() {
+	var lien = document.querySelector('#mem-block a[href="/semantic-memory"]');
+	if (!lien || lien.dataset.onglet === '1') return;
+	lien.dataset.onglet = '1';
+	lien.removeAttribute('target');
+	lien.addEventListener('click', function (ev) {
+		if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button !== 0) return;
+		ev.preventDefault();
+		goTab('memory');
+	});
+}
+var tabObserveur = null;
+function tabVeilleLeLien() {
+	if (typeof MutationObserver === 'undefined') {
+		setTabsVisible();
+		return;
+	}
+	if (tabObserveur) return;
+	var racine = document.getElementById('mem-modal') || document.body;
+	tabObserveur = new MutationObserver(function () {
+		var lien = document.querySelector('#mem-block a[href="/semantic-memory"]');
+		if (lien && lien.dataset.onglet !== '1') tabRaccorderLeLien();
+		setTabsVisible();
+	});
+	tabObserveur.observe(document.body, { childList: true, subtree: true, attributes: true });
+	tabRaccorderLeLien();
+	setTabsVisible();
+}
+function tabRaccourcis(ev) {
+	if (!ev.altKey || ev.ctrlKey || ev.metaKey || ev.shiftKey) return;
+	if (ev.key === '1') { ev.preventDefault(); goTab('chat'); }
+	else if (ev.key === '2') { ev.preventDefault(); goTab('memory'); }
+}
+function initOnglets() {
+	tabVeilleLeLien();
+	document.addEventListener('keydown', tabRaccourcis);
+}
+if (document.readyState === 'loading') {
+	document.addEventListener('DOMContentLoaded', initOnglets);
+} else {
+	initOnglets();
+}
 </script></body></html>

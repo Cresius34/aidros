@@ -73,6 +73,32 @@ select{color-scheme:inherit}
 option,optgroup{background:var(--panel);color:var(--text)}
 .side{width:320px;border-right:1px solid var(--border);padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom));overflow-y:auto;flex-shrink:0}
 .main{flex:1;display:flex;flex-direction:column;min-width:0}
+/* Barre d'onglets. HORS FLUX (absolute) : .main est un flex column qui partage sa
+   hauteur entre #chat (flex:1) et #composer. Un onglet posé EN FLUX aurait pris
+   36 px sur le fil à chaque ouverture, et le fil se souvient de sa position de
+   défilement — un décalage de 36 px à chaque aller-retour, ça se voit. En absolute
+   sous la barre, l'iframe couvre exactement la zone du fil + composeur, et le fil
+   reste exactement où il était derrière lui.
+   ⚠ `hidden` n'efface rien ici : la règle met `display:flex`, et en CSS une
+   déclaration avec sélecteur bat l'attribut caché du navigateur. D'où la ligne
+   [hidden] explicite, la même que celle de .app-run juste en bas. */
+.tabs{position:absolute;top:0;left:0;right:0;z-index:28;display:flex;align-items:stretch;gap:2px;height:36px;padding:0 8px;background:var(--panel);border-bottom:1px solid var(--border);box-sizing:border-box}
+.tabs[hidden]{display:none}
+.tab{display:flex;align-items:center;gap:6px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--dim);font:inherit;font-size:12.5px;cursor:pointer;white-space:nowrap;border-radius:0}
+.tab:hover{color:var(--text)}
+.tab.is-on{color:var(--text);border-bottom-color:var(--accent)}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tabs-sp{flex:1}
+.tab-side{padding:0 8px;opacity:.8}
+.mem-tab{position:absolute;top:36px;left:0;right:0;bottom:0;z-index:27;display:flex;background:var(--bg)}
+.mem-tab[hidden]{display:none}
+.mem-frame{flex:1;width:100%;height:100%;border:0;background:var(--bg)}
+.mem-tab-off{margin:auto;max-width:420px;padding:26px;border:1px solid var(--border);border-radius:14px;background:var(--panel);text-align:center}
+.mem-tab-off p{margin:0 0 14px;color:var(--dim);font-size:13px}
+/* L'onglet est un enfant de .main, donc sa hauteur se prend sur .main : pas de
+   marge haute à prévoir. Sur téléphone, le bandeau de sécurité du haut est porté
+   par <body> (padding), .main est déjà dessous. */
+@media(max-width:520px){.tab{padding:0 8px;font-size:12px}.tabs{padding:0 4px}}
 #menubtn{display:none;position:fixed;top:calc(10px + env(safe-area-inset-top));left:calc(10px + env(safe-area-inset-left));z-index:20;background:var(--panel);border:1px solid var(--border);color:var(--text);width:40px;height:40px;border-radius:6px;font-size:18px;cursor:pointer;touch-action:manipulation}
 #backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10}
 /* Pastille « installation en cours » : suit exactement les règles d'affichage
@@ -88,6 +114,15 @@ option,optgroup{background:var(--panel);color:var(--text)}
   #lc-chip:not([hidden]){display:flex}
   body.drawer-open #menubtn,body.drawer-open #lc-chip{display:none}
   .main{width:100%}
+  /* Onglets, sur téléphone : le bouton ☰ est en `fixed` à 10 px du bord gauche,
+     40×40, donc jusqu'à 50 px du haut — et il est enfant de <body>, hors de .main.
+     Une barre à top:0 l'aurait RECOURU (z-index 28 contre 20) et l'humain n'aurait
+     plus eu de moyen d'ouvrir le panneau. On la fait donc descendre sous lui, et
+     l'iframe suit d'autant pour ne pas manger 56 px de la page de mémoire.
+     Ce n'est pas un réglage au jugé : 40 (hauteur du bouton) + 10 (son écart) + 6
+     d'air = 56, et 56 + 36 (hauteur de la barre) = 92. */
+  .tabs{top:56px}
+  .mem-tab{top:92px}
   #chat{padding:60px 8px 12px}
   .msg{max-width:92%}
   #chat .msg.assistant,#chat .msg.reasoning{max-width:100%}
