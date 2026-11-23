@@ -152,10 +152,28 @@ et `data\bin\aidros.exe`, 17 978 880 octets / `C59B0183DF4B` / identité Windows
 L'étiquette `v1.1.0` n'est **pas encore posée** : la publication attend un accord
 explicite.
 
+## Ce que cette version épingle
+
+Les trois millésimes que le binaire refuse ou accepte, posés dans le code et
+vérifiés par le préflight au démarrage :
+
+| | version |
+|---|---|
+| **moteur MoE Strata** | **0.1.59** (paquet `strata-engine-0.1.59-…-hip-rx9070`) |
+| **panneau de contrôle** | **0.1.54** |
+| **source Strata vendue** | **0.2.8** |
+| **encodeur d'embeddings** | `embeddinggemma-2-Q8_0.gguf`, **309 855 456 octets**, llama.cpp b11669 |
+
+⚠ **Un millésime est épinglé PAR POSTE, pas une valeur unique** : la variante sur
+RX 6900 XT (gfx1030) vise une ligne RDNA2 distincte. C'est ce qui, le 15/11,
+faisait refuser à un exe épinglé 0.1.57 son propre vieux preset 0.1.48 **quel que
+soit l'état du moteur** posé sur le disque.
+
 ## Ascendance
 
 - Base amont : `nathaninline/ajean` **0.20.1** (MIT).
-- Moteur MoE : [**Niko1221/Strata**](https://github.com/Niko1221/Strata).
+- Moteur MoE : [**Niko1221/Strata**](https://github.com/Niko1221/Strata) — **0.1.59**
+  posé, **0.1.54** de contrôle, source **0.2.8**.
 - Embeddings : [**google/embeddinggemma-2**](https://huggingface.co/google/embeddinggemma-2),
   servi par [**ggml-org/llama.cpp**](https://github.com/ggml-org/llama.cpp).
 - Notes de la ligne précédente (`1.0.0`, `v1.0.0+rev0`) :
