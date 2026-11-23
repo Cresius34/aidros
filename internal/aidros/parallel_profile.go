@@ -88,13 +88,16 @@ const parallelMemoryRevision = 7
 // cmd/ajean-memory-test/versioninfo.json (StringFileInfo.ProductVersion et
 // FileVersion), vérifié par TestVersionFlavorWindowsSuit.
 //
+// Le .1 de ce soir (23/11, 23h40) est un correctif ECRIT A LA MAIN, pas une
+// restauration : la barre des onglets se reveillait elle-meme, son observateur se
+// declenchait sur SES PROPRES ecritures d'attributs (26-onglets.js, trois gardes).
 // La révision .1 est l'ordre du 23/11 (« v1.0.1 »), qui répare le défaut nommé la
 // veille : un +revN est INVISIBLE à la mise à jour, semver.Canonical efface le
 // build-suffixe donc Compare(v1.0.0+rev0, v1.0) rend 0. Un incrément en « . » se
 // compare. Le .1 porte aussi la bascule de l'encodeur mémoire : EmbeddingGemma 2
 // passe du Python/Transformers (pic de 20 Go, 3,5 Go vifs en 2 min) au GGUF Q8 lu
 // par llama.cpp, six fois plus petit et sans runtime Python.
-const buildFlavorSuffix = ".0"
+const buildFlavorSuffix = ".1"
 
 // uiBadgeLabel : intitulé affiché sous le logo par le build portable, à la
 // place du repère « TEST mémoire · R6 ». Ce n'est plus « le nom du patch » :

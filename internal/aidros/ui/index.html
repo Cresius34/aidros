@@ -15898,7 +15898,7 @@ function setTabsVisible() {
 	var lien = document.querySelector('#mem-block a[href="/semantic-memory"]');
 	var visible = !!lien || tabMemoireDispo;
 	if (!barre) return;
-	barre.hidden = !visible;
+	if (barre.hidden !== !visible) barre.hidden = !visible;
 	if (!visible && tabActif === 'memory') goTab('chat');
 	updateTabButtons();
 }
@@ -15915,16 +15915,17 @@ function updateTabButtons() {
 	var memoire = document.getElementById('tab-memory');
 	var etre = function (el, actif) {
 		if (!el) return;
-		el.classList.toggle('is-on', actif);
-		el.setAttribute('aria-current', actif ? 'page' : 'false');
+		if (el.classList.contains('is-on') !== actif) el.classList.toggle('is-on', actif);
+		var courant = actif ? 'page' : 'false';
+		if (el.getAttribute('aria-current') !== courant) el.setAttribute('aria-current', courant);
 	};
 	etre(chat, tabActif === 'chat');
 	etre(memoire, tabActif === 'memory');
 	var dansCalque = tabActif === 'memory';
 	var rel = document.getElementById('tab-reload');
 	var pop = document.getElementById('tab-pop');
-	if (rel) rel.hidden = !dansCalque;
-	if (pop) pop.hidden = !dansCalque;
+	if (rel && rel.hidden !== !dansCalque) rel.hidden = !dansCalque;
+	if (pop && pop.hidden !== !dansCalque) pop.hidden = !dansCalque;
 }
 var tabEnCadreRelu = null;
 async function tabEnCadrePermis() {
@@ -16037,7 +16038,7 @@ function tabVeilleLeLien() {
 		if (lien && lien.dataset.onglet !== '1') tabRaccorderLeLien();
 		setTabsVisible();
 	});
-	tabObserveur.observe(document.body, { childList: true, subtree: true, attributes: true });
+	tabObserveur.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
 	tabRaccorderLeLien();
 	setTabsVisible();
 }
