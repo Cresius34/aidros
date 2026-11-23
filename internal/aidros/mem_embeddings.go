@@ -207,6 +207,43 @@ func queueEmbeddingIndex(root string, cfg embeddingConfig) bool {
 	return true
 }
 
+// reprendsEncodageAvecUnEncodeurNeuf encode un fragment, et n'admet qu'un seul
+// essai de plus — sur un encodeur que startEmbeddingServer aura relancé s'il était
+// mort. Le défaut mesuré le 23/11 sur le poste de Julien : l'encodeur rendu muet
+// (20 minutes d'inactivité, la garde du veilleur, ou une mort qu'il ne raconte
+// pas — son journal s'arrête net en plein launch_slot_) tuait l'indexation sur une
+// erreur réseau, et le job ne repartait pas : 1316 fragments sur 1448, affichés
+// comme une panne.
+//
+// ⚠ startEmbeddingServer, pas stopEmbeddingServer. L'arrêt appelle
+// clearEmbeddingCache, qui augmente Epoch ; la boucle teste Epoch à chaque
+// fragment et s'interdirait donc de finir (« indexation annulée »). Or un fils
+// déjà mort est reconnu par startEmbeddingServer (select sur p.done) et relancé
+// sans toucher au cache : c'est le chemin qui répare sans jeter le travail.
+//
+// ⚠ Ce que ça ne répare PAS, et c'est voulu : un encodeur VIVANT mais muet n'est
+// pas tué ici, le tuer effacerait les vecteurs déjà encodés.
+func reprendsEncodageAvecUnEncodeurNeuf(ctx context.Context, cfg embeddingConfig, client *embeddingHTTPClient, input embeddingInput) ([][]float32, *embeddingHTTPClient, error) {
+	v, err := client.embedInput(ctx, input)
+	if err == nil {
+		return v, client, nil
+	}
+	if ctx.Err() != nil {
+		return nil, client, err // annulé (verrou, échéance) : une panne à réparer, pas une annulation
+	}
+	startCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	actif, serr := startEmbeddingServer(startCtx, cfg)
+	cancel()
+	if serr != nil {
+		return nil, client, fmt.Errorf("encodeur arrêté (%v) ; redémarrage de l'encodeur impossible (%v)", err, serr)
+	}
+	v, err = actif.embedInput(ctx, input)
+	if err != nil {
+		return nil, client, err
+	}
+	return v, actif, nil
+}
+
 func rebuildEmbeddingIndex(ctx context.Context, root string, cfg embeddingConfig, epoch uint64) (*embeddingIndex, error) {
 	if memLocked() {
 		return nil, errMemLocked
@@ -249,10 +286,18 @@ func rebuildEmbeddingIndex(ctx context.Context, root string, cfg embeddingConfig
 				return nil, err
 			}
 			input.Text = "title: " + c.File + " — " + c.Title + " | text: " + input.Text
-			v, err := client.embedInput(ctx, input)
+			// La reprise, pas l'appel direct : mesuré le 23/11, l'encodeur rendu
+			// muet par 20 minutes d'inactivité (la garde du veilleur, ou une mort
+			// qu'il ne raconte pas) tuait l'indexation en cours sur une erreur
+			// réseau, et le job ne repartait pas — 1316 fragments sur 1448, affiché
+			// comme une panne. Un seul essai de plus, sur un encodeur neuf.
+			// Le client rendu remplace celui qui a parlé : les fragments suivants
+			// ne retournent pas frapper à la porte morte.
+			v, nouveau, err := reprendsEncodageAvecUnEncodeurNeuf(ctx, cfg, client, input)
 			if err != nil {
 				return nil, err
 			}
+			client = nouveau
 			idx.Vectors[c.Key] = v[0]
 		}
 		embeddingCache.Lock()
