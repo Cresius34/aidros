@@ -97,7 +97,7 @@ const parallelMemoryRevision = 7
 // compare. Le .1 porte aussi la bascule de l'encodeur mémoire : EmbeddingGemma 2
 // passe du Python/Transformers (pic de 20 Go, 3,5 Go vifs en 2 min) au GGUF Q8 lu
 // par llama.cpp, six fois plus petit et sans runtime Python.
-const buildFlavorSuffix = ".1"
+const buildFlavorSuffix = ".2"
 
 // uiBadgeLabel : intitulé affiché sous le logo par le build portable, à la
 // place du repère « TEST mémoire · R6 ». Ce n'est plus « le nom du patch » :

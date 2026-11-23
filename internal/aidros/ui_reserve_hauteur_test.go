@@ -223,8 +223,22 @@ func TestReserveDeHauteurLeveeParSonChargeur(t *testing.T) {
 		t.Fatal("la liste des chargeurs de loadAll est introuvable : le tableau passé à allSettled a changé de forme")
 	}
 	noms := regexp.MustCompile(`\b(load[A-Za-z0-9_$]+)`).FindAllString(liste[1], -1)
-	if len(noms) != 18 {
-		t.Errorf("%d chargeurs dans la liste, attendu 18 : %v", len(noms), noms)
+	if len(noms) != 17 {
+		t.Errorf("%d chargeurs dans la liste, attendu 17 : %v", len(noms), noms)
+	}
+	// LE GARDE QUI MANQUAIT, mesure le 23/11 au soir : ce filet comptait les noms
+	// et ne verifiait la DEFINITION que des PROPRIETAIRES de HPROPRIETAIRE, plus bas.
+	// loadRemote a surv vecu une journee entiere a la suppression de 13-remote.js
+	// (f7e1318, Retirer Ajean Link du depot) : la liste gardait ses dix-huit noms,
+	// le compteur restait a 18, le filet restait VERT, et loadAll() mourait sur
+	// ReferenceError SUR LA LIGNE DU TABLEAU, avant de lancer un seul chargeur.
+	// Les six blocs de HRESERVE restaient sous leur minHeight de la session
+	// precedente : Configuration et Presets vides a l ecran. Compter ne suffit
+	// pas : il faut que CHAQUE nom lance soit defini quelque part.
+	for _, nom := range noms {
+		if !strings.Contains(js, "function "+nom+"(") {
+			t.Errorf("%s est lance par loadAll alors qu aucun fichier JS ne le definit : ReferenceError sur la ligne du tableau", nom)
+		}
 	}
 	compte := map[string]int{}
 	for _, nom := range noms {

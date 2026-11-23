@@ -8127,7 +8127,7 @@ async function setLinkBrowser(v){
 async function loadAll(){
   const P={};
   const lance=(nom,f)=>{ if(!P[nom]) P[nom]=f(); return P[nom]; };
-  const T=[loadStatus,loadTelemetry,loadCfg,loadPresets,loadAgent,loadInternet,loadComputer,loadMCP,loadApiKey,loadNetwork,loadPrefs,loadOpen,loadEngine,loadMoe,loadExl3,loadRemote,loadBridge,loadTasks]
+  const T=[loadStatus,loadTelemetry,loadCfg,loadPresets,loadAgent,loadInternet,loadComputer,loadMCP,loadApiKey,loadNetwork,loadPrefs,loadOpen,loadEngine,loadMoe,loadExl3,loadBridge,loadTasks]
     .map(f=>lance(f.name,f));
   const HPROPRIETAIRE={cfg:'loadCfg',presets:'loadPresets','internet-status':'loadInternet','mcp-list':'loadMCP',vram:'loadTelemetry','ram-details':'loadTelemetry'};
   for(const id of HRESERVE){
