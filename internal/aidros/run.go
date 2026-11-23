@@ -19,7 +19,7 @@ import (
 // buildFlavorSuffix y ajoute le cran de correctif : "1.0" + ".0" rend
 // « 1.0.0 », la mise à jour suivante « 1.0.1 ». Le nom du patch ne figure plus
 // dans le millésime (ordre de l'humain du 21/11) : il vit dans l'étiquette git.
-const Version = "1.0"
+const Version = "1.1"
 
 // Main est le vrai main() du binaire (cmd/aidros ne fait que l'appeler).
 func Main() {

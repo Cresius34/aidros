@@ -15,12 +15,13 @@ function reserveHeights(){
     }catch(e){}
   });
 }
+function libereBloc(id){
+  const el=document.getElementById(id); if(!el) return;
+  el.style.minHeight='';
+  try{ localStorage.setItem('ajean-h-'+id, String(el.offsetHeight||0)); }catch(e){}
+}
 function releaseHeights(){
-  HRESERVE.forEach(id=>{
-    const el=document.getElementById(id); if(!el) return;
-    el.style.minHeight='';
-    try{ localStorage.setItem('ajean-h-'+id, String(el.offsetHeight||0)); }catch(e){}
-  });
+  HRESERVE.forEach(libereBloc);
 }
 document.addEventListener('DOMContentLoaded', reserveHeights);
 // Numéro (1-based) du preset vers lequel on bascule, tant que le serveur n'a pas
@@ -711,11 +712,31 @@ async function setLinkBrowser(v){
   toast(t('settings.link_browser_saved'));
 }
 async function loadAll(){
-  // allSettled et pas all : un seul chargement en échec (accès distant coupé,
-  // clé API absente…) ne doit pas empêcher la suite — et surtout pas laisser les
-  // hauteurs réservées en place pour toujours.
-  await Promise.allSettled([loadStatus(),loadTelemetry(),loadCfg(),loadPresets(),loadAgent(),loadInternet(),loadComputer(),loadMCP(),loadApiKey(),loadNetwork(),loadPrefs(),loadOpen(),loadMemoryPreferences(),loadEngine(),loadMoe(),loadExl3(),loadRemote(),loadBridge(),loadTasks()]);
-  releaseHeights(); // tout est en place : on rend la main et on mesure pour la prochaine fois
+  // Chaque chargeur est lance UNE fois, sous son nom : la promesse est gardee pour
+  // savoir lequel a fini. (Lancer deux fois vaudrait deux appels reseau.)
+  const P={};
+  const lance=(nom,f)=>{ if(!P[nom]) P[nom]=f(); return P[nom]; };
+  // Les dix-neuf, dans le meme ordre qu'avant : rien n'est retire, rien n'est
+  // rendu plus lent. allSettled et pas all : un seul chargement en echec (acces
+  // distant coupe, cle API absente…) ne doit pas empecher la suite.
+  const T=[loadStatus,loadTelemetry,loadCfg,loadPresets,loadAgent,loadInternet,loadComputer,loadMCP,loadApiKey,loadNetwork,loadPrefs,loadOpen,loadMemoryPreferences,loadEngine,loadMoe,loadExl3,loadRemote,loadBridge,loadTasks]
+    .map(f=>lance(f.name,f));
+  // ⚠ LE DEFAUT QUE CA REPARAIT, mesure le 23/11 : la reserve de ces six blocs
+  // ne tombait qu'ici, donc quand les DIX-NEUF avaient fini. Or le plus lent,
+  // /api/moe a 2,396 s (les dix-huit autres a 0,079 s ou moins), ne peint aucun
+  // des six : il les retenait tous. Un bloc rend sa reserve des que le chargeur
+  // QUI LE PEINT a fini — le bloc est peuple, la place mesuree n'a plus a etre
+  // tenue. Les dix autres chargeurs travaillent pendant, sans otage.
+  const HPROPRIETAIRE={cfg:'loadCfg',presets:'loadPresets','internet-status':'loadInternet','mcp-list':'loadMCP',vram:'loadTelemetry','ram-details':'loadTelemetry'};
+  for(const id of HRESERVE){
+    const p=P[HPROPRIETAIRE[id]];
+    if(!p) continue; // aucun proprietaire connu : releaseHeights garde le filet
+    // then sur les deux branches : un echec doit aussi rendre la main, c'est
+    // précisément le cas allSettled (acces distant coupe).
+    p.then(()=>libereBloc(id),()=>libereBloc(id));
+  }
+  await Promise.allSettled(T);
+  releaseHeights(); // filet : ce qui reste, et la mesure pour la prochaine fois
 }
 // Démarrer / arrêter / redémarrer le moteur. On REMONTE l'erreur si le serveur répond
 // {ok:false} (issue #88 : avant, l'échec — ex. « Accès refusé » sur le log — était avalé

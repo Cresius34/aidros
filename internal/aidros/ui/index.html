@@ -7658,12 +7658,13 @@ function reserveHeights(){
     }catch(e){}
   });
 }
+function libereBloc(id){
+  const el=document.getElementById(id); if(!el) return;
+  el.style.minHeight='';
+  try{ localStorage.setItem('ajean-h-'+id, String(el.offsetHeight||0)); }catch(e){}
+}
 function releaseHeights(){
-  HRESERVE.forEach(id=>{
-    const el=document.getElementById(id); if(!el) return;
-    el.style.minHeight='';
-    try{ localStorage.setItem('ajean-h-'+id, String(el.offsetHeight||0)); }catch(e){}
-  });
+  HRESERVE.forEach(libereBloc);
 }
 document.addEventListener('DOMContentLoaded', reserveHeights);
 let pendingPreset = 0;
@@ -8154,7 +8155,17 @@ async function setLinkBrowser(v){
   toast(t('settings.link_browser_saved'));
 }
 async function loadAll(){
-  await Promise.allSettled([loadStatus(),loadTelemetry(),loadCfg(),loadPresets(),loadAgent(),loadInternet(),loadComputer(),loadMCP(),loadApiKey(),loadNetwork(),loadPrefs(),loadOpen(),loadMemoryPreferences(),loadEngine(),loadMoe(),loadExl3(),loadRemote(),loadBridge(),loadTasks()]);
+  const P={};
+  const lance=(nom,f)=>{ if(!P[nom]) P[nom]=f(); return P[nom]; };
+  const T=[loadStatus,loadTelemetry,loadCfg,loadPresets,loadAgent,loadInternet,loadComputer,loadMCP,loadApiKey,loadNetwork,loadPrefs,loadOpen,loadMemoryPreferences,loadEngine,loadMoe,loadExl3,loadRemote,loadBridge,loadTasks]
+    .map(f=>lance(f.name,f));
+  const HPROPRIETAIRE={cfg:'loadCfg',presets:'loadPresets','internet-status':'loadInternet','mcp-list':'loadMCP',vram:'loadTelemetry','ram-details':'loadTelemetry'};
+  for(const id of HRESERVE){
+    const p=P[HPROPRIETAIRE[id]];
+    if(!p) continue; 
+    p.then(()=>libereBloc(id),()=>libereBloc(id));
+  }
+  await Promise.allSettled(T);
   releaseHeights(); 
 }
 async function act(a){
@@ -16042,6 +16053,10 @@ async function tabEnCadrePermis() {
 		var delai = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, 4000);
 		var res = await fetch(TAB_MEMORY_URL, { method: 'HEAD', cache: 'no-store', signal: ctrl.signal });
 		clearTimeout(delai);
+		if (res.status === 405 || res.status === 501) {
+		} else if (res.status >= 400) {
+			permis = false;
+		}
 		var xfo = (res.headers.get('x-frame-options') || '').trim().toUpperCase();
 		if (xfo && xfo !== 'SAMEORIGIN') permis = false;
 		var csp = res.headers.get('content-security-policy') || '';
