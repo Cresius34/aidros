@@ -1,130 +1,113 @@
-# Aidros `1.1.3` — la carte du Pont parle la langue de l'écran
+# Aidros `1.2.0` — la mémoire garde ce qu'elle a déjà encodé
 
-Un cran de **corrections** après `1.1.0`, `1.1.1` et `1.1.2`. Le défaut était visible
-sur une capture d'écran et invisible dans le code : l'interface servie en **anglais**
-gardait « Pont Aidros ↔ Aidros », son badge « à l'écoute » et le sélecteur de projet
-« Générale ». Trois trous, nommés dans mes notes de livraison du 23/11 et laissés là
-faute de correctif. La cause n'était pas une clé mal traduite : **ces textes
-n'avaient aucune clé.**
-
-**Projet dérivé, usage personnel.** Construit sur [**nathaninline/ajean**](https://github.com/nathaninline/ajean)
-(projet principal, MIT), dont il descend en `0.20.1`. Les changements décrits ici forment
-une **ligne privée** : non validés sur d'autres machines, non garantis transposables. Pour
-installer AJEAN, prenez les versions publiées sur
-[nathaninline/ajean](https://github.com/nathaninline/ajean/releases/latest).
+Un cran de **fonction** après `1.1.3` : le chiffre du milieu monte sur l'arbitrage de
+l'humain, « vu que l'on est sur une modification profonde de embedding ». La route des
+embeddings n'a pas été réparée, **elle a changé de contrat**.
 
 ## Les gains, chiffrés
 
 | | avant | après |
 |---|---|---|
-| textes de la carte du Pont portant une clé | **0** | **23** (contrôlés un à un dans le gabarit) |
-| lignes de français en dur dans `13b-bridge.js` | **33** | **0** |
-| clés de traduction, français / anglais | 0 / 0 | **74 / 74**, parité vérifiée |
-| écrans anglais affichant du français | 3 | **0** (prouvé par la page rendue) |
+| fragments rescapés d'une coupure | **0** (tout-ou-rien) | **jusqu'à 1444 sur 1445** |
+| cache disque, tel que `/api/embeddings` le rend | « **aucun cache disque** », en permanence | le fichier, relu et annoncé |
+| travail jeté à un arrêt d'encodeur | **~12 min** (1316/1445 repris depuis le fragment 0) | **~11 s** (borné à 24 fragments) |
+| coût de la sauvegarde pendant la route | — | **~0,3 %** (~30 ms d'écriture pour 0,47 s d'encodage) |
+| encodeur tué après 20 min sans usage | **oui** — et il a tué une instance **morte** | **non** (garde d'inactivité levée) |
 
-## 1. `applyI18n()` ne traduit que ce qui porte une clé — et la carte n'en portait pas
+## 1. Le cache disque était inatteignable par construction
 
-Le moteur parcourt les éléments marqués `data-i18n`. La carte Pont était écrite en
-français **en dur**, dans le gabarit comme dans son JS : `applyI18n()` passait devant
-sans rien trouver à traduire. D'où le piège du 23/11 : un texte traduit à 100 % dans le
-dictionnaire, mais **absent du dictionnaire**, se traduit parfaitement en… rien.
+L'écriture sur le disque ne vivait qu'**après** le juge de fraîcheur `indexFresh`, dans
+la **seule sortie sans `return`** de la route d'indexation. Un dossier de mémoire bouge —
+le ménage de 05 h édite les pages — donc ce `return` rendait le fichier **jamais écrit**,
+et `/api/embeddings` répondait « aucun cache disque » **en permanence**, job fini compris.
 
-74 clés posées dans les deux langues : **73 `bridge.*` + `projects.default_name`**. Le
-français de secours reste écrit dans le gabarit à côté de sa clé : c'est le repli prévu
-du moteur, pas une trace du défaut.
+L'index est désormais posé **pendant** la route (tous les 24 fragments) et à **chacune**
+de ses sorties : délai, annulation, erreur d'encodage, panne d'encodeur, et **avant** le
+verdict du juge.
 
-## 2. Le nom du projet par défaut demandait plus qu'un mot à traduire
+**Un anneau partiel est sûr, et c'est la clé qui le prouve** : `memoryChunk.Key` est
+`memoryDigest(embeddingProtocol · fichier · titre · TEXTE · mediaHash)` — un vecteur rangé
+sous la clé `K` a été calculé sur le texte qui hache en `K`. Il peut être **incomplet**,
+il ne peut pas être **faux**.
 
-Le serveur fige `defaultProjectName = "Générale"`, et **c'est ce nom qui nomme le
-dossier mémoire** `memory/<slug>/`. Le nom *stocké* ne bouge donc pas ; ce qui se dit
-dans la langue est le **libellé**.
+**Le drapeau `Complet` ferme le mensonge que cette route introduisait** : un anneau
+partiel a des empreintes de pages complètes, donc `indexFresh` — qui ne compare **que**
+des empreintes — l'aurait déclaré **frais** avec des vecteurs manquants, et la recherche
+aurait rendu **moins** de résultats sans le dire. Un anneau complet est **re-publié en
+RAM** (le gain est là) ; un anneau partiel est **fondu par clé** dans l'index existant,
+jamais publié comme frais.
 
-Deux drapeaux, vrais seulement si le projet porte **encore** le nom figé :
+## 2. La garde d'inactivité levée, dans les deux voies
 
-- `name_default` sur `/api/projects`,
-- `default_name_default` sur `/api/chat/projects`.
+Contexte mesuré : l'indexation du 23/11 s'était arrêtée à **1316/1445** sur une erreur
+réseau et **ne repartait pas**. L'encodeur avait été tué **pour inactivité** par le
+veilleur du 14/11 — une instance **morte** ; le job a reçu une erreur réseau au lieu
+d'une relance.
 
-Sans ce drapeau, traduire écraserait un nom que l'humain a écrit : le « Projet » d'un
-projet rebaptisé « Mon atelier » reste « Mon atelier » dans les deux langues.
+⚠ `0` n'est pas « jamais » tout seul : `time.Since(…) > 0` est **vrai** aussitôt. Les
+**deux** comparateurs testent d'abord l'**armement** — sinon la garde levée tuerait plus
+vite que la garde armée. La garde RAM (700 Mo libres) et la tolérance de démarrage
+(45 min, le temps d'installer `torch`) restent.
 
-## 3. Changer de langue ne repaie pas l'ouverture d'un tchat
+## Preuves
 
-`setLang()` repeint le nom **sans appel réseau** : les projets sont déjà en mémoire.
-Je n'appelle **ni** `loadProjects()` **ni** `loadHistory()` :
+La morsure est **jouée dans les deux sens** : l'appel du tronçon critique **retiré** fait
+**rougir** le garde, **remis** le fait **verdir**. Le garde est borné au **tronçon entre
+le juge et son abandon** — chercher la sauvegarde dans tout le corps s'en satisferait
+n'importe où, **y compris après**, ce qui est le défaut. Cinq filets neufs sur l'anneau
+et la garde, dont deux qui rejouent la garde **armée** à une valeur écrite : deux de mes
+filets jouaient une garde **levée** sans le savoir et verdiraient en ne prouvant rien.
 
-- le nombre de chargeurs de `loadAll()` est un **contrat gardé par un test**
-  (`ui_reserve_hauteur_test.go` : « 17 chargeurs ») ;
-- `loadHistory()` reconstruit tout le fil — **mesuré 148 108 jetons** le 23/11. Payer
-  ça pour un seul mot rendrait un changement de langue **plus lent qu'une ouverture de
-  tchat**.
+`go vet` 0 · `gofmt` propre · **suite complète verte en 150,962 s** · quatre gardes de
+version rejoués **non calculés** (`-count=1`).
 
-## Comment c'est prouvé
+Binaire de la campagne, cible portable `cmd/ajean-memory-test` : **17 981 952 octets**,
+SHA-256 `7F632678…`, relu dans ses octets — UTF-16 (la ressource Windows) : « 1.2.0 » ×2,
+« 1.1.4 » ×0, « 1.1.3 » ×0, « 1.1.0 » ×0. ASCII (les constantes Go) : non discriminant,
+dit comme tel.
+Les quatre `.syso` régénérés au **chemin complet** de `goversioninfo` — il n'est **pas au
+`PATH`**, et `go generate ./...` **saute ce maillon sans se plaindre**.
 
-`i18n_pont_test.go`, **six filets**, joués **dans les deux sens** :
+## Ce qui n'est pas là
 
-| contre le code **non traduit** (`git stash`) | contre le code traduit |
-|---|---|
-| **23** textes visibles sans `data-i18n` | six **verts** |
-| **33** lignes de français en dur | — |
-| **0** clé surveillée | **74** clés, parité fr/en |
+- **Rien n'est posé ici**, et `aidros update` n'apporte **rien** sur ce poste :
+  `parallel_profile.go:282-284` court-circuite la route sans contacter GitHub. La release
+  vaut pour une machine qui installe depuis GitHub.
+- **La première indexation reste due** (~25 min à 59 pages/min), et se repaie quand
+  l'**empreinte du moteur** change : des vecteurs d'un autre moteur ne sont pas les miens.
+- **Le job ne se relance pas tout seul.** Il garde son travail ; la reprise
+  automatique, elle, n'est pas codée.
+- **Les 30 `setInterval` de l'interface ne sont pas touchés** — c'est la cause mesurée de
+  la RAM de Firefox (dont un `sync()` réseau tous les 500 ms). Ce cran ferme
+  l'indexation, pas l'interface.
+- **La garde RAM est hors d'atteinte ici** : seuil 700 Mo libres, mesuré **44 920 Mo**.
+- La génération d'**images** n'est toujours pas codée (ComfyUI : **zéro occurrence** dans
+  le dépôt). Pas de **coffre à secrets**, pas de **sauvegarde** (base bbolt à verrou
+  exclusif, clé d'API en clair dans un profil). Les correctifs de l'amont ne tomberont
+  plus tout seuls : depuis la scission, leur `main` est **sans ancêtre commun**.
 
-Le filet a trouvé **un vrai trou que j'avais laissé** : `'refusé'` en dur ligne 174 —
-j'avais traduit les autres fonctions de la carte et oublié celle-là. Et un **faux
-positif où le filet avait tort** : `const moteur = pre.moteur ? …` accusé d'être du
-français. Ces mots servent d'identifiants JS dans ce fichier ; les retirer de la liste
-est le correctif, pas un arrosage — l'accentué les couvre dès qu'ils sont accentués.
-
-**La preuve ne vient pas que des octets.** Sur un atelier isolé, moteur décalé, après
-`POST /api/prefs {"lang":"en"}`, la page servie rend `Receive a brain` ×1, `Listening`
-×3, et `à l'écoute` **×0**. Les octets, dans les deux sens : le neuf porte
-`data-i18n="bridge.title"` ×1, `name_default` ×4, `default_name_default` ×2,
-`projects.default_name` ×4 ; le 1.1.2 en service les rend à **×0** et porte encore
-`stitle">Pont Aidros` ×1, qui a disparu du neuf.
-
-## Ce qui n'est pas là, dit franchement
-
-- **Une ligne d'historique déjà affichée garde son étiquette de projet** jusqu'au
-  prochain rechargement de l'historique. C'est une ligne de liste, pas l'écran courant ;
-  le payer à chaque changement de langue coûtait la reconstruction du fil.
-- **La garde du texte en dur est lexicalisée, pas grammaticale.** Elle surveille les
-  accents, les apostrophes typographiques, et une liste fermée des mots d'écran de
-  **cette** carte. Un mot français sans accent et sans majuscule (« prêt », « ici »)
-  écrit en dur ailleurs passerait. L'étendre à toute l'interface se paierait en faux
-  positifs sur le français de secours : l'élargir est une décision, pas un réglage.
-- **La translation est bornée à la carte du Pont**, là où le défaut a été mesuré. Le
-  reste de l'interface n'est pas couvert par ces six filets.
-- **Le binaire publié par l'intégration continue est `./cmd/aidros`**, dont l'identité
-  Windows est la **base nue** (`1.1.0`) : le cran de correctif `1.1.3` vit dans le build
-  portable, seul à poser `BuildFlavor`. C'est mesuré, pas supposé.
-- `goversioninfo` **n'est pas au `PATH`** sur ce poste : `go generate ./...` le saute et
-  **ne régénère pas les `.syso`**. Les `.syso` de la cible portable ont été régénérés à
-  la main, en chemin complet, et relus (« 1.1.3 » ×2, « Aidros » ×4 chacun).
-- **Rien ne lit la release publiée.** Aucun filet ne vérifie que l'étiquette publiée
-  est en phase avec le millésime du binaire qu'elle embarque.
-- **La génération d'images n'est toujours pas codée** : ComfyUI tourne sur ce poste, mais
-  compte **zéro occurrence** dans le dépôt, ici comme chez l'amont.
-- **Pas de coffre à secrets, pas de sauvegarde.** La base est du bbolt à verrou exclusif,
-  et une clé d'API est stockée en clair dans un fichier de profil.
-- **Les correctifs de l'amont ne tomberont plus tout seuls.** Depuis la scission, leur
-  `main` est un historique **sans ancêtre commun** avec le nôtre.
+Deux affirmations des notes de `1.1.3` deviennent fausses : « l'identité Windows du
+binaire publié est la base nue `1.1.0` » (les quatre endroits sont montés, `1.2.0` relue
+dans l'exécutable) et « **rien ne lit la release publiée** » (`TestPublicationNeSeProposePasEnBoucle`
+le fait, en jouant le cas historique `Compare(v1.1.3, v1.1) = +1`).
 
 ## État sur le poste de fabrication
 
-`aidros-1.1.3.exe` en service, **17 980 416 octets**, SHA-256 `D657A229…`,
-`ProductVersion 1.1.3`, `ProductName Aidros`. L'interface rend `/api/status → version
-1.1.3, state active`, moteur MoE en vie. `go vet` 0, `gofmt` propre, **suite complète
-verte en 137,9 s**, les trois gardes de version verts dans les deux sens.
+L'instance en service **n'a pas bougé** : `aidros-1.1.3.exe`, 17 980 416 octets,
+`D657A229…`. Le neuf est posé **à part**, nommé avec son millésime — aucun fichier de
+l'installation touché, aucun processus arrêté.
 
 ## Ce que cette version épingle
 
 Moteur MoE **Strata 0.1.59** (panneau de contrôle 0.1.54) · encodeur d'embeddings
-**EmbeddingGemma-2**, 256 dimensions · llama.cpp à la version épinglée par le poseur.
-La version de moteur est **par machine**, et **avertit au lieu de refuser**.
+**EmbeddingGemma-2**, 256 dimensions · llama.cpp à la version épinglée par le poseur. La
+version de moteur est **par machine**, et **avertit au lieu de refuser**. Cette campagne
+ne touche **aucun moteur** : les épinglages sont reportés tels quels.
 
 ## Ascendance
 
 - Base amont : `nathaninline/ajean` **0.20.1** (MIT).
 - Moteur MoE : [**Niko1221/Strata**](https://github.com/Niko1221/Strata).
 - Embeddings : [**google/embeddinggemma-2**](https://huggingface.co/google/embeddinggemma-2).
-- Notes du cran précédent (`1.1.2`) :
-  [docs/notes-de-version-1.1.2.md](docs/notes-de-version-1.1.2.md).
+- Notes du cran précédent (`1.1.3`) :
+  [docs/notes-de-version-1.1.3.md](docs/notes-de-version-1.1.3.md).

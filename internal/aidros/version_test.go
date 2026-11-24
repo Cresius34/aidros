@@ -110,16 +110,32 @@ func TestPublicationNeSeProposePasEnBoucle(t *testing.T) {
 			}[c < 0])
 	}
 
-	// 3. Contre-épreuve, et la leçon du 23/11 figée dans le garde. Le
-	//    comparateur bouge, et il bouge EXACTEMENT comme hier : une base à DEUX
-	//    chiffres — « 1.1 », la mienne jusqu'à cette campagne — canonise en
-	//    « v1.1.0 », donc Compare(v1.1.3, v1.1) rend +1 pour l'éternité. C'est
-	//    ainsi qu'une release se propose en boucle sans qu'on y touche.
-	//    Sans cette ligne, la garde 2 serait une égalité que je fabrique moi-même
-	//    (l'étiquette est dérivée de Version) : un vert qui ne vérifie rien.
-	if c := semver.Compare("v"+installe, ensureV(semver.MajorMinor("v"+installe))); c != 1 {
-		t.Errorf("Compare(%q, base à deux chiffres %q) = %d, attendu +1 : c'est le défaut du 23/11, la base nue se fait dépasser par sa propre release pour toujours",
-			"v"+installe, ensureV(semver.MajorMinor("v"+installe)), c)
+	// 3. Contre-épreuve, et la leçon du 23/11 figée dans le garde. Le comparateur
+	//    bouge, et il bouge EXACTEMENT comme hier : une base à DEUX chiffres —
+	//    « 1.1 », la mienne jusqu'à la campagne du 24/11 — canonise en « v1.1.0 »,
+	//    donc Compare(v1.1.3, v1.1) rend +1 pour l'éternité. C'est ainsi qu'une
+	//    release se propose en boucle sans qu'on y touche.
+	//
+	// ⚠ LE CAS HISTORIQUE EST ÉCRIT EN DUR, il n'est PAS DÉRIVÉ du millésime du
+	//    jour, et la campagne 1.2.0 l'a prouvé en rougissant. Dérivé, le garde
+	//    faisait Compare(installe, MajorMinor(installe)) : sur « 1.1.3 » il rendait
+	//    +1 (le défaut), sur « 1.2.0 » il rend **0** — parce que « v1.2 » canonise
+	//    en « v1.2.0 ». Autrement dit le garde ne prouvait rien dès que le
+	//    correctif vaut 0 : il était satisfait par accident un jour sur dix.
+	//    Une preuve qui dépend de ce qu'elle est censée prouver n'est pas une preuve.
+	if c := semver.Compare("v1.1.3", "v1.1"); c != 1 {
+		t.Errorf("Compare(v1.1.3, v1.1) = %d, attendu +1 : c'est le défaut du 23/11 figé dans le garde — la base nue se fait dépasser par sa propre release pour toujours", c)
+	}
+
+	// 3 bis. LE CAS DU JOUR, nommé pour ce qu'il est. Sur un millésime dont le
+	//    correctif vaut 0, la base nue à deux chiffres RATTRAPE sa release :
+	//    Compare(v1.2.0, v1.2) = 0. Ce n'est pas le défaut du 23/11, c'est
+	//    l'inverse — Compare = 0 veut dire « rien n'est proposé », le binaire
+	//    installé est bien la release. Écrit ici pour que le 0 ne soit plus jamais
+	//    pris pour un rouge, et pour que le 23/11 ne soit plus jamais pris pour un
+	//    vert : les deux dépendent du dernier chiffre, pas du comparateur.
+	if c := semver.Compare("v1.2.0", "v1.2"); c != 0 {
+		t.Errorf("Compare(v1.2.0, v1.2) = %d, attendu 0 : un millésime à correctif nul est ÉGAL à sa base nue, donc rien n'est proposé — c'est le comportement voulu, pas le défaut", c)
 	}
 
 	// 4. Autour de l'égalité, le comparateur rend bien 0 / +1 / −1.

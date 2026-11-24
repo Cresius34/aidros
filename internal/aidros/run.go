@@ -21,18 +21,25 @@ import (
 // de correctif vit ICI, plus dans buildFlavorSuffix. La raison est mesurée dans
 // le code qui décide : sys_update.go:190 compare l'étiquette publiée à
 // semver.Canonical(ensureV(Version)) — JAMAIS à displayVersion(). Une base à
-// deux chiffres canonise donc en « v1.1.0 » : publier v1.1.4 laissait
+// deux chiffres canonise donc en « v1.1.0 » : publier v1.2.0 laissait
 // Compare > 0 pour toujours, la mise à jour s'offrant en boucle à un binaire
 // qui reste à « 1.1 ». C'est le défaut de 0.8.0, que version_test.go existe
 // pour empêcher, revenu par l'autre bout.
 //
-// Jamais QUATRE chiffres : "1.1.4" + ".4" rendrait « 1.1.4.4 », que
+// LE CHIFFRE DU MILIEU MONTE, et c'est l'arbitrage de l'humain du 24/11 :
+// « vu que l'on est sur une modification profonde de embedding, on passera en
+// 1.2.0 ». La règle des trois nombres tient — Majeur.fonction.correction —, le
+// cran du milieu nomme la fonction touchée en profondeur, pas un correctif de
+// plus. Autrement dit : la route des embeddings n'a pas été réparée, elle a
+// changé de contrat (l'anneau, et le drapeau de complétude).
+//
+// Jamais QUATRE chiffres : "1.2.0" + ".4" rendrait « 1.2.0.4 », que
 // semver.IsValid refuse (mesuré avec tools/sonde-semver, la sonde versionnée) ;
 // sys_update.go:185 rend alors l'erreur « tag de release inattendu » et il ne
 // se propose plus jamais rien, silencieusement. Le nom du patch ne figure
 // toujours pas dans le millésime (ordre de l'humain du 21/11) : il vit dans
 // l'étiquette git.
-const Version = "1.1.4"
+const Version = "1.2.0"
 
 // Main est le vrai main() du binaire (cmd/aidros ne fait que l'appeler).
 func Main() {
