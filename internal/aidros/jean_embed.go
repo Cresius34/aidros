@@ -65,10 +65,13 @@ const (
 	jeanEmbedDims     = 768
 	jeanEmbedDocChars = 1200 // une entrée au-delà est tronquée (le début porte le sujet)
 	jeanEmbedBatch    = 8
-	jeanEmbedStartMB  = 1500             // RAM disponible requise pour démarrer le moteur
-	jeanEmbedStopMB   = 700              // en dessous, le moteur est arrêté
-	jeanEmbedIdle     = 20 * time.Minute // moteur éteint après ce délai sans usage
-	jeanEmbedPrefix   = "embed-"
+	jeanEmbedStartMB  = 1500 // RAM disponible requise pour démarrer le moteur
+	jeanEmbedStopMB   = 700  // en dessous, le moteur est arrêté
+	// ⚠ time.Duration(0), pas 0 nu : une constante non typée devient un `int`, et
+	// le filet du veilleur la rend avec %s — vet tombe sur le format, et la
+	// comparaison des deux voies (mem_embedding_veilleur_test.go:139) perd son sens.
+	jeanEmbedIdle   = time.Duration(0) // 0 = jamais pour inactivité : voir mem_embedding_backend.go:415
+	jeanEmbedPrefix = "embed-"
 )
 
 // jeanEmbedModelPath : là où est EMBD. D'abord le chemin que la mémoire
@@ -257,7 +260,9 @@ func (p *jeanEmbedProc) watch(cmd *exec.Cmd) {
 			p.mu.Unlock()
 			return
 		}
-		idle := time.Since(p.lastUse) > jeanEmbedIdle
+		// ⚠ La comparaison n'est pas optionnelle : `time.Since(...) > 0` serait VRAI
+		// aussitôt, et la garde levée tuerait le moteur à son premier battement.
+		idle := jeanEmbedIdle > 0 && time.Since(p.lastUse) > jeanEmbedIdle
 		p.mu.Unlock()
 		if a := availRAMMB(); a >= 0 && a < jeanEmbedStopMB {
 			p.stopFor(fmt.Sprintf("arrêté : RAM trop basse (%d Mo)", a), 10*time.Minute)

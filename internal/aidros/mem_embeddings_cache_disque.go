@@ -57,7 +57,39 @@ type cacheMemoireSurDisque struct {
 	Hashes      map[string]string    `json:"hashes"`
 	Vectors     map[string][]float32 `json:"vecteurs"`
 	Updated     time.Time            `json:"actualise"`
+	// Anneau : le motif posé par le dernier écrivain — « index complet » quand
+	// l'indexation a fini, « anneau après N fragments » quand elle s'est arrêtée
+	// en chemin. Informatif pour l'interface ; le contrat de vérité n'est PAS là,
+	// il est dans la CLÉ de chaque vecteur (voir anneauComplet).
+	Anneau string `json:"anneau,omitempty"`
 }
+
+// anneauComplet est le motif que lireCacheMemoire lit pour reconstituer le
+// drapeau embeddingIndex.Complet.
+//
+// ⭐ POURQUOI UN ANNEAU PARTIEL EST SÛR, et ce qui le prouve — la CLÉ, pas une
+// promesse. memoryChunk.Key est memoryDigest(embeddingProtocol · fichier · titre
+// · TEXTE · mediaHash) (mem_embeddings.go) : un vecteur rangé sous la clé K a
+// donc été calculé sur le texte qui hache en K, ni plus ni moins. Un fragment
+// rescapé d'un anneau ne peut pas être « un vecteur d'un autre texte » ; il est
+// soit exactement son fragment, soit absent (la clé ne se retrouve plus).
+//
+// ➜ L'anneau peut être INCOMPLET. Il ne peut pas être FAUX. C'est ce qui rend
+// possible de le sauver AVANT le juge de fraîcheur, sans jamais présenter un
+// index comme à jour alors qu'il lui manque des fragments.
+//
+// anneauComplet est le motif de l'index terminé ; anneauAprès, celui d'un arrêt
+// en cours de route — nommé par l'humain du 24/11, qui veut l'anneau mais pas le
+// mensonge.
+//
+// ⭐ Le motif n'est pas un ornement : c'est LE drapeau de complétude. Écrire autre
+// chose que anneauComplet déclare un anneau réutilisable mais non frais, et
+// indexFresh le refuse (mem_embeddings.go:189). Il voyage avec le fichier : la
+// complétude ne peut pas être déduite après coup, les empreintes de pages d'un
+// anneau partiel étant, elles, complètes.
+const anneauComplet = "index complet"
+
+func anneauAprès(n int) string { return fmt.Sprintf("anneau après %d fragments", n) }
 
 // cheminCacheMemoire ne prend PAS memoryDir() : le cache appartient au projet
 // dont root est le dossier. memoryDir() suit le projet ACTIF, et une indexation
@@ -75,9 +107,16 @@ func cheminCacheMemoire(root string) string {
 // du cache n'est retenue que 30 ms de plus, une fois par indexation, et écrire
 // hors du verrou aurait exigé de figer une copie de l'index (2,8 Mo de vecteurs)
 // pour la confier à une goroutine. Un seul défaut à la fois.
-func ecrireCacheMemoire(root string, idx *embeddingIndex) error {
+//
+// anneau nomme ce qui est posé : « index complet », ou « anneau après N
+// fragments ». Un anneau incomplet est ÉCRIT comme tel, jamais comme un index
+// terminé — sa sécurité vient des clés, pas de ce mot (voir anneauComplet).
+func ecrireCacheMemoire(root string, idx *embeddingIndex, anneau string) error {
 	if idx == nil || memLocked() {
 		return nil // rien à écrire, ou mémoire verrouillée : la DEK est partie
+	}
+	if len(idx.Vectors) == 0 {
+		return nil // un anneau vide n'est rien : il ne faut pas l'écrire, ni le relire comme un gain
 	}
 	plaine, err := json.Marshal(cacheMemoireSurDisque{
 		Millésime:   millésimeCacheMemoire,
@@ -85,6 +124,7 @@ func ecrireCacheMemoire(root string, idx *embeddingIndex) error {
 		Hashes:      idx.Hashes,
 		Vectors:     idx.Vectors,
 		Updated:     idx.Updated,
+		Anneau:      anneau,
 	})
 	if err != nil {
 		return fmt.Errorf("cache mémoire en JSON : %w", err)
@@ -99,11 +139,23 @@ func ecrireCacheMemoire(root string, idx *embeddingIndex) error {
 	return nil
 }
 
-// lireCacheMemoire retrouve l'index posé lors d'un lancement précédent. Renvoie
+// lireCacheMemoire retrouve l'anneau posé lors d'un lancement précédent. Renvoie
 // nil sans erreur dans TOUS les cas où il n'y a rien à réutiliser : fichier
 // absent, format d'un autre millésime, mémoire verrouillée (la DEK est partie),
 // moteur qui a changé d'empreinte. Un cache qu'on ne comprend pas est jeté,
 // jamais interprété de travers.
+//
+// ⭐ Il renvoie un ANNEAU, pas un « index à jour ». Un anneau peut être partiel :
+// c'est voulu, et c'est sûr, parce que chaque vecteur est rangé sous la CLÉ de
+// SON texte (voir anneauComplet). Ce qui interdit de le présenter comme frais,
+// c'est le drapeau Complet reconstitué ci-dessous, plus indexFresh en dessous.
+//
+// ⚠ Le drapeau Complet est RECONSTITUÉ ICI depuis le motif posé par l'écrivain :
+// seul anneauComplet lève le doute. Un anneau arrêté en chemin a des empreintes
+// de pages COMPLÈTES — donc indexFresh, qui ne compare que des empreintes, le
+// déclarerait frais avec des vecteurs manquants, et la recherche rendrait moins
+// de résultats sans le dire. Le motif écrit est la seule vérité de la
+// complétude : il voyage avec le fichier, il ne peut pas être déduit après coup.
 func lireCacheMemoire(root, fingerprint string) *embeddingIndex {
 	if memLocked() {
 		return nil
@@ -131,6 +183,7 @@ func lireCacheMemoire(root, fingerprint string) *embeddingIndex {
 		Hashes:      cache.Hashes,
 		Vectors:     cache.Vectors,
 		Updated:     cache.Updated,
+		Complet:     cache.Anneau == anneauComplet,
 	}
 }
 

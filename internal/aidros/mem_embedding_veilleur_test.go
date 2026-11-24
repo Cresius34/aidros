@@ -36,7 +36,7 @@ func TestVeilleurEncodeurPython_Decisions(t *testing.T) {
 		started := t0
 		now := t0.Add(embeddingGrace - time.Minute)
 		lastUse := t0.Add(-2 * time.Hour)
-		if stop, why := embeddingWatchDecision(now, started, lastUse, 120); stop {
+		if stop, why := embeddingWatchDecision(now, started, lastUse, 120, embeddingIdleStop); stop {
 			t.Errorf("arrêté pendant la tolérance de démarrage (%s) : %s", embeddingGrace, why)
 		}
 	})
@@ -45,7 +45,7 @@ func TestVeilleurEncodeurPython_Decisions(t *testing.T) {
 		started := t0.Add(-2 * embeddingGrace)
 		now := t0
 		lastUse := now.Add(-time.Second) // vient de servir : seule la RAM décide
-		stop, why := embeddingWatchDecision(now, started, lastUse, embeddingStopRAMMB-1)
+		stop, why := embeddingWatchDecision(now, started, lastUse, embeddingStopRAMMB-1, embeddingIdleStop)
 		if !stop {
 			t.Fatalf("RAM à %d Mo : le veilleur ne l'a pas arrêté (seuil %d)", embeddingStopRAMMB-1, embeddingStopRAMMB)
 		}
@@ -57,7 +57,7 @@ func TestVeilleurEncodeurPython_Decisions(t *testing.T) {
 	t.Run("RAM juste au-dessus du seuil : on ne tue pas", func(t *testing.T) {
 		started := t0.Add(-2 * embeddingGrace)
 		lastUse := time.Now().Add(-time.Second)
-		if stop, why := embeddingWatchDecision(time.Now(), started, lastUse, embeddingStopRAMMB); stop {
+		if stop, why := embeddingWatchDecision(time.Now(), started, lastUse, embeddingStopRAMMB, embeddingIdleStop); stop {
 			t.Errorf("arrêté à exactement %d Mo, attendu seulement en dessous : %s", embeddingStopRAMMB, why)
 		}
 	})
@@ -65,21 +65,57 @@ func TestVeilleurEncodeurPython_Decisions(t *testing.T) {
 	t.Run("RAM indisponible (-1) : on ne tue pas sur un doute", func(t *testing.T) {
 		started := t0.Add(-2 * embeddingGrace)
 		lastUse := time.Now().Add(-time.Second)
-		if stop, why := embeddingWatchDecision(time.Now(), started, lastUse, -1); stop {
+		if stop, why := embeddingWatchDecision(time.Now(), started, lastUse, -1, embeddingIdleStop); stop {
 			t.Errorf("arrêté sur une RAM inconnue : %s", why)
 		}
 	})
 
 	t.Run("inactif depuis plus de la garde : arrete", func(t *testing.T) {
+		// ⭐ La garde est un RÉGLAGE, joué ICI ARMÉE (20 min) alors que sa valeur
+		// du jour est 0 — levée sur l'ordre de l'humain du 24/11. Le réglage passe
+		// en paramètre de embeddingWatchDecision précisément pour que ce test
+		// existe : la constante du jour ne prouverait que l'état du jour.
+		const armée = 20 * time.Minute
 		started := t0.Add(-2 * embeddingGrace)
 		now := time.Now()
-		lastUse := now.Add(-embeddingIdleStop - time.Minute)
-		stop, why := embeddingWatchDecision(now, started, lastUse, 999999)
+		lastUse := now.Add(-armée - time.Minute)
+		stop, why := embeddingWatchDecision(now, started, lastUse, 999999, armée)
 		if !stop {
-			t.Fatalf("inactif depuis %s : le veilleur ne l'a pas arrêté", embeddingIdleStop+time.Minute)
+			t.Fatalf("inactif depuis %s : le veilleur ne l'a pas arrêté", armée+time.Minute)
 		}
 		if !strings.Contains(why, "inutilisé") {
 			t.Errorf("motif sans « inutilisé » : %q", why)
+		}
+	})
+
+	t.Run("garde LEVEE : une inactivité de dix heures ne tue pas", func(t *testing.T) {
+		// Le réglage du jour, joué pour de vrai. Le piège que ce filet garde :
+		// `now.Sub(lastUse) > 0` est VRAI aussitôt. Retirer le test d'armement
+		// dans les deux comparateurs (mem_embedding_backend.go:459 et
+		// jean_embed.go:260) tuerait l'encodeur à son premier battement — une
+		// garde levée tuerait ALORS plus vite qu'une garde de vingt minutes.
+		started := t0.Add(-2 * embeddingGrace)
+		now := time.Now()
+		lastUse := now.Add(-10 * time.Hour)
+		if stop, why := embeddingWatchDecision(now, started, lastUse, 999999, embeddingIdleStop); stop {
+			t.Errorf("garde levée (%s) et pourtant arrêté : %s", embeddingIdleStop, why)
+		}
+	})
+
+	t.Run("garde levee : la RAM veille ENCORE, c'est elle qui proteeait la machine", func(t *testing.T) {
+		// Ce que l'ordre « pas de garde d'inactivité » ne retire PAS. Le 14/11, la
+		// machine était à 5,5 Go libres : c'est le seuil RAM qui était en cause,
+		// jamais l'inactivité (mesurée 15,4-15,9 Go LIBRES le 24/11). Lever
+		// l'inactivité sans garder la RAM laisserait la voie Python de 24,8 Go
+		// privés tenir la machine indéfiniment.
+		started := t0.Add(-2 * embeddingGrace)
+		lastUse := time.Now().Add(-time.Second)
+		stop, why := embeddingWatchDecision(time.Now(), started, lastUse, embeddingStopRAMMB-1, embeddingIdleStop)
+		if !stop {
+			t.Fatalf("RAM à %d Mo libres : la RAM ne veille plus (seuil %d)", embeddingStopRAMMB-1, embeddingStopRAMMB)
+		}
+		if !strings.Contains(why, "RAM") {
+			t.Errorf("motif sans le mot RAM : %q", why)
 		}
 	})
 
@@ -88,8 +124,11 @@ func TestVeilleurEncodeurPython_Decisions(t *testing.T) {
 		// tient la machine en RAM mais sert l'encodeur, donc lastUse est récent.
 		started := t0.Add(-2 * embeddingGrace)
 		now := time.Now()
-		lastUse := now.Add(-embeddingIdleStop + 30*time.Second)
-		if stop, why := embeddingWatchDecision(now, started, lastUse, 999999); stop {
+		// ⚠ La garde est ARMÉE ici, à une valeur ÉCRITE : la constante du jour est 0
+		// (levée), et `lastUse` récent ne prouverait rien avec une garde levée.
+		const gardeArmée = 20 * time.Minute
+		lastUse := now.Add(-gardeArmée + 30*time.Second)
+		if stop, why := embeddingWatchDecision(now, started, lastUse, 999999, gardeArmée); stop {
 			t.Errorf("arrêté alors que l'encodeur vient de servir : %s", why)
 		}
 	})
@@ -172,8 +211,44 @@ func TestVeilleurEncodeurPython_Cablage(t *testing.T) {
 	t.Run("la tolerance de demarrage existe", func(t *testing.T) {
 		// Le premier lancement de la voie Python installe torch : tuer pendant
 		// cette phase tuerait une installation légitime, en plein travail.
-		if embeddingGrace <= embeddingIdleStop {
-			t.Errorf("tolérance de démarrage %s <= garde d'inactivité %s : un premier lancement serait tué", embeddingGrace, embeddingIdleStop)
+		//
+		// ⚠ Comparé à une garde ARMÉE, pas à la constante du jour. La garde
+		// d'inactivité valait 20 min et la tolérance 45 : l'inégalité avait un
+		// sens. Depuis le 24/11 la garde du jour est 0 (levée) — la comparer à 0
+		// satisfait le test SANS RIEN PROUVER, et le filet dormirait vert. La
+		// comparaison qui garde quelque chose est tolérance contre garde armée.
+		const gardeArmée = 20 * time.Minute
+		if embeddingGrace <= gardeArmée {
+			t.Errorf("tolérance de démarrage %s <= garde d'inactivité armée %s : un premier lancement serait tué", embeddingGrace, gardeArmée)
+		}
+	})
+
+	t.Run("les deux comparateurs testent BIEN l'armement", func(t *testing.T) {
+		// Le piège propre à ce réglage, relu dans les DEUX sources : `z > 0` est
+		// VRAI aussitôt, donc une garde levée écrite à la va-vite tuerait
+		// l'encodeur plus vite qu'une garde de vingt minutes. Les deux voies
+		// doivent armer AVANT de soustraire.
+		//
+		// Le motif : une LIGNE qui porte à la fois l'inactivité et le test
+		// `> 0`. Retirer l'armement de jean_embed.go laisse
+		// `idle := time.Since(p.lastUse) > jeanEmbedIdle` — de l'inactivité, un `>`,
+		// plus aucun `> 0` : le filet rougit. Pareil côté Python.
+		for _, nom := range []string{"mem_embedding_backend.go", "jean_embed.go"} {
+			b, err := os.ReadFile(nom)
+			if err != nil {
+				t.Fatalf("relire %s : %v", nom, err)
+			}
+			armee := false
+			for _, ligne := range strings.Split(string(b), "\n") {
+				basse := strings.ToLower(ligne)
+				if strings.Contains(basse, "idle") && strings.Contains(basse, " > 0") {
+					armee = true
+					break
+				}
+			}
+			if !armee {
+				t.Errorf("%s : aucune garde d'armement avant la soustraction — une garde levée tuerait aussitôt", nom)
+			}
 		}
 	})
 }

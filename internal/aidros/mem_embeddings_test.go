@@ -122,7 +122,10 @@ func TestEmbeddingChunksScopeAndExternalEdits(t *testing.T) {
 			t.Fatalf("bloc invalide : %+v", c)
 		}
 	}
-	idx := &embeddingIndex{Fingerprint: "f", Hashes: snapshotHashes(docs)}
+	// ⚠ Complet: true : depuis le 24/11, un index sans le drapeau n'est PAS frais
+	// (c'est le garde de l'anneau partiel). Sans lui, ce filet échouerait sur
+	// « empreinte ignorée » pour une raison sans rapport avec ce qu'il teste.
+	idx := &embeddingIndex{Fingerprint: "f", Hashes: snapshotHashes(docs), Complet: true}
 	if !indexFresh(idx, docs, "f") || indexFresh(idx, docs, "changed-model") {
 		t.Fatal("empreinte ignorée")
 	}

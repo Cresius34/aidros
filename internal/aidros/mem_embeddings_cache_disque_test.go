@@ -31,12 +31,17 @@ import (
 )
 
 // cacheDeTest pose un index d'un fragment, avec l'empreinte voulue.
+//
+// ⚠ Complet: true — depuis le 24/11, indexFresh exige le drapeau : un anneau
+// partiel a de bonnes empreintes et des vecteurs manquants, il n'est PAS frais.
+// Une fixture qui l'omettrait ne prouverait que le refus.
 func cacheDeTest(fp string) *embeddingIndex {
 	return &embeddingIndex{
 		Fingerprint: fp,
 		Hashes:      map[string]string{"fiche.md": "empreinte-de-page"},
 		Vectors:     map[string][]float32{"fiche.md:0-8": {0.5, 0.25}},
 		Updated:     time.Now().UTC(),
+		Complet:     true,
 	}
 }
 
@@ -55,7 +60,7 @@ func TestCacheMemoireSurDisque(t *testing.T) {
 	chemin := filepath.Join(root, dossierCacheMemoire, fichierCacheMemoire)
 
 	// 1. écrire puis relire, en mémoire claire.
-	if err := ecrireCacheMemoire(root, cacheDeTest(fp)); err != nil {
+	if err := ecrireCacheMemoire(root, cacheDeTest(fp), anneauComplet); err != nil {
 		t.Fatalf("écriture en clair : %v", err)
 	}
 	fi, err := os.Stat(chemin)
@@ -118,7 +123,7 @@ func TestCacheMemoireSurDisque(t *testing.T) {
 	if lu := lireCacheMemoire(root, fp); lu != nil {
 		t.Error("le cache est relisible alors que la mémoire est verrouillée")
 	}
-	if err := ecrireCacheMemoire(root, cacheDeTest(fp)); err != nil {
+	if err := ecrireCacheMemoire(root, cacheDeTest(fp), anneauComplet); err != nil {
 		t.Errorf("écriture sous mémoire verrouillée : %v", err)
 	}
 	if lu := lireCacheMemoire(root, fp); lu != nil {
@@ -132,7 +137,7 @@ func TestCacheMemoireSurDisque(t *testing.T) {
 	// verrouillage n'est que temporaire et la recherche retrouverait ses vecteurs.
 	// ⚠ Reposé exprès : le fichier peut être parti à l'étape 4, et ce qu'on garde
 	// ici est l'effacement par clearEmbeddingCache, pas ce qui l'a précédé.
-	if err := ecrireCacheMemoire(root, cacheDeTest(fp)); err != nil {
+	if err := ecrireCacheMemoire(root, cacheDeTest(fp), anneauComplet); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(chemin); err != nil {
@@ -271,7 +276,8 @@ func TestCacheMemoireSurDisquePasseLeJuge(t *testing.T) {
 		Hashes:      map[string]string{docs[0].File: docs[0].Hash},
 		Vectors:     map[string][]float32{docs[0].File + ":0-8": {0.5, 0.25}},
 		Updated:     time.Now().UTC(),
-	}); err != nil {
+		Complet:     true,
+	}, anneauComplet); err != nil {
 		t.Fatal(err)
 	}
 	lu := lireCacheMemoire(root, fp)
@@ -307,8 +313,52 @@ func TestCacheMemoireSurDisqueEstBranche(t *testing.T) {
 		if !contains(corps, "lireCacheMemoire(root, client.Fingerprint)") {
 			t.Error("l'indexation ne consulte pas le disque : un redémarrage repart à zéro")
 		}
-		if !contains(corps, "ecrireCacheMemoire(root, idx)") {
+		if !contains(corps, "ecrireCacheMemoire(root, idx,") {
 			t.Error("l'indexation ne pose jamais son index sur le disque")
+		}
+	})
+
+	// ⭐ LE GARDE DU 24/11 : l'anneau est posé AVANT que le juge de fraîcheur
+	// jette. Le défaut, mesuré : ecrireCacheMemoire ne vivait qu'APRÈS ce juge,
+	// donc sur un dossier qui bouge (et il bouge — le ménage de 05 h édite les
+	// pages) le `return` rendait le cache disque inatteignable PAR CONSTRUCTION.
+	// /api/embeddings répondait « RAM ; aucun cache disque » en permanence.
+	//
+	// Le garde est borné au TRONCON entre le juge et son message : chercher
+	// « sauveAnneau » dans tout le corps se satisferait d'une sauvegarde posée
+	// n'importe où ailleurs, y compris après — ce qui est exactement le défaut.
+	t.Run("l'anneau est posé AVANT que le juge de fraîcheur jette l'index", func(t *testing.T) {
+		corps := corpsDeFonction(t, "mem_embeddings.go", "rebuildEmbeddingIndex")
+		i := strings.Index(corps, "!indexFresh(idx, current,")
+		if i < 0 {
+			t.Fatal("le juge de fraîcheur n'est plus dans l'indexation : le garde n'a plus de prise")
+		}
+		j := strings.Index(corps[i:], "fichiers modifiés pendant")
+		if j < 0 {
+			t.Fatal("le message du juge a changé : relire ce garde avant de conclure")
+		}
+		troncon := corps[i : i+j]
+		if !strings.Contains(troncon, "sauveAnneau(") {
+			t.Error("aucune sauvegarde entre le juge et son abandon : le cache disque redevient inatteignable sur un dossier qui bouge")
+		}
+	})
+
+	// L'anneau doit aussi survivre aux quatre autres sorties de la boucle : le
+	// délai, l'annulation, l'erreur d'encodage, la panne d'encodeur. Chacune
+	// jetait le travail de dizaines de minutes, mesuré le 23/11 (1316/1448).
+	t.Run("l'anneau est posé à chaque sortie de la boucle d'encodage", func(t *testing.T) {
+		corps := corpsDeFonction(t, "mem_embeddings.go", "rebuildEmbeddingIndex")
+		debut := strings.Index(corps, "for i, c := range chunks")
+		fin := strings.Index(corps, "current, err := loadMemoryDocumentsFor")
+		if debut < 0 || fin < 0 || fin < debut {
+			t.Fatal("la boucle d'encodage n'est plus reconnaissable : le garde n'a plus de prise")
+		}
+		boucle := corps[debut:fin]
+		if n := strings.Count(boucle, "sauveAnneau("); n < 4 {
+			t.Errorf("%d sauvegarde(s) d'anneau dans la boucle, attendu au moins 4 (délai, annulation, encodage, encodeur)", n)
+		}
+		if !strings.Contains(boucle, "anneauTousFragments") {
+			t.Error("l'anneau n'est plus sauvé PENDANT la route : il ne protège plus d'une coupure en cours d'indexation")
 		}
 	})
 

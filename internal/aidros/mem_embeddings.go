@@ -25,6 +25,14 @@ type embeddingIndex struct {
 	Hashes      map[string]string
 	Vectors     map[string][]float32
 	Updated     time.Time
+	// Complet : l'index couvre-t-il TOUS les fragments, ou est-ce un anneau arrêté
+	// en chemin ? Indispensable depuis que le disque s'écrit en cours de route :
+	// les empreintes d'un anneau partiel sont complètes (elles viennent des pages,
+	// pas des vecteurs), donc indexFresh, qui ne compare que des empreintes, le
+	// déclarerait FRAIS alors qu'il lui manque des vecteurs. La recherche rendrait
+	// alors moins de résultats sans le dire — le mensonge que cette page entière
+	// s'efforce d'empêcher.
+	Complet bool
 }
 type embeddingJob struct {
 	Root        string `json:"project_path"`
@@ -175,7 +183,10 @@ func snapshotHashes(docs []memoryDocument) map[string]string {
 	return m
 }
 func indexFresh(idx *embeddingIndex, docs []memoryDocument, fp string) bool {
-	if idx == nil || idx.Fingerprint != fp || len(idx.Hashes) != len(docs) {
+	// Un anneau arrêté en chemin a de bonnes empreintes et des vecteurs
+	// manquants : il n'est PAS frais, il est réutilisable. La distinction est
+	// exactement ce champ.
+	if idx == nil || !idx.Complet || idx.Fingerprint != fp || len(idx.Hashes) != len(docs) {
 		return false
 	}
 	for _, d := range docs {
@@ -248,6 +259,40 @@ func reprendsEncodageAvecUnEncodeurNeuf(ctx context.Context, cfg embeddingConfig
 	return v, actif, nil
 }
 
+// sauveAnneau pose l'index en cours sur le disque, sous le verrou du cache (le
+// contrat de ecrireCacheMemoire). Appelé à CHAQUE sortie de la boucle d'indexation
+// et tous les anneauTousFragments fragments : c'est ce qui remplace le tout-ou-rien.
+//
+// ⭐ Le défaut que ça ferme, mesuré le 24/11 : ecrireCacheMemoire ne vivait qu'à la
+// FIN, après le juge de fraîcheur. Sur un dossier qui bouge — et il bouge, la tâche
+// de ménage de 05 h édite mes propres pages — le juge fait `return` avant
+// l'écriture, et le cache disque ne naît JAMAIS. /api/embeddings rend « RAM ;
+// aucun cache disque » en permanence, y compris job fini, pour cette seule raison.
+// Conséquence chiffrée : chaque lancement repayait l'indexation, et chaque coupure
+// de l'encodeur la reprenait à zéro.
+//
+// Un anneau partiel est SÛR parce que la clé d'un fragment est le digest de SON
+// texte (chunkMemory, ci-dessus) : un vecteur rescapé ne peut être que son
+// fragment, jamais celui d'un autre. Il peut manquer ; il ne peut pas mentir.
+func sauveAnneau(root string, idx *embeddingIndex, note string) {
+	embeddingCache.Lock()
+	defer embeddingCache.Unlock()
+	if err := ecrireCacheMemoire(root, idx, note); err != nil {
+		embeddingCache.Note = "anneau non écrit : " + err.Error()
+		return
+	}
+	if note != "" {
+		embeddingCache.Note = note
+	}
+}
+
+// anneauTousFragments : la fréquence de sauvegarde. Mesuré le 24/11, un fragment
+// coûte 0,47 s sur ce poste (16 threads, CPU) et une écriture du cache ~30 ms.
+// Un anneau complet de 1 561 fragments fait ~2,8 Mo. Sauver tous les 24 fragments
+// coûte donc ~0,3 % du temps d'indexation et borne la perte, à une coupure près,
+// à ~11 s de travail.
+const anneauTousFragments = 24
+
 func rebuildEmbeddingIndex(ctx context.Context, root string, cfg embeddingConfig, epoch uint64) (*embeddingIndex, error) {
 	if memLocked() {
 		return nil, errMemLocked
@@ -271,6 +316,11 @@ func rebuildEmbeddingIndex(ctx context.Context, root string, cfg embeddingConfig
 	// Le cache RAM est vide au premier tour après un redémarrage : sans ce
 	// fichier, chaque lancement repaierait les ~25 minutes de réencodage mesurées
 	// le 23/11. La réutilisation en dessous ne demandait qu'un « old » survivant.
+	//
+	// ⭐ L'anneau du disque est FUSIONNÉ par clé, jamais adopté comme index :
+	// il peut être partiel (voir anneauComplet), et seul indexFresh décidera de la
+	// fraîcheur plus bas, drapeau Complet en tête. Le RAM survivant a la priorité,
+	// fragment par fragment.
 	if old == nil {
 		old = lireCacheMemoire(root, client.Fingerprint)
 	}
@@ -279,12 +329,14 @@ func rebuildEmbeddingIndex(ctx context.Context, root string, cfg embeddingConfig
 	idx := &embeddingIndex{Fingerprint: client.Fingerprint, Hashes: snapshotHashes(docs), Vectors: make(map[string][]float32), Updated: time.Now()}
 	for i, c := range chunks {
 		if err := ctx.Err(); err != nil {
+			sauveAnneau(root, idx, anneauAprès(i)) // le délai est mort : ce qui est encodé est sauvé
 			return nil, err
 		}
 		embeddingCache.Lock()
 		valid := embeddingCache.Epoch == epoch
 		embeddingCache.Unlock()
 		if !valid || memLocked() {
+			sauveAnneau(root, idx, anneauAprès(i)) // annulé : pareil, rien de ce qui est encodé n'est jeté
 			return nil, errors.New("indexation annulée (verrouillage ou configuration modifiée)")
 		}
 		if old != nil && old.Fingerprint == client.Fingerprint {
@@ -293,6 +345,7 @@ func rebuildEmbeddingIndex(ctx context.Context, root string, cfg embeddingConfig
 		if idx.Vectors[c.Key] == nil {
 			input, _, err := embeddingMedia(root, c.Text, cfg)
 			if err != nil {
+				sauveAnneau(root, idx, anneauAprès(i))
 				return nil, err
 			}
 			input.Text = "title: " + c.File + " — " + c.Title + " | text: " + input.Text
@@ -305,6 +358,7 @@ func rebuildEmbeddingIndex(ctx context.Context, root string, cfg embeddingConfig
 			// ne retournent pas frapper à la porte morte.
 			v, nouveau, err := reprendsEncodageAvecUnEncodeurNeuf(ctx, cfg, client, input)
 			if err != nil {
+				sauveAnneau(root, idx, anneauAprès(i)) // la panne non plus ne jette plus le travail
 				return nil, err
 			}
 			client = nouveau
@@ -313,14 +367,30 @@ func rebuildEmbeddingIndex(ctx context.Context, root string, cfg embeddingConfig
 		embeddingCache.Lock()
 		embeddingCache.Job.Done = i + 1
 		embeddingCache.Unlock()
+		// L'ANNEAU, pendant la route : c'est ce qui remplace le tout-ou-rien. Sauvé
+		// tous les anneauTousFragments fragments (~0,3 % du temps mesuré, ~30 ms
+		// d'écriture pour 0,47 s d'encodage), la perte est bornée à ~11 s de
+		// travail au lieu des ~12 minutes du plein réencodage mesuré le 24/11.
+		if (i+1)%anneauTousFragments == 0 {
+			sauveAnneau(root, idx, anneauAprès(i+1))
+		}
 	}
 	// Only publish if the source still matches. No stale snippets or vectors can
 	// become current just because a Drive edit occurred during encoding.
 	current, err := loadMemoryDocumentsFor(root, cfg)
 	if err != nil {
+		sauveAnneau(root, idx, anneauComplet) // les pages ont bougé, les vecteurs restent
 		return nil, err
 	}
 	if !indexFresh(idx, current, client.Fingerprint) {
+		// ⭐ LE DÉFAUT QUE CETTE LIGNE FERMET, mesuré le 24/11 : l'écriture du
+		// disque ne vivait qu'APRÈS ce juge. Sur un dossier qui bouge — et il
+		// bouge, le ménage de 05 h édite les pages — ce `return` rendait le cache
+		// disque inatteignable par construction, et /api/embeddings répondait
+		// « RAM ; aucun cache disque » en permanence, job fini compris. L'anneau
+		// est posé AVANT de sortir ; l'index incomplet n'est pas publié en RAM,
+		// mais il n'est plus jeté.
+		sauveAnneau(root, idx, anneauComplet)
 		return nil, errors.New("fichiers modifiés pendant l’indexation ; relancer")
 	}
 	embeddingCache.Lock()
@@ -333,10 +403,14 @@ func rebuildEmbeddingIndex(ctx context.Context, root string, cfg embeddingConfig
 		embeddingCache.Indexes = make(map[string]*embeddingIndex)
 	}
 	embeddingCache.Indexes[root] = idx
+	// ⭐ L'index publié en RAM couvre DÉSORMAIS chaque fragment : c'est ici, et
+	// nulle part ailleurs, qu'un anneau devient « complet ». Sans ce drapeau,
+	// indexFresh refuserait un index tout juste terminé (voir le champ Complet).
+	idx.Complet = true
 	// Sous le même verrou : l'index publié en RAM et celui posé sur le disque
 	// sont alors le même. Écrire hors du verrou aurait exigé d'en figer une copie
 	// (2,8 Mo de vecteurs) pour la confier à une goroutine. ~30 ms par indexation.
-	if err := ecrireCacheMemoire(root, idx); err != nil {
+	if err := ecrireCacheMemoire(root, idx, anneauComplet); err != nil {
 		embeddingCache.Note = "index prêt ; cache disque non écrit : " + err.Error()
 	}
 	return idx, nil

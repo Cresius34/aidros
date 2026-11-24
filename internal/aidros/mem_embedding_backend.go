@@ -419,8 +419,31 @@ func startEmbeddingServer(ctx context.Context, c embeddingConfig) (*embeddingHTT
 // 24,8 Go privés et 15,9 Go vifs APRÈS la fin de l'indexation (0,1 s de CPU sur
 // 25 s), sans jamais les rendre, jusqu'à l'arrêt de l'application.
 const (
-	embeddingStopRAMMB = 700              // sous ce seuil, l'encodeur est arrêté
-	embeddingIdleStop  = 20 * time.Minute // au-delà sans requête, il est arrêté
+	embeddingStopRAMMB = 700 // sous ce seuil, l'encodeur est arrêté
+	// embeddingIdleStop : 0 = JAMAIS arrêté pour inactivité.
+	//
+	// ⭐ La garde est LEVÉE sur l'ordre de l'humain du 24/11/2026 : « pas de garde
+	// d'inactivité, si Aidros est lancé, la mémoire reste indexée et s'actualise
+	// au fur et à mesure ». Ce n'est pas un caprice, c'est une mesure : la garde
+	// de vingt minutes protégeait la machine d'une fuite de 24,8 Go, mais elle
+	// protégeait la voie PYTHON. La voie en service (llama.cpp/GGUF, mesuré
+	// pid 133460 le 24/11) tient 426 Mo vifs / 1 299 Mo privés, soit ~2 % de ce
+	// pour quoi la garde a été écrite. Et son coût, lui, n'a pas baissé : tuer
+	// l'encodeur rend la recherche suivante lexicale (readyEmbeddingClient répond
+	// « encodeur non démarré », mem_embedding_backend.go:527) et, comme le cache
+	// disque ne s'écrivait pas, le plein réencodage — ~12 min de CPU pour
+	// 1 561 fragments à 0,47 s.
+	//
+	// ⚠ CE QUE LA GARDE NE PROTÉGEAIT PAS, et qui reste protégé : la RAM. Le
+	// seuil embeddingStopRAMMB, lui, veille toujours — et c'est LUI qui était en
+	// cause le 14/11 (5,5 Go libres mesurés), jamais l'inactivité (mesurée 15,4 à
+	// 15,9 Go LIBRES aujourd'hui, seuil hors d'atteinte).
+	//
+	// ⚠ ZÉRO N'EST PAS « JAMAIS » TOUT SEUL : `time.Since(...) > 0` est VRAI
+	// aussitôt. Les deux comparateurs (ici :459 et jean_embed.go:260) testent
+	// d'abord si la garde est ARMÉE. Retirer ce test-là tuerait l'encodeur à son
+	// premier battement — la garde levée tuerait plus vite que la garde armée.
+	embeddingIdleStop = 0 * time.Minute
 	// Le veilleur ne regarde pas avant ce délai. Le premier lancement de la voie
 	// Python installe torch et ses dépendances, qui dépasse largement une phase
 	// d'encodage et consomme justement de la RAM : sans cette tolérance, on
@@ -449,15 +472,27 @@ func markEmbeddingUse(c *embeddingHTTPClient) {
 // temps au lieu d'attendre vingt minutes.
 //
 // availMB vaut -1 quand la RAM est indisponible : on ne tue pas sur un doute.
-func embeddingWatchDecision(now, started, lastUse time.Time, availMB int) (bool, string) {
+//
+// idleStop est passé EN PARAMÈTRE et n'est pas lu dans la constante : la garde
+// d'inactivité est un RÉGLAGE dont la valeur du jour est 0 (levée). Un filet qui
+// ne lirait que la constante ne prouverait qu'un seul état ; avec le réglage en
+// entrée, le même test joue la garde armée ET la garde levée, et mord dans les
+// deux sens. C'est la seule façon de tester « jamais » sans attendre.
+//
+// ⚠ idleStop <= 0 = la garde n'est PAS armée. Le test d'armement vient AVANT la
+// soustraction : sans lui, `now.Sub(lastUse) > 0` serait vrai aussitôt et une
+// garde levée tuerait l'encodeur plus vite qu'une garde de vingt minutes.
+func embeddingWatchDecision(now, started, lastUse time.Time, availMB int, idleStop time.Duration) (bool, string) {
 	if now.Sub(started) <= embeddingGrace {
 		return false, "" // tolérance de démarrage : torch s'installe, il travaille
 	}
 	if a := availMB; a >= 0 && a < embeddingStopRAMMB {
 		return true, fmt.Sprintf("RAM trop basse (%d Mo libres, %d requis)", a, embeddingStopRAMMB)
 	}
-	if d := now.Sub(lastUse); d > embeddingIdleStop {
-		return true, fmt.Sprintf("inutilisé depuis %s", d.Truncate(time.Minute))
+	if idleStop > 0 {
+		if d := now.Sub(lastUse); d > idleStop {
+			return true, fmt.Sprintf("inutilisé depuis %s", d.Truncate(time.Minute))
+		}
 	}
 	return false, ""
 }
@@ -488,7 +523,7 @@ func embeddingWatch(p *embeddingProcess, started time.Time) {
 			return // une autre instance a pris la main : ce n'est plus à elle de veiller
 		}
 
-		if stop, why := embeddingWatchDecision(time.Now(), started, lastUse, availRAMMB()); stop {
+		if stop, why := embeddingWatchDecision(time.Now(), started, lastUse, availRAMMB(), embeddingIdleStop); stop {
 			fmt.Fprintf(os.Stderr, "[mémoire] encodeur arrêté : %s\n", why)
 			stopEmbeddingServer()
 			return
