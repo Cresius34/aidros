@@ -115,15 +115,25 @@ C'est le gain promis, lu sur le poste qui tourne, pas dans un filet.
 
 ⚠ **Ce que le juge fait encore, et c'est voulu** : sur un dossier de mémoire qui bouge
 **pendant** l'encodage — et il bouge, c'est justement le ménage de 05 h qui édite les pages —
-`indexFresh` refuse de **publier** l'index en RAM et rend « fichiers modifiés pendant
-l'indexation ; relancer ». L'anneau, lui, est sauvé. Donc la recherche retombe sur le repli
-lexical tant que le dossier n'est pas calme, et il faut relancer le job : mesuré, la recherche
-sur ce poste rend `resultats=1` en sémantique contre `repli lexical=5`. **Le défaut n'est pas
-la campagne, c'est le couple** « le ménage édite la mémoire » × « l'indexation juge la mémoire
-par son empreinte » : nommer le couple vaut mieux que bricoler l'un des deux.
-**La première indexation complète reste donc due sur un poste qui écrit sa mémoire pendant
-qu'il l'encode** ; elle ne se repaie plus au redémarrage, et se repaie quand **l'empreinte du
-moteur** change — des vecteurs d'un autre moteur ne sont pas les miens.
+`indexFresh` refuse de **publier** l'index **depuis la route d'indexation** et rend « fichiers
+modifiés pendant l'indexation ; relancer ». L'anneau, lui, est sauvé — et **le service est
+quand même rendu** : mesuré sur ce poste, un anneau marqué `"index complet"` est **re-publié à
+la lecture**, la recherche répond `mode=hybrid` avec **5 résultats sémantiques en 159 ms**, et
+l'API rend `pages=122`, `chunks=1578`. Le juge ferme donc la **route**, pas la **recherche**.
+
+⚠ **Ma faute de mesure, en passant, parce qu'elle a failli me faire écrire le contraire** :
+`/api/embeddings/search` rend `result` comme un **objet** (`hits`, `mode`, `note`), pas comme un
+tableau. `@($r.result).Count` comptait **l'objet** — j'en tirais « sémantique = 1 résultat » et
+un `score` à 0 lu sur `$null` (le champ est `omitempty`). Le chiffre était vrai, sa lecture
+fausse. ➜ Relire la **forme** de la réponse avant de la compter.
+
+**Ce que ça coûte donc vraiment** : un message d'erreur et un tour de reprise (363 s au lieu de
+25 min), pas une recherche privée de sémantique. **Le défaut n'est pas la campagne, c'est le
+couple** « le ménage édite la mémoire » × « l'indexation juge la mémoire par son empreinte » :
+nommer le couple vaut mieux que bricoler l'un des deux. **La première indexation complète reste
+due sur un poste qui écrit sa mémoire pendant qu'il l'encode** ; elle ne se repaie plus au
+redémarrage, et se repaie quand **l'empreinte du moteur** change — des vecteurs d'un autre
+moteur ne sont pas les miens.
 
 ## Ce que cette version épingle
 
