@@ -15,11 +15,24 @@ import (
 // (racine sans parent, historique réécrit, 689 fichiers qui ne se recouvrent
 // pas), et ses étiquettes v1.0.0→v1.0.10 vivent dans notre dépôt local sans
 // être nos ancêtres. Reprendre sa base (« 0.20.1 ») n'a plus de sens : la base
-// est la nôtre. La forme reste à DEUX chiffres (1.0, 1.1, 2.0) parce que
-// buildFlavorSuffix y ajoute le cran de correctif : "1.0" + ".0" rend
-// « 1.0.0 », la mise à jour suivante « 1.0.1 ». Le nom du patch ne figure plus
-// dans le millésime (ordre de l'humain du 21/11) : il vit dans l'étiquette git.
-const Version = "1.1"
+// est la nôtre.
+//
+// La forme est à TROIS chiffres (1.1.3) depuis la campagne du 24/11, et le cran
+// de correctif vit ICI, plus dans buildFlavorSuffix. La raison est mesurée dans
+// le code qui décide : sys_update.go:190 compare l'étiquette publiée à
+// semver.Canonical(ensureV(Version)) — JAMAIS à displayVersion(). Une base à
+// deux chiffres canonise donc en « v1.1.0 » : publier v1.1.3 laissait
+// Compare > 0 pour toujours, la mise à jour s'offrant en boucle à un binaire
+// qui reste à « 1.1 ». C'est le défaut de 0.8.0, que version_test.go existe
+// pour empêcher, revenu par l'autre bout.
+//
+// Jamais QUATRE chiffres : "1.1.3" + ".3" rendrait « 1.1.3.3 », que
+// semver.IsValid refuse (mesuré avec tools/sonde-semver, la sonde versionnée) ;
+// sys_update.go:185 rend alors l'erreur « tag de release inattendu » et il ne
+// se propose plus jamais rien, silencieusement. Le nom du patch ne figure
+// toujours pas dans le millésime (ordre de l'humain du 21/11) : il vit dans
+// l'étiquette git.
+const Version = "1.1.3"
 
 // Main est le vrai main() du binaire (cmd/aidros ne fait que l'appeler).
 func Main() {

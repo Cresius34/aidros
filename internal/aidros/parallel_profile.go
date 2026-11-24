@@ -27,19 +27,35 @@ const parallelMemoryRevision = 7
 // actée le 21/11, la base n'est PLUS « reprise telle quelle du tag nathaninline
 // fusionné » : elle est la nôtre, et le nom du patch n'entre plus dans le
 // millésime (ordre de l'humain du 21/11 : « supprime Cresius du millésime »).
-// Version = "1.0" suivi de buildFlavorSuffix rend le millésime affiché : « .0 » a
+// Version = "1.0" suivi de buildFlavorSuffix rendait le millésime affiché : « .0 » a
 // rendu « 1.0.0 » (étiquette git v1.0.0+rev0), « .1 » rend « 1.0.1 » (ordre de
-// l'humain du 23/11). Le suffixe reste un incrément de correctif en « . », jamais
-// un « + » : c'est la forme qu'admet le test de version Windows, et celle que le
-// lanceur d'un poste sait lire.
+// l'humain du 23/11), « .3 » a rendu « 1.1.3 ». Le suffixe reste un incrément de
+// correctif en « . », jamais un « + » : c'est la forme qu'admet le test de version
+// Windows, et celle que le lanceur d'un poste sait lire.
+//
+// ⚠ DEPUIS LA CAMPAGNE DU 24/11 LE CRAN VIT DANS Version (« 1.1.3 ») et ce
+// suffixe est Vide, pour une raison mesurée dans le code qui décide :
+// sys_update.go:190 compare l'étiquette publiée à semver.Canonical(ensureV(Version))
+// et JAMAIS à displayVersion(). Une base à deux chiffres canonise en « x.y.0 »,
+// donc publier v1.1.3 sur une Version "1.1" laissait Compare > 0 à vie : le binaire
+// s'offre la même mise à jour en boucle. Et garder « .3 » avec une Version à trois
+// chiffres ferait QUATRE chiffres (« 1.1.3.3 »), que semver.IsValid refuse — la
+// mise à jour se tait alors complètement (« tag de release inattendu »,
+// sys_update.go:185). Les deux pièges sont gardés par version_flavor_test.go.
 //
 // ⚠ TROIS ENDROITS MONTENT ENSEMBLE, et le troisième est celui qu'on oublie :
-// versioninfo.json (ses DEUX blocs numériques ET ses deux chaînes), ce suffixe,
-// et les DEUX .syso — régénérés par goversioninfo, sinon l'identité Windows ne
-// suit pas. Le garde version_flavor_test.go compare les .syso de la cible
-// portable à displayVersion() ; version_test.go compare ceux de cmd/aidros à la
-// base nue. Monter l'un des trois sans les autres rend un rouge, ou pire un vert
-// qui ment sur ce que Windows affiche.
+// versioninfo.json (ses DEUX blocs numériques ET ses deux chaînes), ce suffixe
+// (ou Version, depuis la campagne du 24/11), et les DEUX .syso — régénérés par
+// goversioninfo, sinon l'identité Windows ne suit pas. Le garde
+// version_flavor_test.go compare les .syso de la cible portable à
+// displayVersion() ; version_test.go compare ceux de cmd/aidros à la base nue.
+// Monter l'un des trois sans les autres rend un rouge, ou pire un vert qui ment
+// sur ce que Windows affiche.
+//
+// ⚠️ goversioninfo n'est PAS au PATH sur ce poste : `go generate ./...` SAUTE ce
+// maillon sans se plaindre et les .syso restent à l'ancien millésime. Mesuré
+// 24/11 : il est à C:\Users\julie\go\bin\goversioninfo.exe. Le jouer par chemin
+// complet, dans le dossier de la cible, PUIS relire les .syso à l'octet.
 //
 // Le « + » n'était pas qu'un goût. Il rendait la release INVISIBLE à l'auto-maj :
 // semver.Canonical efface le build-suffixe, donc Compare(v1.0.0+rev0, v1.0) rend 0
@@ -105,7 +121,21 @@ const parallelMemoryRevision = 7
 // compare. Le .1 porte aussi la bascule de l'encodeur mémoire : EmbeddingGemma 2
 // passe du Python/Transformers (pic de 20 Go, 3,5 Go vifs en 2 min) au GGUF Q8 lu
 // par llama.cpp, six fois plus petit et sans runtime Python.
-const buildFlavorSuffix = ".3"
+//
+// ⚠ DEPUIS LA CAMPAGNE DU 24/11, le suffixe est VIDE et le cran de correctif est
+// monté dans Version (« 1.1.3 »). Il vivait ici : "1.1" + ".1" rendait « 1.1.1 »,
+// ".2" rendait « 1.1.2 », ".3" rendait « 1.1.3 ». Ce qui reste vrai : un « . » se
+// compare, un « + » est effacé par Canonical donc invisible à l'auto-maj (mesuré
+// 22/11), et c'est la forme qu'admet le test de version Windows, celle que le
+// lanceur d'un poste sait lire.
+//
+// Ce qui a changé, mesuré dans sys_update.go:190 : l'auto-maj ne lit QUE Version.
+// Laisser « .3 » avec une Version à trois chiffres ferait QUATRE chiffres
+// (« 1.1.3.3 »), que semver refuse. La garde est donc déplacée sur
+// displayVersion() — ce que le poste affiche et ce que Windows déclare — et non
+// plus sur la seule longueur du suffixe : LA PLACE du nombre est un choix, sa
+// forme comparable ne l'est pas.
+const buildFlavorSuffix = ""
 
 // uiBadgeLabel : intitulé affiché sous le logo par le build portable, à la
 // place du repère « TEST mémoire · R6 ». Ce n'est plus « le nom du patch » :
