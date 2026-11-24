@@ -326,6 +326,14 @@ engine is stopped, the conversation part of the bridge is silent — control
 The bridge speaks its own small protocol (`X-Aidros-*` headers) and accepts both
 spellings of the header name, so an older neighbour is not left out.
 
+**The bridge card follows the interface language.** Title, state badge, setting
+labels and error messages all go through a key, in French and in English. So does the
+default project name — but that one is translated **without touching the stored name**,
+which is the name of the memory folder: a project renamed to "My workshop" stays "My
+workshop" in both languages. Switching language **does not reload** the conversation
+thread: the label is recomputed from what is already in memory, so changing language
+costs less than opening a chat.
+
 ---
 
 ## Access from anywhere

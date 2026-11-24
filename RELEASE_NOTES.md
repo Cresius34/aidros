@@ -1,10 +1,11 @@
-# Aidros `1.1.2` — les panneaux latéraux s'éveillent, la barre d'onglets ne se réveille plus elle-même
+# Aidros `1.1.3` — la carte du Pont parle la langue de l'écran
 
-Un cran de **corrections**, après `1.1.0` et `1.1.1`. Deux chaînes cassées, toutes deux
-**latentes et invisibles** jusqu'à ce que l'interface change d'état : les panneaux de la
-barre latérale qui ne se chargent plus, et la barre d'onglets qui se redéclenchait
-elle-même. Chaque correction a un filet qui mord, et le filet de la réserve de hauteur
-avait **le même trou que le défaut** — il est réparé aussi.
+Un cran de **corrections** après `1.1.0`, `1.1.1` et `1.1.2`. Le défaut était visible
+sur une capture d'écran et invisible dans le code : l'interface servie en **anglais**
+gardait « Pont Aidros ↔ Aidros », son badge « à l'écoute » et le sélecteur de projet
+« Générale ». Trois trous, nommés dans mes notes de livraison du 23/11 et laissés là
+faute de correctif. La cause n'était pas une clé mal traduite : **ces textes
+n'avaient aucune clé.**
 
 **Projet dérivé, usage personnel.** Construit sur [**nathaninline/ajean**](https://github.com/nathaninline/ajean)
 (projet principal, MIT), dont il descend en `0.20.1`. Les changements décrits ici forment
@@ -16,141 +17,114 @@ installer AJEAN, prenez les versions publiées sur
 
 | | avant | après |
 |---|---|---|
-| **Chargeurs lancés par `loadAll()`** | **zéro** (mort sur `ReferenceError`) | **dix-sept**, tous définis |
-| **Panneaux latéraux peints** | **aucun des six** | **six**, prouvés à l'OCR sur la capture |
-| **Écritures d'attributs par clic d'onglet** | une par minuterie, **à chaque passage** | **aucune** quand rien ne change |
+| textes de la carte du Pont portant une clé | **0** | **23** (contrôlés un à un dans le gabarit) |
+| lignes de français en dur dans `13b-bridge.js` | **33** | **0** |
+| clés de traduction, français / anglais | 0 / 0 | **74 / 74**, parité vérifiée |
+| écrans anglais affichant du français | 3 | **0** (prouvé par la page rendue) |
 
-## 1. `loadRemote` a survécu à son propre fichier — et `loadAll()` mourait avec lui
+## 1. `applyI18n()` ne traduit que ce qui porte une clé — et la carte n'en portait pas
 
-Symptôme vu sur le poste de fabrication : « **Configuration** » et « **Presets** », et
-d'autres éléments de la barre latérale, **ne se chargent plus** — pendant que la RAM, elle,
-est bonne. Deux choses distinctes, deux chemins distincts.
+Le moteur parcourt les éléments marqués `data-i18n`. La carte Pont était écrite en
+français **en dur**, dans le gabarit comme dans son JS : `applyI18n()` passait devant
+sans rien trouver à traduire. D'où le piège du 23/11 : un texte traduit à 100 % dans le
+dictionnaire, mais **absent du dictionnaire**, se traduit parfaitement en… rien.
 
-**La cause, mesurée dans le code :** le commit `f7e1318` (« Retirer Ajean Link du dépôt »,
-22/11) a supprimé `13-remote.js` et sa fonction `loadRemote`, mais a **oublié de retirer
-`loadRemote` de la liste** `const T=[…]` (`06-settings.js:722`). Citer un **identifiant
-inexistant dans un littéral JS** lève `ReferenceError` **sur la ligne du tableau** :
-`loadAll()` meurt **avant de lancer le moindre chargeur**. Les six blocs de `HRESERVE`
-(`cfg`, `presets`, `internet-status`, `mcp-list`, `vram`, `ram-details`) gardent donc leur
-hauteur réservée de la session précédente **et ne se peignent jamais**.
+74 clés posées dans les deux langues : **73 `bridge.*` + `projects.default_name`**. Le
+français de secours reste écrit dans le gabarit à côté de sa clé : c'est le repli prévu
+du moteur, pas une trace du défaut.
 
-Le défaut dormait depuis la veille : le tableau est évalué à l'exécution du script, donc
-**aucune requête réseau ne partait**, pas même la plus rapide. Il ne se voyait pas parce
-que la page, elle, restait figée sur autre chose.
+## 2. Le nom du projet par défaut demandait plus qu'un mot à traduire
 
-## 2. Le filet avait le même trou : compter n'est pas vérifier
+Le serveur fige `defaultProjectName = "Générale"`, et **c'est ce nom qui nomme le
+dossier mémoire** `memory/<slug>/`. Le nom *stocké* ne bouge donc pas ; ce qui se dit
+dans la langue est le **libellé**.
 
-`TestReserveDeHauteurLeveeParSonChargeur` **comptait** les dix-huit noms de la liste et ne
-vérifiait la **définition** que des **propriétaires** de `HPROPRIETAIRE`. `loadRemote` n'en
-est pas un : le compteur restait à 18, **le filet restait VERT avec une liste cassée**, un
-jour entier.
+Deux drapeaux, vrais seulement si le projet porte **encore** le nom figé :
 
-Je répare donc **le filet aussi**, pas seulement le chiffre : le compte passe à dix-sept et
-**chaque nom lancé doit être défini quelque part dans le JS**. Le filet a mordu dès le
-premier essai, pour la bonne raison.
+- `name_default` sur `/api/projects`,
+- `default_name_default` sur `/api/chat/projects`.
 
-➜ **Leçon, à appliquer au-delà de ce fichier :** une liste dont je ne vérifie que la
-**taille** peut être verte et cassée. Un littéral peut nommer un identifiant mort ; le
-garde doit **résoudre chaque nom**, pas seulement les noms « importants ».
+Sans ce drapeau, traduire écraserait un nom que l'humain a écrit : le « Projet » d'un
+projet rebaptisé « Mon atelier » reste « Mon atelier » dans les deux langues.
 
-## 3. La barre d'onglets ne se réveille plus elle-même (`1.1.1`)
+## 3. Changer de langue ne repaie pas l'ouverture d'un tchat
 
-Le calque des onglets se rouvrait en boucle. **Ma première explication était fausse**, et
-je l'ai corrigée en consultant la spécification DOM : `classList.toggle(token, force)`
-exécute ses *update steps* **même quand le jeton ne change pas**, et « changer un
-attribut » ne compare **jamais** l'ancienne valeur à la nouvelle. Autrement dit : écrire la
-même valeur **est** une mutation, et elle **relance l'observateur**. D'où **trois gardes
-explicites** — on ne touche à l'attribut que s'il doit changer :
+`setLang()` repeint le nom **sans appel réseau** : les projets sont déjà en mémoire.
+Je n'appelle **ni** `loadProjects()` **ni** `loadHistory()` :
 
-```js
-if (barre.hidden !== !visible) barre.hidden = !visible;
-if (c.classList.contains('is-on') !== actif) c.classList.toggle('is-on', actif);
-if (c.getAttribute('aria-current') !== courant) c.setAttribute('aria-current', courant);
-```
-
-plus les gardes sur `rel.hidden` / `pop.hidden`, et un `attributeFilter` restreint à
-`['class','style']` sur l'observateur.
-
-⚠ **Ce que ça ne prouve pas, dit franchement :** le gel n'est **pas** prouvé disparu. Je
-n'ai jamais vu le calque se figer sous mes yeux, jamais vu non plus la preuve qu'il ne se
-figerait plus. Ces gardes empêchent **l'écriture inutile** ; c'est la corde que l'observateur
-pourchassait, pas un verdict sur le gel lui-même.
+- le nombre de chargeurs de `loadAll()` est un **contrat gardé par un test**
+  (`ui_reserve_hauteur_test.go` : « 17 chargeurs ») ;
+- `loadHistory()` reconstruit tout le fil — **mesuré 148 108 jetons** le 23/11. Payer
+  ça pour un seul mot rendrait un changement de langue **plus lent qu'une ouverture de
+  tchat**.
 
 ## Comment c'est prouvé
 
-Relu **dans les octets de l'exe** (17 968 128 o, `41C8DD52…`, `FileVersion` =
-`ProductVersion` = **1.1.2**) et **dans la page servie** (HTTP 200, 1 076 815 o) :
+`i18n_pont_test.go`, **six filets**, joués **dans les deux sens** :
 
-- **dix-sept chargeurs** dans la liste, **`loadRemote` x0** ;
-- les six routes des panneaux répondent **200** (`/api/config`, `/api/presets`,
-  `/api/internet`, `/api/mcp`, `/api/telemetry`) ;
-- les gardes des onglets : `aria-current` **x1**, `classList.contains('is-on')` **x1**,
-  `attributeFilter` **x5** (contre **x4** dans l'exe en service) ;
-- **contre-épreuve** dans les deux exes `1.1.0` en service : `aria-current` **x0**,
-  `attributeFilter` **x4**. Ce qui est neuf est bien **absent de l'ancien, présent dans le neuf** ;
-- **l'OCR des deux captures** (`docs/ui-en.png`, `docs/ui-fr.png`, 2880×1800) lit
-  `v1.1.2`, les deux onglets, **CONFIGURATION peuplée** (CTX 32 768, BATCH 2048,
-  UBATCH 512, NGL 999) et les deux jauges (GPU 28,6 / 31,9 GiB, RAM 105,0 / 127,1 GiB).
-  Une capture d'une page non rendue n'aurait pas ces chiffres ;
-- `go vet ./...` **0**, filets de version **ok**, filets des onglets, de la marque, du
-  badge et de la réserve **ok** ; `gofmt -l` vide.
+| contre le code **non traduit** (`git stash`) | contre le code traduit |
+|---|---|
+| **23** textes visibles sans `data-i18n` | six **verts** |
+| **33** lignes de français en dur | — |
+| **0** clé surveillée | **74** clés, parité fr/en |
 
-Deux incidents de fabrication, nommés parce qu'ils sont instructifs : mon premier jet du
-garde a **recopié le fichier de test** (12 498 → 200 890 caractères, mon bloc répété seize
-fois) sans que je m'en aperçoive ; le contrôle de taille strict, ajouté du même coup, m'a
-arrêté — et **mon attente était fausse elle aussi**, `18` → `17` étant deux chiffres pour
-deux. ➜ pour une substitution, vérifier **le compte des deux côtés**, pas la longueur.
+Le filet a trouvé **un vrai trou que j'avais laissé** : `'refusé'` en dur ligne 174 —
+j'avais traduit les autres fonctions de la carte et oublié celle-là. Et un **faux
+positif où le filet avait tort** : `const moteur = pre.moteur ? …` accusé d'être du
+français. Ces mots servent d'identifiants JS dans ce fichier ; les retirer de la liste
+est le correctif, pas un arrosage — l'accentué les couvre dès qu'ils sont accentués.
+
+**La preuve ne vient pas que des octets.** Sur un atelier isolé, moteur décalé, après
+`POST /api/prefs {"lang":"en"}`, la page servie rend `Receive a brain` ×1, `Listening`
+×3, et `à l'écoute` **×0**. Les octets, dans les deux sens : le neuf porte
+`data-i18n="bridge.title"` ×1, `name_default` ×4, `default_name_default` ×2,
+`projects.default_name` ×4 ; le 1.1.2 en service les rend à **×0** et porte encore
+`stitle">Pont Aidros` ×1, qui a disparu du neuf.
 
 ## Ce qui n'est pas là, dit franchement
 
-- **Le gel de la barre d'onglets n'est pas prouvé parti** (voir le ⚠ plus haut).
-- **Trois trous de traduction, vus par l'OCR de la capture anglaise** : le titre du pont
-  reste « Pont Aidros ↔ Aidros », son badge « à l'écoute », et le sélecteur de projet
-  « Générale ». Écrits **en dur dans le gabarit** (`index.tmpl.html:2263`,
-  `13b-bridge.js:34`), donc hors de la portée d'`applyI18n()`. Nommés, **pas corrigés** :
-  une modification à la fois.
-- **Les minuteries de l'interface ne sont pas touchées.** Quatre tournent sous la seconde
-  (200, 250, 500 ×2, 800 ms), dont une qui fait un `sync()` **réseau** tous les 500 ms.
-- **Le premier rendu du fil ne page pas** : un fil de 148 108 jetons est rejoué en entier,
-  alors que `/api/chat/older` répond en 0,014 s. C'est le plus gros des gains restants.
-- **Aucun filet ne lit les images du README**, ni la release publiée : le workflow peut
-  rougir et la release ne jamais naître, seule l'API GitHub le sait.
-- La génération d'images n'est toujours pas codée ; pas de coffre à secrets, pas de
-  sauvegarde ; les correctifs de l'amont ne tomberont plus tout seuls (leur `main` est un
-  historique **sans ancêtre commun** avec le nôtre).
+- **Une ligne d'historique déjà affichée garde son étiquette de projet** jusqu'au
+  prochain rechargement de l'historique. C'est une ligne de liste, pas l'écran courant ;
+  le payer à chaque changement de langue coûtait la reconstruction du fil.
+- **La garde du texte en dur est lexicalisée, pas grammaticale.** Elle surveille les
+  accents, les apostrophes typographiques, et une liste fermée des mots d'écran de
+  **cette** carte. Un mot français sans accent et sans majuscule (« prêt », « ici »)
+  écrit en dur ailleurs passerait. L'étendre à toute l'interface se paierait en faux
+  positifs sur le français de secours : l'élargir est une décision, pas un réglage.
+- **La translation est bornée à la carte du Pont**, là où le défaut a été mesuré. Le
+  reste de l'interface n'est pas couvert par ces six filets.
+- **Le binaire publié par l'intégration continue est `./cmd/aidros`**, dont l'identité
+  Windows est la **base nue** (`1.1.0`) : le cran de correctif `1.1.3` vit dans le build
+  portable, seul à poser `BuildFlavor`. C'est mesuré, pas supposé.
+- `goversioninfo` **n'est pas au `PATH`** sur ce poste : `go generate ./...` le saute et
+  **ne régénère pas les `.syso`**. Les `.syso` de la cible portable ont été régénérés à
+  la main, en chemin complet, et relus (« 1.1.3 » ×2, « Aidros » ×4 chacun).
+- **Rien ne lit la release publiée.** Aucun filet ne vérifie que l'étiquette publiée
+  est en phase avec le millésime du binaire qu'elle embarque.
+- **La génération d'images n'est toujours pas codée** : ComfyUI tourne sur ce poste, mais
+  compte **zéro occurrence** dans le dépôt, ici comme chez l'amont.
+- **Pas de coffre à secrets, pas de sauvegarde.** La base est du bbolt à verrou exclusif,
+  et une clé d'API est stockée en clair dans un fichier de profil.
+- **Les correctifs de l'amont ne tomberont plus tout seuls.** Depuis la scission, leur
+  `main` est un historique **sans ancêtre commun** avec le nôtre.
 
 ## État sur le poste de fabrication
 
-Le binaire `1.1.2` est **posé aux deux endroits attendus** (racine et `data\bin`,
-17 968 128 o / `41C8DD52…` / identité Windows **1.1.2**), sha relu **identique** à la
-source aux deux places. **L'instance en service tourne sur le 1.1.2**, avec ses points de
-retour (`aidros-1.1.1.exe`, `aidros.avant-1.1.0.bak.exe`). Mes essais ont été joués sur une
-instance **isolée**, port **18095**, home séparé : rien tué, aucun port de service touché.
-
-L'étiquette `v1.1.2` n'est **pas encore posée** : la publication attend un accord explicite.
-Rappel mesuré le 22/11 : une étiquette `+revN` est **invisible au comparateur de versions**
-(`Canonical` efface le `+`), donc **une release publiée est un numéro qui monte**, pas un `+rev`.
+`aidros-1.1.3.exe` en service, **17 980 416 octets**, SHA-256 `D657A229…`,
+`ProductVersion 1.1.3`, `ProductName Aidros`. L'interface rend `/api/status → version
+1.1.3, state active`, moteur MoE en vie. `go vet` 0, `gofmt` propre, **suite complète
+verte en 137,9 s**, les trois gardes de version verts dans les deux sens.
 
 ## Ce que cette version épingle
 
-Inchangé depuis `1.1.0` — le millésime de l'application bouge, celui des moteurs non :
-
-| | version |
-|---|---|
-| **moteur MoE Strata** | **0.1.59** (paquet `strata-engine-0.1.59-…-hip-rx9070`) |
-| **panneau de contrôle** | **0.1.54** |
-| **source Strata vendue** | **0.2.8** |
-| **encodeur d'embeddings** | `embeddinggemma-2-Q8_0.gguf`, **309 855 456 octets**, llama.cpp b11669 |
-
-⚠ **Un millésime est épinglé PAR POSTE, pas une valeur unique** : la variante sur RX 6900 XT
-(gfx1030) vise une ligne RDNA2 distincte.
+Moteur MoE **Strata 0.1.59** (panneau de contrôle 0.1.54) · encodeur d'embeddings
+**EmbeddingGemma-2**, 256 dimensions · llama.cpp à la version épinglée par le poseur.
+La version de moteur est **par machine**, et **avertit au lieu de refuser**.
 
 ## Ascendance
 
 - Base amont : `nathaninline/ajean` **0.20.1** (MIT).
-- Moteur MoE : [**Niko1221/Strata**](https://github.com/Niko1221/Strata) — **0.1.59** posé,
-  **0.1.54** de contrôle, source **0.2.8**.
-- Embeddings : [**google/embeddinggemma-2**](https://huggingface.co/google/embeddinggemma-2),
-  servi par [**ggml-org/llama.cpp**](https://github.com/ggml-org/llama.cpp).
-- Notes de la version précédente (`1.1.0`) :
-  [docs/notes-de-version-1.1.0.md](docs/notes-de-version-1.1.0.md).
+- Moteur MoE : [**Niko1221/Strata**](https://github.com/Niko1221/Strata).
+- Embeddings : [**google/embeddinggemma-2**](https://huggingface.co/google/embeddinggemma-2).
+- Notes du cran précédent (`1.1.2`) :
+  [docs/notes-de-version-1.1.2.md](docs/notes-de-version-1.1.2.md).

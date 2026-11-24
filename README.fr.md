@@ -341,6 +341,15 @@ Le pont parle son propre petit protocole (des en-têtes `X-Aidros-*`) et accepte
 les deux orthographes du nom d'en-tête, pour ne pas laisser un voisin plus ancien
 dehors.
 
+**La carte du Pont se met à la langue de l'interface.** Titre, badge d'état,
+intitulés des réglages, messages d'erreur : tout passe par une clé, en français et en
+anglais. Le nom du projet par défaut aussi — mais lui se traduit **sans bouger le nom
+stocké**, qui est celui qui nomme le dossier mémoire : un projet rebaptisé « Mon
+atelier » garde « Mon atelier » dans les deux langues. Changer de langue **ne recharge
+pas** le fil de conversation : le libellé se recalcule depuis ce qui est déjà en
+mémoire, pour qu'un changement de langue ne coûte pas plus cher qu'une ouverture de
+tchat.
+
 ---
 
 ## Accès depuis n'importe où
