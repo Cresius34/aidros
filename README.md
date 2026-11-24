@@ -179,7 +179,11 @@ indexed by [EmbeddingGemma 2](https://huggingface.co/google/embeddinggemma-2)
 so the AI can search it by meaning and not only by keyword. Four settings:
 *injected* (the index is loaded up front), *search* (the AI looks things up when
 needed, lighter on context), *on demand* (only when you ask), or *off*. The
-embedding engine runs on your machine, and a watchdog keeps it alive.
+embedding engine runs on your machine, and a watchdog keeps it alive. What it has
+already encoded is kept on disk (`.memcache`, under the project's memory folder):
+restarting no longer repays the ~25 minutes of re-encoding, and an indexing job
+stopped midway picks up where it stopped instead of starting over from the first
+fragment.
 
 **Trackers.** Dated data that piles up: counters, readings, a running follow-up.
 The AI writes them, and you browse them by level — a year, a month, one point —

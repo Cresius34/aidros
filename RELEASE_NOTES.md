@@ -70,13 +70,12 @@ Les quatre `.syso` régénérés au **chemin complet** de `goversioninfo` — il
 
 ## Ce qui n'est pas là
 
-- **Rien n'est posé ici**, et `aidros update` n'apporte **rien** sur ce poste :
-  `parallel_profile.go:282-284` court-circuite la route sans contacter GitHub. La release
-  vaut pour une machine qui installe depuis GitHub.
-- **La première indexation reste due** (~25 min à 59 pages/min), et se repaie quand
-  l'**empreinte du moteur** change : des vecteurs d'un autre moteur ne sont pas les miens.
-- **Le job ne se relance pas tout seul.** Il garde son travail ; la reprise
-  automatique, elle, n'est pas codée.
+- **`aidros update` n'apporte rien sur ce poste** : `parallel_profile.go:282-284`
+  court-circuite la route sans contacter GitHub. La release vaut pour une machine qui
+  installe depuis GitHub.
+- **Le job ne se relance pas tout seul.** Il garde son travail — mesuré : 10,1 Mo
+  conservés, reprise en 363 s sans réécrire un vecteur — mais la reprise *automatique*,
+  elle, n'est pas codée.
 - **Les 30 `setInterval` de l'interface ne sont pas touchés** — c'est la cause mesurée de
   la RAM de Firefox (dont un `sync()` réseau tous les 500 ms). Ce cran ferme
   l'indexation, pas l'interface.
@@ -93,16 +92,48 @@ le fait, en jouant le cas historique `Compare(v1.1.3, v1.1) = +1`).
 
 ## État sur le poste de fabrication
 
-L'instance en service **n'a pas bougé** : `aidros-1.1.3.exe`, 17 980 416 octets,
-`D657A229…`. Le neuf est posé **à part**, nommé avec son millésime — aucun fichier de
-l'installation touché, aucun processus arrêté.
+**La bascule est faite.** `aidros.exe` à la racine, 17 981 952 octets, `7F632678…`,
+`ProductVersion`/`FileVersion` **1.2.0** relus dans le fichier, en écoute sur 18090 et
+18190 depuis 22:01. Le point de retour de l'ancien (`aidros-1.1.3.exe`, `D657A229…`) reste
+à la racine.
+
+**L'épreuve de vie du correctif, mesurée sur le poste qui tourne** — c'est le seul endroit
+où elle pouvait être jouée, les filets ne prouvaient que le code :
+
+| ce que la campagne promet | lu sur le poste en service |
+|---|---|
+| le cache disque est **atteignable** | `cache : RAM + disque (.memcache/embeddings.json, 10 111 695 octets)` — là où il répondait « RAM ; aucun cache disque » **en permanence** |
+| l'anneau se pose **pendant** la route | le fichier **grossit pendant** le job : 6 396 822 → 6 411 094 octets, `mtime` qui suit `job.Done` |
+| la complétude **voyage avec le fichier** | `"anneau":"index complet"` relu dans la clé JSON du fichier |
+| un arrêt en chemin **ne jette plus** le travail | le job s'est arrêté sur « fichiers modifiés pendant l'indexation » avec `Done 1579/1579` et **10,1 Mo conservés** ; relancé, il repart de zéro **sans réécrire les vecteurs** — le fichier ne bouge plus d'un octet, les clés se retrouvent |
+
+**Le coût de la reprise, mesuré à deux reprises au lieu d'être supposé.** Le premier tour
+s'est arrêté à 22:06:29, le second à 22:12:32 : **363 s pour 1579 fragments**, soit
+**261 fragments/min** — contre **59 pages/min** au premier encodage, la mesure du 23/11 qui
+faisait payer ~25 minutes. **La reprise est ~4,4 fois plus vite, et elle ne recode rien.**
+C'est le gain promis, lu sur le poste qui tourne, pas dans un filet.
+
+⚠ **Ce que le juge fait encore, et c'est voulu** : sur un dossier de mémoire qui bouge
+**pendant** l'encodage — et il bouge, c'est justement le ménage de 05 h qui édite les pages —
+`indexFresh` refuse de **publier** l'index en RAM et rend « fichiers modifiés pendant
+l'indexation ; relancer ». L'anneau, lui, est sauvé. Donc la recherche retombe sur le repli
+lexical tant que le dossier n'est pas calme, et il faut relancer le job : mesuré, la recherche
+sur ce poste rend `resultats=1` en sémantique contre `repli lexical=5`. **Le défaut n'est pas
+la campagne, c'est le couple** « le ménage édite la mémoire » × « l'indexation juge la mémoire
+par son empreinte » : nommer le couple vaut mieux que bricoler l'un des deux.
+**La première indexation complète reste donc due sur un poste qui écrit sa mémoire pendant
+qu'il l'encode** ; elle ne se repaie plus au redémarrage, et se repaie quand **l'empreinte du
+moteur** change — des vecteurs d'un autre moteur ne sont pas les miens.
 
 ## Ce que cette version épingle
 
 Moteur MoE **Strata 0.1.59** (panneau de contrôle 0.1.54) · encodeur d'embeddings
-**EmbeddingGemma-2**, 256 dimensions · llama.cpp à la version épinglée par le poseur. La
-version de moteur est **par machine**, et **avertit au lieu de refuser**. Cette campagne
-ne touche **aucun moteur** : les épinglages sont reportés tels quels.
+**EmbeddingGemma-2** — **768 dimensions natives**, et le sélecteur de l'interface en
+réduit l'empreinte à 512, 256 ou 128 (`mem_embedding_backend.go:235-241`, défaut 768 dans
+`mem_embedding_settings.go:19`) : **512 sur ce poste**, réglage et non caractéristique de la
+version · llama.cpp à la version épinglée par le poseur. La version de moteur est **par
+machine**, et **avertit au lieu de refuser**. Cette campagne ne touche **aucun moteur** : les
+épinglages sont reportés tels quels.
 
 ## Ascendance
 

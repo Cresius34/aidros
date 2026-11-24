@@ -184,7 +184,10 @@ l'IA peut la chercher par le sens, pas seulement par mot-clé. Quatre réglages 
 *injectée* (l'index est chargé d'avance), *recherche* (l'IA va chercher quand il
 faut, plus léger en contexte), *à la demande* ( seulement quand vous le demandez),
 ou *coupée*. Le moteur d'embeddings tourne sur votre machine, et un veilleur le
-garde vivant.
+garde vivant. Ce qu'il a déjà encodé est gardé sur le disque (`.memcache`, en
+dessous du dossier mémoire du projet) : redémarrer ne repaie plus les ~25 minutes
+de réencodage, et une indexation arrêtée en chemin reprend là où elle s'était
+arrêtée au lieu de repartir du premier fragment.
 
 **Traceurs.** Les données datées qui s'accumulent : compteurs, mesures, un
 suivi qui court. L'IA les écrit, et vous les parcourez par niveau — une année,
