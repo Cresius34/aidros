@@ -33,6 +33,14 @@ const parallelMemoryRevision = 7
 // un « + » : c'est la forme qu'admet le test de version Windows, et celle que le
 // lanceur d'un poste sait lire.
 //
+// ⚠ TROIS ENDROITS MONTENT ENSEMBLE, et le troisième est celui qu'on oublie :
+// versioninfo.json (ses DEUX blocs numériques ET ses deux chaînes), ce suffixe,
+// et les DEUX .syso — régénérés par goversioninfo, sinon l'identité Windows ne
+// suit pas. Le garde version_flavor_test.go compare les .syso de la cible
+// portable à displayVersion() ; version_test.go compare ceux de cmd/aidros à la
+// base nue. Monter l'un des trois sans les autres rend un rouge, ou pire un vert
+// qui ment sur ce que Windows affiche.
+//
 // Le « + » n'était pas qu'un goût. Il rendait la release INVISIBLE à l'auto-maj :
 // semver.Canonical efface le build-suffixe, donc Compare(v1.0.0+rev0, v1.0) rend 0
 // et rien n'était jamais proposé (mesuré avec tools/sonde-semver, la sonde
@@ -97,7 +105,7 @@ const parallelMemoryRevision = 7
 // compare. Le .1 porte aussi la bascule de l'encodeur mémoire : EmbeddingGemma 2
 // passe du Python/Transformers (pic de 20 Go, 3,5 Go vifs en 2 min) au GGUF Q8 lu
 // par llama.cpp, six fois plus petit et sans runtime Python.
-const buildFlavorSuffix = ".2"
+const buildFlavorSuffix = ".3"
 
 // uiBadgeLabel : intitulé affiché sous le logo par le build portable, à la
 // place du repère « TEST mémoire · R6 ». Ce n'est plus « le nom du patch » :
