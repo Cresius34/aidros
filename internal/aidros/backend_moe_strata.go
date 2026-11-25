@@ -27,17 +27,17 @@ import (
 // beside it. The preflight check below compares BUILD.json against strataVersion only.
 //
 //lint:ignore U1000 mémoire du millésime du paquet, côté Go. Ce que l'installeur lit est le JSON déplié à côté (moe_windows_manifest.json porte "version": "0.2.8" et "commit": "36f6663c25e6…", mesuré) ; cette constante est le jumeau lisible par un humain, plus rien ne la lit.
-const strataSourceVersion = "0.2.8"
+const strataSourceVersion = "0.2.21"
 
 // Moteur Qwen : 0.1.48 → 0.1.54 dans 0.2.8 (fenêtres HIP de 16 rangées), puis
 // 0.1.59 dans 0.2.13 (chunked GDN scan gfx12 pour les prompts de 30 000 tokens
 // et plus). Monter cette constante est la PAIRE de rendre au paquet moteur son
 // propre engine/BUILD.json : le préflight ci-dessous compare l'un à l'autre, et
 // strataSourceDir() nomme le dossier d'installation d'après cette valeur.
-const strataVersion = "0.1.59"
+const strataVersion = "0.1.67"
 
 //lint:ignore U1000 mémoire du millésime du paquet Control : l'installeur lit la sienne dans moe_windows_manifest.json (engine_version), et le préflight compare BUILD.json à strataVersion seule (L178-181). La constante documente, elle n'est plus lue.
-const strataControlVersion = "0.1.54"
+const strataControlVersion = "0.1.67"
 
 // strataSourceCommit désigne l'arbre source que l'installeur déplie (serve/, strata_control/,
 // setup.py). C'est le commit du paquet Control, qui est public. Le commit de BUILD.json du
@@ -48,7 +48,7 @@ const strataControlVersion = "0.1.54"
 // commit Control garde une source téléchargeable et vérifiable pour l'installation.
 //
 //lint:ignore U1000 même raison que strataSourceVersion : le commit réellement téléchargé est celui du manifeste JSON (moe_windows_manifest.json:3, :8, :11, mesuré), la constante Go est là pour qu'un humain sache sur quel arbre l'installeur déplie.
-const strataSourceCommit = "36f6663c25e60abdfc626abe48e0e8fa3a9fe762"
+const strataSourceCommit = "d46f5f268f8ed797e83a5c63a69bffbd7a581cf6"
 const strataPathToken = "${AJEAN_HOME}/"
 
 //go:embed moe_portable_install.ps1
