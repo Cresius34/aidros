@@ -85,7 +85,7 @@ func TestPreflightAccepteMillésimeDivergent(t *testing.T) {
 	// Et la couleur doit le dire, sinon la porte ouverte devient un trou muet.
 	mv, ok, avis := strataMillésimePreset(c)
 	if ok {
-		t.Fatal("moteur 0.1.57 sur une application épinglée 0.1.59 : doit etre rouge")
+		t.Fatalf("moteur 0.1.57 sur une application épinglée %s : doit être rouge", strataVersion)
 	}
 	if mv != "0.1.57" {
 		t.Errorf("millésime rendu %q, attendu 0.1.57 (le nom du moteur posé, pas celui demande)", mv)
@@ -121,12 +121,12 @@ func TestMillésimePresetRougePresetContreMoteur(t *testing.T) {
 	c := strataMoteurFixture(t, strataVersion+"-hip", "0.1.48")
 	mv, ok, avis := strataMillésimePreset(c)
 	if ok {
-		t.Fatal("preset 0.1.59 contre moteur pose 0.1.48 : doit etre rouge")
+		t.Fatalf("preset %s contre moteur posé 0.1.48 : doit être rouge", strataVersion)
 	}
 	if mv != "0.1.48" {
 		t.Errorf("millésime rendu %q, attendu 0.1.48 : la couleur doit dire ce qui EST LÀ", mv)
 	}
-	for _, veut := range []string{"0.1.59", "0.1.48"} {
+	for _, veut := range []string{strataVersion, "0.1.48"} {
 		if !strings.Contains(avis, veut) {
 			t.Errorf("l'avis doit nommer %q, rendu : %q", veut, avis)
 		}
